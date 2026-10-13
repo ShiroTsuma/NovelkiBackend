@@ -4,8 +4,9 @@ using Amazon.Runtime;
 using Amazon.S3;
 using Authentication;
 using BookCovers;
-using BookSearch;
+using BookFiles;
 using BookMetadata;
+using BookSearch;
 using Caching;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Configuration;
@@ -164,11 +165,31 @@ public static class DependencyInjection
                 return new AmazonS3Client(credentials, config);
             });
             builder.Services.AddScoped<IBookCoverStorage, S3BookCoverStorage>();
+            builder.Services.AddScoped<IBookFileStorage, S3BookFileStorage>();
         }
         else
         {
             builder.Services.AddScoped<IBookCoverStorage, LocalBookCoverStorage>();
+            builder.Services.AddScoped<IBookFileStorage, LocalBookFileStorage>();
         }
+
+        builder.Services.AddOptions<BookFileOptions>()
+            .Bind(builder.Configuration.GetSection(BookFileOptions.SectionName))
+            .Validate(o => o.MaxFileBytes > 0 && o.MaxUploadBytes >= o.MaxFileBytes &&
+                           o.MaxExtractedBytes >= o.MaxFileBytes &&
+                           o.MaxExpandedEpubBytes > 0 && o.MaxOwnerStorageBytes >= o.MaxFileBytes &&
+                           o.MaxLibraryArchiveBytes >= o.MaxFileBytes &&
+                           o.MaxStagingBytes >= 2 * o.MaxLibraryArchiveBytes && o.MaxConcurrentOperations > 0 &&
+                           o.MaxFilesPerImport > 0 &&
+                           o.MaxArchiveEntries > 0 && o.MaxLibraryArchiveEntries > 0 && o.MaxActiveJobsPerOwner > 0 &&
+                           o.ProcessingTimeout > TimeSpan.Zero && o.JobLifetime > o.ProcessingTimeout &&
+                           o.Retention > TimeSpan.Zero &&
+                           o.TicketLifetime > TimeSpan.Zero && !string.IsNullOrWhiteSpace(o.StagingRoot) &&
+                           !string.IsNullOrWhiteSpace(o.StorageRoot),
+                "EPUB storage limits are invalid.").ValidateOnStart();
+        builder.Services.AddScoped<BookFileService>();
+        builder.Services.AddScoped<IBookFileService>(p => p.GetRequiredService<BookFileService>());
+        builder.Services.AddHostedService<BookFileBackgroundService>();
 
         builder.Services.AddScoped<IBookCoverRemoteImageService, BookCoverRemoteImageService>();
         builder.Services.AddSingleton<IBookCoverOperationGate, BookCoverOperationGate>();

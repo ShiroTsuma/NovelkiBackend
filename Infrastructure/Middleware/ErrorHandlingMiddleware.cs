@@ -110,6 +110,9 @@ public class ErrorHandlingMiddleware
                 or EntityNotFoundException<ContentType, Guid>
                 or EntityNotFoundException<Book, Guid>
                 or EntityNotFoundException<BookCover, Guid>
+                or EntityNotFoundException<BookFile, Guid>
+                or EntityNotFoundException<BookFileJob, Guid>
+                or EntityNotFoundException<BookFileDownloadTicket, Guid>
                 or EntityNotFoundException<PublicBookSnapshot, Guid>
                 or EntityNotFoundException<Tag, Guid>
                 or EntityNotFoundException<Author, Guid> => ErrorCategory.NotFound,

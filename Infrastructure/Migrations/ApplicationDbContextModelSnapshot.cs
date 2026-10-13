@@ -359,6 +359,189 @@ namespace Infrastructure.Migrations
                     b.ToTable("BookCovers");
                 });
 
+            modelBuilder.Entity("Domain.Entities.BookFile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BookId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("Created")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("DeletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FirstContentLabel")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("LastContentLabel")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTimeOffset>("LastModified")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("LastModifiedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("MimeType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Sha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("StoragePath")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookId", "Sha256")
+                        .IsUnique()
+                        .HasFilter("\"DeletedAtUtc\" IS NULL");
+
+                    b.HasIndex("BookId", "SortOrder");
+
+                    b.HasIndex("OwnerId", "DeletedAtUtc");
+
+                    b.ToTable("BookFiles", t =>
+                        {
+                            t.HasCheckConstraint("CK_BookFiles_Size", "\"SizeBytes\" > 0");
+                        });
+                });
+
+            modelBuilder.Entity("Domain.Entities.BookFileDownloadTicket", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ConsumedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("FileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("JobId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("SnapshotId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpiresAtUtc");
+
+                    b.ToTable("BookFileDownloadTickets");
+                });
+
+            modelBuilder.Entity("Domain.Entities.BookFileJob", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("BookId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("ImportedCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("ProcessedFiles")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("ReservedBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("SkippedCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Status")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<int>("TotalFiles")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .IsConcurrencyToken()
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerId", "ExpiresAtUtc");
+
+                    b.HasIndex("Status", "CreatedAtUtc");
+
+                    b.ToTable("BookFileJobs");
+                });
+
             modelBuilder.Entity("Domain.Entities.BookLink", b =>
                 {
                     b.Property<Guid>("Id")
@@ -680,6 +863,21 @@ namespace Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Domain.Entities.PublicBookFile", b =>
+                {
+                    b.Property<Guid>("SnapshotId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BookFileId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("SnapshotId", "BookFileId");
+
+                    b.HasIndex("BookFileId");
+
+                    b.ToTable("PublicBookFiles");
+                });
+
             modelBuilder.Entity("Domain.Entities.PublicBookSnapshot", b =>
                 {
                     b.Property<Guid>("Id")
@@ -988,6 +1186,13 @@ namespace Infrastructure.Migrations
                     b.Property<DateTime>("NextAttemptAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("StorageKind")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasDefaultValue("Cover");
+
                     b.Property<string>("StoragePath")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -997,7 +1202,7 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("NextAttemptAt");
 
-                    b.HasIndex("StoragePath")
+                    b.HasIndex("StorageKind", "StoragePath")
                         .IsUnique();
 
                     b.ToTable("StorageCleanupQueueItems");
@@ -1357,6 +1562,15 @@ namespace Infrastructure.Migrations
                     b.Navigation("Book");
                 });
 
+            modelBuilder.Entity("Domain.Entities.BookFile", b =>
+                {
+                    b.HasOne("Domain.Entities.Book", null)
+                        .WithMany()
+                        .HasForeignKey("BookId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Domain.Entities.BookLink", b =>
                 {
                     b.HasOne("Domain.Entities.Book", "Book")
@@ -1421,6 +1635,21 @@ namespace Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Book");
+                });
+
+            modelBuilder.Entity("Domain.Entities.PublicBookFile", b =>
+                {
+                    b.HasOne("Domain.Entities.BookFile", null)
+                        .WithMany()
+                        .HasForeignKey("BookFileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.PublicBookSnapshot", null)
+                        .WithMany()
+                        .HasForeignKey("SnapshotId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Domain.Entities.PublicBookSnapshot", b =>

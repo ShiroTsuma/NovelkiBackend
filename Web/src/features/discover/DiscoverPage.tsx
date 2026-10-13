@@ -11,6 +11,7 @@ import { BookCoverArtwork } from '@/features/books/BookCoverSection'
 import { BookSearchInput } from '@/features/books/BookSearchInput'
 import { DescribedMetadataPills, MetadataSummary } from '@/features/books/MetadataBadges'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
+import { BookFilesDialog } from '@/features/books/BookFilesPanel'
 
 export function DiscoverPage() {
   const navigate = useNavigate()
@@ -98,6 +99,7 @@ function PublicBookCard({ snapshot, copying, onCopy }: {
   copying: boolean
   onCopy: () => void
 }) {
+  const [filesOpen, setFilesOpen] = useState(false)
   const cover: BookCoverDto | null = snapshot.coverUrl ? {
     id: snapshot.id,
     status: 'Found',
@@ -107,6 +109,7 @@ function PublicBookCard({ snapshot, copying, onCopy }: {
   } : null
 
   return (
+    <>
     <Surface as="article" className="discover-card">
       <div className="discover-card__cover">
         <BookCoverArtwork
@@ -153,6 +156,7 @@ function PublicBookCard({ snapshot, copying, onCopy }: {
 
         <div className="discover-card__footer">
           <span>Snapshot {new Date(snapshot.snapshotAt).toLocaleDateString()}</span>
+          {(snapshot.filesCount ?? 0) > 0 && <button className={buttonVariants.secondary} type="button" onClick={() => setFilesOpen(true)}>Files ({snapshot.filesCount})</button>}
           <button
             className={buttonVariants.primary}
             disabled={copying || snapshot.isOwner}
@@ -165,6 +169,8 @@ function PublicBookCard({ snapshot, copying, onCopy }: {
         </div>
       </div>
     </Surface>
+    {filesOpen && <BookFilesDialog snapshotId={snapshot.id} onClose={() => setFilesOpen(false)} />}
+    </>
   )
 }
 

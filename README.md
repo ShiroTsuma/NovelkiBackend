@@ -255,3 +255,8 @@ Endpointy diagnostyczne:
 ## Licencja
 
 Autor projektu nie wybrał jeszcze licencji.
+
+## EPUB files
+
+Book attachments and separate EPUB library exports/imports are documented in [EPUB storage](docs/epub-storage.md).
+Existing full backups still contain CSV data and covers only.

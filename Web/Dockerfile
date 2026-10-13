@@ -13,6 +13,7 @@ COPY Web/ .
 RUN npm run build
 
 FROM nginx:1.31.3-alpine AS runtime
+ENV BOOK_FILES_ARCHIVE_UPLOAD_LIMIT=12289m
 RUN apk add --no-cache certbot openssl
 COPY Web/nginx.conf /etc/nginx/templates/default.conf.template
 COPY Web/docker-entrypoint.d/15-configure-tls.sh /docker-entrypoint.d/15-configure-tls.sh

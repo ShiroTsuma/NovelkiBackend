@@ -34,11 +34,16 @@ services:
       BookCovers__S3__AccessKey: ${BOOK_COVERS__S3__ACCESS_KEY:-}
       BookCovers__S3__SecretKey: ${BOOK_COVERS__S3__SECRET_KEY:-}
       BookCovers__S3__Bucket: ${BOOK_COVERS__S3__BUCKET:-}
+      BookFiles__MaxOwnerStorageBytes: ${BOOK_FILES_OWNER_STORAGE_BYTES:-10737418240}
+      BookFiles__MaxLibraryArchiveBytes: ${BOOK_FILES_LIBRARY_ARCHIVE_BYTES:-12884901888}
+      BookFiles__MaxStagingBytes: ${BOOK_FILES_STAGING_BYTES:-25769803776}
       OTEL_SERVICE_NAME: novelki-api
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       OTEL_EXPORTER_OTLP_PROTOCOL: grpc
     volumes:
       - ./storage/covers:/app/storage/covers
+      - ./storage/epubs:/app/storage/epubs
+      - ./storage/epub-staging:/app/storage/epub-staging
     restart: unless-stopped
     ports:
       - "127.0.0.1:${API_PORT:-5232}:5232"
@@ -60,7 +65,8 @@ services:
       api:
         condition: service_healthy
     environment:
-      NGINX_ENVSUBST_FILTER: PUBLIC_DOMAIN|PUBLIC_HTTPS_AUTHORITY
+      NGINX_ENVSUBST_FILTER: PUBLIC_DOMAIN|PUBLIC_HTTPS_AUTHORITY|BOOK_FILES_ARCHIVE_UPLOAD_LIMIT
+      BOOK_FILES_ARCHIVE_UPLOAD_LIMIT: ${BOOK_FILES_ARCHIVE_UPLOAD_LIMIT:-12289m}
       PUBLIC_DOMAIN: ${PUBLIC_DOMAIN:-localhost}
       PUBLIC_HTTPS_AUTHORITY: ${PUBLIC_HTTPS_AUTHORITY:-localhost:8080}
       ACME_ENABLED: ${ACME_ENABLED:-false}

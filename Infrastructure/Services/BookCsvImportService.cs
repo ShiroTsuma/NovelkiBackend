@@ -3,7 +3,7 @@ namespace Infrastructure.Services;
 using System.IO.Compression;
 using System.Text.Json;
 using Application.Common.DTOs.Book;
-using FluentValidation;
+using Archives;
 using Microsoft.Extensions.Options;
 using Microsoft.VisualBasic.FileIO;
 
@@ -885,10 +885,7 @@ public sealed class BookCsvImportService : IBookCsvImportService
 
         author = new Author
         {
-            OwnerId = ownerId,
-            IsPublic = false,
-            PrimaryName = authorName,
-            NormalizedPrimaryName = normalized
+            OwnerId = ownerId, IsPublic = false, PrimaryName = authorName, NormalizedPrimaryName = normalized
         };
         author.Names.Add(new AuthorName
         {
@@ -912,105 +909,10 @@ public sealed class BookCsvImportService : IBookCsvImportService
         }
     }
 
-    private Dictionary<string, ZipArchiveEntry> ValidateArchiveMetadata(
-        ZipArchive archive,
+    private Dictionary<string, ZipArchiveEntry> ValidateArchiveMetadata(ZipArchive archive,
         long maxUncompressedArchiveBytes)
-    {
-        if (archive.Entries.Count == 0 || archive.Entries.Count > _securityOptions.MaxArchiveEntries)
-        {
-            throw new ValidationException("Full backup contains an invalid number of entries.");
-        }
-
-        var entries = new Dictionary<string, ZipArchiveEntry>(StringComparer.OrdinalIgnoreCase);
-        long declaredTotal = 0;
-        long compressedTotal = 0;
-        string? excessiveCompressionEntry = null;
-        foreach (var entry in archive.Entries)
-        {
-            if (IsTraversalOrRootAttempt(entry.FullName))
-            {
-                throw new SuspiciousBookImportException("archive-path-traversal",
-                    "Full backup contains an archive path that attempts to escape its allowed directory.");
-            }
-
-            if (IsLinkOrReparseEntry(entry))
-            {
-                throw new SuspiciousBookImportException("archive-link-entry",
-                    "Full backup contains a link or reparse-point archive entry.");
-            }
-
-            if (!IsSafeArchiveEntryName(entry.FullName) || !entries.TryAdd(entry.FullName, entry))
-            {
-                throw new ValidationException($"Full backup contains an unsafe or duplicate entry '{entry.FullName}'.");
-            }
-
-            if (entry.Length < 0 || entry.CompressedLength < 0)
-            {
-                throw new ValidationException("Full backup archive contains invalid size metadata.");
-            }
-
-            if (entry.Length > 0)
-            {
-                var compressionRatio = entry.CompressedLength == 0
-                    ? double.PositiveInfinity
-                    : entry.Length / (double)entry.CompressedLength;
-                if (entry.Length >= _securityOptions.SuspiciousCompressionMinimumBytes &&
-                    compressionRatio > _securityOptions.SuspiciousCompressionRatio)
-                {
-                    throw new SuspiciousBookImportException("extreme-compression-ratio",
-                        "Full backup contains an entry with an extreme compression ratio.");
-                }
-
-                if (compressionRatio > _securityOptions.MaxCompressionRatio)
-                {
-                    excessiveCompressionEntry ??= entry.FullName;
-                }
-            }
-
-            if (entry.CompressedLength > long.MaxValue - compressedTotal)
-            {
-                throw new ValidationException("Full backup archive contains invalid size metadata.");
-            }
-
-            if (entry.Length > maxUncompressedArchiveBytes - declaredTotal)
-            {
-                var projectedDeclaredTotal = declaredTotal + (double)entry.Length;
-                var projectedCompressedTotal = compressedTotal + (double)entry.CompressedLength;
-                var projectedRatio = projectedCompressedTotal == 0
-                    ? double.PositiveInfinity
-                    : projectedDeclaredTotal / projectedCompressedTotal;
-                if (projectedDeclaredTotal >= _securityOptions.SuspiciousCompressionMinimumBytes &&
-                    projectedRatio > _securityOptions.SuspiciousCompressionRatio)
-                {
-                    throw new SuspiciousBookImportException("extreme-archive-compression-ratio",
-                        "Full backup has an extreme overall compression ratio.");
-                }
-
-                throw new ValidationException("Full backup archive is too large.");
-            }
-
-            declaredTotal += entry.Length;
-            compressedTotal += entry.CompressedLength;
-        }
-
-        var archiveCompressionRatio = compressedTotal == 0
-            ? double.PositiveInfinity
-            : declaredTotal / (double)compressedTotal;
-        if (declaredTotal >= _securityOptions.SuspiciousCompressionMinimumBytes &&
-            archiveCompressionRatio > _securityOptions.SuspiciousCompressionRatio)
-        {
-            throw new SuspiciousBookImportException("extreme-archive-compression-ratio",
-                "Full backup has an extreme overall compression ratio.");
-        }
-
-        if (excessiveCompressionEntry != null)
-        {
-            throw new ValidationException(
-                $"Full backup entry '{excessiveCompressionEntry}' has a suspicious compression ratio.");
-        }
-
-        return entries;
-    }
+        => ArchiveSafety.Validate(archive, _securityOptions, maxUncompressedArchiveBytes,
+            _securityOptions.MaxArchiveEntries);
 
     private static ZipArchiveEntry GetRequiredEntry(IReadOnlyDictionary<string, ZipArchiveEntry> entries,
         string entryName)
@@ -1066,43 +968,8 @@ public sealed class BookCsvImportService : IBookCsvImportService
         }
     }
 
-    private static bool IsSafeArchiveEntryName(string name)
-    {
-        if (string.IsNullOrWhiteSpace(name) || name.Length > 240 || name.Contains('\\') || name.Contains(':') ||
-            name.StartsWith('/') || name.EndsWith('/'))
-        {
-            return false;
-        }
-
-        var segments = name.Split('/');
-        return segments.All(segment => segment.Length > 0 && segment is not "." and not "..");
-    }
-
-    private static bool IsTraversalOrRootAttempt(string name)
-    {
-        if (string.IsNullOrEmpty(name))
-        {
-            return false;
-        }
-
-        if (name.Any(char.IsControl) || name.StartsWith('/') || name.StartsWith('\\') ||
-            (name.Length >= 2 && char.IsAsciiLetter(name[0]) && name[1] == ':'))
-        {
-            return true;
-        }
-
-        var normalized = name.Replace('\\', '/');
-        return normalized.Split('/').Any(segment => segment == "..");
-    }
-
-    private static bool IsLinkOrReparseEntry(ZipArchiveEntry entry)
-    {
-        const int unixFileTypeMask = 0xF000;
-        const int unixSymbolicLink = 0xA000;
-        const int windowsReparsePoint = 0x0400;
-        var unixFileType = (entry.ExternalAttributes >> 16) & unixFileTypeMask;
-        return unixFileType == unixSymbolicLink || (entry.ExternalAttributes & windowsReparsePoint) != 0;
-    }
+    private static bool IsSafeArchiveEntryName(string name) => ArchiveSafety.IsSafeName(name);
+    private static bool IsTraversalOrRootAttempt(string name) => ArchiveSafety.IsTraversal(name);
 
     private static bool IsSafeCoverEntryName(string name)
     {
@@ -1192,40 +1059,9 @@ public sealed class BookCsvImportService : IBookCsvImportService
             cancellationToken);
     }
 
-    private static async Task CopyBoundedAsync(Stream source, Stream destination, long maximumBytes,
+    private static Task CopyBoundedAsync(Stream source, Stream destination, long maximumBytes,
         long declaredLength, string entryName, ArchiveReadBudget budget, CancellationToken cancellationToken)
-    {
-        var buffer = new byte[64 * 1024];
-        long entryBytes = 0;
-        while (true)
-        {
-            var read = await source.ReadAsync(buffer, cancellationToken);
-            if (read == 0)
-            {
-                break;
-            }
-
-            entryBytes += read;
-            if (entryBytes > declaredLength)
-            {
-                throw new SuspiciousBookImportException("forged-uncompressed-size",
-                    "Full backup contains an entry whose decompressed size exceeds its declared size.");
-            }
-
-            if (entryBytes > maximumBytes)
-            {
-                throw new ValidationException($"Full backup entry '{entryName}' is too large after decompression.");
-            }
-
-            budget.Add(read);
-            await destination.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
-        }
-
-        if (entryBytes == 0)
-        {
-            throw new ValidationException($"Full backup entry '{entryName}' is empty.");
-        }
-    }
+        => ArchiveSafety.CopyAsync(source, destination, maximumBytes, declaredLength, budget, cancellationToken);
 
     private static async Task<string?> DetectCoverMimeTypeAsync(string path, CancellationToken cancellationToken)
     {
@@ -1321,27 +1157,6 @@ public sealed class BookCsvImportService : IBookCsvImportService
         }
 
         return count;
-    }
-
-    private sealed class ArchiveReadBudget
-    {
-        private readonly long _maximumBytes;
-        private long _readBytes;
-
-        public ArchiveReadBudget(long maximumBytes)
-        {
-            _maximumBytes = maximumBytes;
-        }
-
-        public void Add(int bytes)
-        {
-            if (bytes > _maximumBytes - _readBytes)
-            {
-                throw new ValidationException("Full backup exceeds the decompressed data limit.");
-            }
-
-            _readBytes += bytes;
-        }
     }
 
     private sealed record StagedCoverResult(long SizeBytes, string MimeType);

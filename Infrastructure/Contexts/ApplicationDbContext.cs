@@ -1,8 +1,8 @@
 namespace Infrastructure.Contexts;
 
-using Infrastructure.BookSearch;
+using BookSearch;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
+using NpgsqlTypes;
 
 public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, Guid>
 {
@@ -15,6 +15,10 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
     }
 
     public DbSet<Book> Books { get; set; }
+    public DbSet<BookFile> BookFiles { get; set; }
+    public DbSet<PublicBookFile> PublicBookFiles { get; set; }
+    public DbSet<BookFileJob> BookFileJobs { get; set; }
+    public DbSet<BookFileDownloadTicket> BookFileDownloadTickets { get; set; }
     public DbSet<BookCover> BookCovers { get; set; }
     public DbSet<BookTitle> BookTitles { get; set; }
     public DbSet<BookLink> BookLinks { get; set; }
@@ -49,6 +53,7 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
                     {
                         book.LastProgressUpdatedAt = now;
                     }
+
                     break;
 
                 case EntityState.Modified:
@@ -66,6 +71,7 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
         base.OnModelCreating(modelBuilder);
 
         ConfigureBook(modelBuilder, Database.IsNpgsql());
+        ConfigureBookFiles(modelBuilder);
         ConfigureAuthor(modelBuilder);
         ConfigureGenre(modelBuilder);
         ConfigureStatus(modelBuilder);
@@ -79,8 +85,49 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
         {
             ConfigureBookSearchFunctions(modelBuilder);
         }
+
         ConfigureIdentity(modelBuilder);
         SeedSystemDictionaries(modelBuilder);
+    }
+
+    private static void ConfigureBookFiles(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<BookFile>(entity =>
+        {
+            entity.HasOne<Book>().WithMany().HasForeignKey(f => f.BookId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(f => new { f.BookId, f.SortOrder });
+            entity.HasIndex(f => new { f.OwnerId, f.DeletedAtUtc });
+            entity.HasIndex(f => new { f.BookId, f.Sha256 }).IsUnique().HasFilter("\"DeletedAtUtc\" IS NULL");
+            entity.Property(f => f.StoragePath).HasMaxLength(500);
+            entity.Property(f => f.OriginalFileName).HasMaxLength(250);
+            entity.Property(f => f.Title).HasMaxLength(250);
+            entity.Property(f => f.FirstContentLabel).HasMaxLength(500);
+            entity.Property(f => f.LastContentLabel).HasMaxLength(500);
+            entity.Property(f => f.Sha256).HasMaxLength(64);
+            entity.Property(f => f.MimeType).HasMaxLength(100);
+            entity.ToTable(t => t.HasCheckConstraint("CK_BookFiles_Size", "\"SizeBytes\" > 0"));
+        });
+        modelBuilder.Entity<PublicBookFile>(entity =>
+        {
+            entity.HasKey(f => new { f.SnapshotId, f.BookFileId });
+            entity.HasOne<PublicBookSnapshot>().WithMany().HasForeignKey(f => f.SnapshotId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<BookFile>().WithMany().HasForeignKey(f => f.BookFileId).OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<BookFileJob>(entity =>
+        {
+            entity.Property(j => j.Kind).HasMaxLength(30);
+            entity.Property(j => j.Status).HasMaxLength(30).IsConcurrencyToken();
+            entity.Property(j => j.UpdatedAtUtc).IsConcurrencyToken();
+            entity.Property(j => j.Error).HasMaxLength(2000);
+            entity.HasIndex(j => new { j.Status, j.CreatedAtUtc });
+            entity.HasIndex(j => new { j.OwnerId, j.ExpiresAtUtc });
+        });
+        modelBuilder.Entity<BookFileDownloadTicket>(entity =>
+        {
+            entity.Property(t => t.TokenHash).HasMaxLength(64);
+            entity.HasIndex(t => t.ExpiresAtUtc);
+        });
     }
 
     private static void ConfigureBook(ModelBuilder modelBuilder, bool isPostgres)
@@ -104,11 +151,12 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
             entity.Property(b => b.SearchDocument).HasDefaultValue(string.Empty);
             if (isPostgres)
             {
-                entity.Property<NpgsqlTypes.NpgsqlTsVector>("SearchVector")
+                entity.Property<NpgsqlTsVector>("SearchVector")
                     .HasColumnType("tsvector")
                     .IsRequired()
                     .HasDefaultValueSql("''::tsvector");
             }
+
             entity.Property(b => b.CurrentChapterLabel).HasMaxLength(100);
 
             entity.HasOne(b => b.Author)
@@ -392,7 +440,8 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
     {
         modelBuilder.Entity<StorageCleanupQueueItem>(entity =>
         {
-            entity.HasIndex(item => item.StoragePath).IsUnique();
+            entity.HasIndex(item => new { item.StorageKind, item.StoragePath }).IsUnique();
+            entity.Property(item => item.StorageKind).HasMaxLength(30).HasDefaultValue("Cover");
             entity.HasIndex(item => item.NextAttemptAt);
             entity.Property(item => item.StoragePath).HasMaxLength(500);
             entity.Property(item => item.LastError).HasMaxLength(2000);
@@ -417,7 +466,7 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
     {
         var method = typeof(BookSearchDbFunctions).GetMethod(
             nameof(BookSearchDbFunctions.HasCloseLexeme),
-            [typeof(NpgsqlTypes.NpgsqlTsVector), typeof(string)])!;
+            [typeof(NpgsqlTsVector), typeof(string)])!;
 
         modelBuilder.HasDbFunction(method)
             .HasName("book_search_has_close_lexeme")

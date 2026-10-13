@@ -15,6 +15,7 @@ import { getDisplayCoverFailure, getDisplayCoverStatus } from './coverFailure'
 import { getBookListReturnTo } from './bookListNavigation'
 import { DescribedMetadataPills } from './MetadataBadges'
 import { ProgressDialog } from './ProgressDialog'
+import { BookFilesPanel } from './BookFilesPanel'
 
 export function BookDetailsPage() {
   const { id } = useParams<{ id: string }>()
@@ -244,7 +245,8 @@ export function BookDetailsPage() {
           </div>
         </Surface>
 
-        <section className="grid gap-4 md:grid-cols-2">
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <BookFilesPanel bookId={book.id} />
           <Panel title="Links">
             <div className="grid gap-2">
               {book.links.length ? book.links.map((link) => (

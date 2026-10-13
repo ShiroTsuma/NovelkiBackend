@@ -31,7 +31,16 @@ public sealed class PublicBookService(
         var total = await query.CountAsync(cancellationToken);
         var snapshots = await query.OrderBy(snapshot => snapshot.PrimaryTitle).ThenBy(snapshot => snapshot.Id)
             .Skip(skip).Take(take).ToListAsync(cancellationToken);
-        return PaginatedResult<PublicBookSnapshotDto>.Create(skip, take, total, snapshots.Select(ToDto));
+        var ids = snapshots.Select(s => s.Id).ToArray();
+        var counts = await (from p in context.PublicBookFiles
+            join f in context.BookFiles on p.BookFileId equals f.Id
+            join s in context.PublicBookSnapshots on p.SnapshotId equals s.Id
+            where ids.Contains(s.Id) && f.DeletedAtUtc == null && f.BookId == s.SourceBookId && f.OwnerId == s.OwnerId
+            group p by p.SnapshotId
+            into g
+            select new { Id = g.Key, Count = g.Count() }).ToDictionaryAsync(g => g.Id, g => g.Count, cancellationToken);
+        return PaginatedResult<PublicBookSnapshotDto>.Create(skip, take, total,
+            snapshots.Select(s => ToDto(s, counts.GetValueOrDefault(s.Id))));
     }
 
     public async Task<PublicBookSnapshotDto> PublishAsync(Guid bookId, CancellationToken cancellationToken)
@@ -786,7 +795,7 @@ public sealed class PublicBookService(
                                                                                book.ContentTypeId == contentTypeId,
         cancellationToken);
 
-    private PublicBookSnapshotDto ToDto(PublicBookSnapshot snapshot) => new()
+    private PublicBookSnapshotDto ToDto(PublicBookSnapshot snapshot, int filesCount = 0) => new()
     {
         Id = snapshot.Id,
         SourceBookId = snapshot.SourceBookId,
@@ -803,7 +812,8 @@ public sealed class PublicBookService(
         CoverUrl = snapshot.CoverStoragePath is null
             ? null
             : ApiRoutes.PublicBookCover(snapshot.Id, snapshot.SnapshotAt.ToUnixTimeMilliseconds()),
-        IsOwner = snapshot.OwnerId == user.RequiredId
+        IsOwner = snapshot.OwnerId == user.RequiredId,
+        FilesCount = filesCount
     };
 
     private static BookCover CreateBookCover(Book book, BookCoverStoredFiles stored) => new()

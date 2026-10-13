@@ -18,6 +18,7 @@ public sealed record PublicBookSnapshotDto
     public string? CoverUrl { get; init; }
     public DateTimeOffset SnapshotAt { get; init; }
     public bool IsOwner { get; init; }
+    public int FilesCount { get; init; }
 }
 
 public sealed record CopyPublicBookResult(Guid BookId);

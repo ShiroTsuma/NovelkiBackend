@@ -283,7 +283,7 @@ export function ImportBooksDialog({ mode = 'csv', open, onClose, onImported }: I
                   : isFullImport ? 'Choose a full backup ZIP' : 'Choose a CSV file'}
               </div>
               <div className="text-sm text-slate-400">
-                Drop {isFullImport ? 'a backup ZIP' : 'a CSV'} here or use file selection. Nothing is written to the database until you press final save.
+                {isFullImport && 'This backup restores book data and covers; use EPUB archive import for EPUB files. '}Drop {isFullImport ? 'a backup ZIP' : 'a CSV'} here or use file selection. Nothing is written to the database until you press final save.
               </div>
             </div>
             <div className="flex justify-center">

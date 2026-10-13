@@ -82,6 +82,7 @@ export type PublicBookMetadataDto = {
 }
 
 export type PublicBookSnapshotDto = {
+  filesCount?: number
   id: string
   sourceBookId: string
   primaryTitle: string

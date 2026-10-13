@@ -1,21 +1,24 @@
 namespace Api.Observability;
 
 using System.Data;
+using System.Text.RegularExpressions;
+using Infrastructure.BookFiles;
 using Infrastructure.Observability;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Serilog.Events;
 using Serilog.Sinks.OpenTelemetry;
-using System.Text.RegularExpressions;
 
 public static class ObservabilityExtensions
 {
     private const string OtlpEndpointVariable = "OTEL_EXPORTER_OTLP_ENDPOINT";
     private const string DeploymentEnvironmentAttribute = "deployment.environment";
+
     private static readonly Regex SqlOperationPattern = new(
         @"^\s*(?:/\*.*?\*/\s*)*(?<operation>SELECT|INSERT|UPDATE|DELETE|MERGE|EXEC(?:UTE)?)\b",
         RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.Singleline);
+
     private static readonly Regex SqlRelationPattern = new(
         @"\b(?:FROM|INTO|UPDATE)\s+(?<relation>(?:\[[^\]]+\]|""[^""]+""|`[^`]+`|[A-Za-z_][\w$]*)(?:\.(?:\[[^\]]+\]|""[^""]+""|`[^`]+`|[A-Za-z_][\w$]*))*)",
         RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
@@ -95,7 +98,7 @@ public static class ObservabilityExtensions
             .WithMetrics(metrics =>
             {
                 metrics
-                    .AddMeter(NovelkiTelemetry.MeterName)
+                    .AddMeter(NovelkiTelemetry.MeterName, BookFileTelemetry.Meter.Name)
                     .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
                     .AddRuntimeInstrumentation();

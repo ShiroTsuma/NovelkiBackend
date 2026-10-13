@@ -9,12 +9,24 @@ public sealed class StorageCleanupQueue(ApplicationDbContext context, TimeProvid
                      .Cast<string>().Distinct(StringComparer.Ordinal))
         {
             await context.Database.ExecuteSqlInterpolatedAsync($"""
-                INSERT INTO "StorageCleanupQueueItems"
-                    ("Id", "StoragePath", "AttemptCount", "NextAttemptAt", "LastError")
-                VALUES
-                    ({Guid.NewGuid()}, {storagePath}, {0}, {timeProvider.GetUtcNow().UtcDateTime}, {null})
-                ON CONFLICT ("StoragePath") DO NOTHING
-                """, cancellationToken);
+                                                                INSERT INTO "StorageCleanupQueueItems"
+                                                                    ("Id", "StoragePath", "StorageKind", "AttemptCount", "NextAttemptAt", "LastError")
+                                                                VALUES
+                                                                    ({Guid.NewGuid()}, {storagePath}, {"Cover"}, {0}, {timeProvider.GetUtcNow().UtcDateTime}, {null})
+                                                                ON CONFLICT ("StorageKind", "StoragePath") DO NOTHING
+                                                                """, cancellationToken);
         }
+    }
+
+    public async Task EnqueueBookFilesAsync(IEnumerable<string> storagePaths, DateTime notBeforeUtc,
+        CancellationToken cancellationToken)
+    {
+        foreach (var path in storagePaths.Distinct(StringComparer.Ordinal))
+            await context.Database.ExecuteSqlInterpolatedAsync($"""
+                                                                INSERT INTO "StorageCleanupQueueItems"
+                                                                    ("Id", "StoragePath", "StorageKind", "AttemptCount", "NextAttemptAt", "LastError")
+                                                                VALUES ({Guid.NewGuid()}, {path}, {"BookFile"}, {0}, {notBeforeUtc}, {null})
+                                                                ON CONFLICT ("StorageKind", "StoragePath") DO UPDATE SET "NextAttemptAt" = {notBeforeUtc}
+                                                                """, cancellationToken);
     }
 }

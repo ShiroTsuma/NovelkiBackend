@@ -40,6 +40,8 @@ import {
   useBookListUrlState,
 } from './BookListShared'
 import { ImportBooksDialog } from './ImportBooksDialog'
+import { FileImportDialog } from './files/FileImportDialog'
+import { FileExportDialog } from './files/FileExportDialog'
 import { DescribedMetadataPills, MetadataSummary } from './MetadataBadges'
 
 export { formatProgress } from './bookProgress'
@@ -107,6 +109,8 @@ export function BooksPage() {
   const [lastImportResult, setLastImportResult] = useState<BookImportFinalizeResult | null>(null)
   const [importDialogOpen, setImportDialogOpen] = useState(false)
   const [importMenuOpen, setImportMenuOpen] = useState(false)
+  const [epubExportOpen, setEpubExportOpen] = useState(false)
+  const [epubImportOpen, setEpubImportOpen] = useState(false)
   const [importMode, setImportMode] = useState<'csv' | 'full'>('csv')
   const [summaryOpen, setSummaryOpen] = useState(false)
   const pageSizeOptions = viewMode === 'cards'
@@ -316,7 +320,12 @@ export function BooksPage() {
                   }}
                 >
                   {fullExportMutation.isPending ? 'Creating full backup...' : 'Full backup (ZIP)'}
-                  <span className="mt-0.5 block text-xs font-normal text-[var(--qs-muted)]">CSV plus stored cover files</span>
+                  <span className="mt-0.5 block text-xs font-normal text-[var(--qs-muted)]">CSV plus stored cover files; EPUBs exported separately</span>
+                </button>
+                <button className="px-3 py-3 text-left text-sm font-semibold hover:bg-[var(--qs-surface-muted)]" role="menuitem" type="button"
+                  onClick={() => { setExportMenuOpen(false); setEpubExportOpen(true) }}>
+                  EPUB files (ZIP)
+                  <span className="mt-0.5 block text-xs font-normal text-[var(--qs-muted)]">Choose books and files; includes a restore manifest</span>
                 </button>
               </div>
             ) : null}
@@ -363,6 +372,11 @@ export function BooksPage() {
                 >
                   Full backup (ZIP)
                   <span className="mt-0.5 block text-xs font-normal text-[var(--qs-muted)]">Restore book data and stored covers</span>
+                </button>
+                <button className="px-3 py-3 text-left text-sm font-semibold hover:bg-[var(--qs-surface-muted)]" role="menuitem" type="button"
+                  onClick={() => { setImportMenuOpen(false); setEpubImportOpen(true) }}>
+                  EPUB archive
+                  <span className="mt-0.5 block text-xs font-normal text-[var(--qs-muted)]">Restore EPUBs to existing books</span>
                 </button>
               </div>
             ) : null}
@@ -464,6 +478,8 @@ export function BooksPage() {
           onGoToPage={pagination.onGoToPage}
         />
       </Surface>
+      {epubExportOpen && <FileExportDialog query={requestQuery} onClose={() => setEpubExportOpen(false)} />}
+      {epubImportOpen && <FileImportDialog onClose={() => setEpubImportOpen(false)} onImported={() => { void queryClient.invalidateQueries({ queryKey: ['book-files'] }) }} />}
       <ImportBooksDialog mode={importMode} open={importDialogOpen} onClose={() => setImportDialogOpen(false)} onImported={handleImportComplete} />
       <ScrollShortcutButtons
         showBackToTop={scrollShortcuts.showBackToTop}

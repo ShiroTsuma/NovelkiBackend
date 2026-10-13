@@ -6,7 +6,8 @@ public sealed class StorageCleanupQueueProcessor(
     ApplicationDbContext context,
     IBookCoverStorage storage,
     TimeProvider timeProvider,
-    ILogger<StorageCleanupQueueProcessor> logger)
+    ILogger<StorageCleanupQueueProcessor> logger,
+    IBookFileStorage? bookFileStorage = null)
 {
     private const int BatchSize = 20;
     private const int LastErrorMaxLength = 2000;
@@ -26,6 +27,32 @@ public sealed class StorageCleanupQueueProcessor(
         {
             try
             {
+                if (item.StorageKind == "BookFile")
+                {
+                    var file = await context.BookFiles.AsNoTracking()
+                        .SingleOrDefaultAsync(f => f.StoragePath == item.StoragePath, cancellationToken);
+                    await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+                    if (file != null && context.Database.IsNpgsql())
+                        await context.Database.ExecuteSqlInterpolatedAsync(
+                            $"SELECT pg_advisory_xact_lock({BitConverter.ToInt64(file.OwnerId.ToByteArray())})",
+                            cancellationToken);
+                    file = await context.BookFiles.AsNoTracking()
+                        .SingleOrDefaultAsync(f => f.StoragePath == item.StoragePath, cancellationToken);
+                    if (file == null || file.DeletedAtUtc != null)
+                    {
+                        await (bookFileStorage ??
+                               throw new InvalidOperationException("EPUB storage is not configured."))
+                            .DeleteIfExistsAsync(item.StoragePath, cancellationToken);
+                        await context.BookFiles.Where(f => f.StoragePath == item.StoragePath && f.DeletedAtUtc != null)
+                            .ExecuteDeleteAsync(cancellationToken);
+                    }
+
+                    context.StorageCleanupQueueItems.Remove(item);
+                    await context.SaveChangesAsync(cancellationToken);
+                    await transaction.CommitAsync(cancellationToken);
+                    continue;
+                }
+
                 await storage.DeleteIfExistsAsync(item.StoragePath, cancellationToken);
                 context.StorageCleanupQueueItems.Remove(item);
             }

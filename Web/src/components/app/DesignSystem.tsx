@@ -1,4 +1,4 @@
-import { useEffect, type HTMLAttributes, type ReactNode } from 'react'
+import { useEffect, type HTMLAttributes, type ReactNode, type Ref } from 'react'
 import { cn } from '@/lib/utils'
 
 export const buttonVariants = {
@@ -10,20 +10,23 @@ export const buttonVariants = {
 
 export const controlClass = 'ui-control'
 
+let scrollLockCount = 0
+let savedBodyOverflow = ''
+let savedRootOverflow = ''
 export function useBodyScrollLock(active: boolean) {
   useEffect(() => {
-    if (!active) {
-      return
+    if (!active) return
+    if (scrollLockCount++ === 0) {
+      savedBodyOverflow = document.body.style.overflow
+      savedRootOverflow = document.documentElement.style.overflow
+      document.body.style.overflow = 'hidden'
+      document.documentElement.style.overflow = 'hidden'
     }
-
-    const bodyOverflow = document.body.style.overflow
-    const rootOverflow = document.documentElement.style.overflow
-    document.body.style.overflow = 'hidden'
-    document.documentElement.style.overflow = 'hidden'
-
     return () => {
-      document.body.style.overflow = bodyOverflow
-      document.documentElement.style.overflow = rootOverflow
+      if (--scrollLockCount === 0) {
+        document.body.style.overflow = savedBodyOverflow
+        document.documentElement.style.overflow = savedRootOverflow
+      }
     }
   }, [active])
 }
@@ -90,7 +93,7 @@ export function DialogPanel({
   children,
   className,
   ...props
-}: HTMLAttributes<HTMLElement>) {
+}: HTMLAttributes<HTMLElement> & { ref?: Ref<HTMLElement> }) {
   return (
     <section className={cn('ui-dialog-panel', className)} {...props}>
       {children}

@@ -208,6 +208,19 @@ export async function installLayoutApiMocks(page: Page) {
     const url = new URL(route.request().url())
     const path = url.pathname.replace('/api/v1/', '')
 
+    if (path === 'book/files/limits') {
+      await route.fulfill({ json: { maxFileBytes: 104857600, maxUploadBytes: 314572800, maxFilesPerImport: 100, maxLibraryArchiveBytes: 12884901888, retentionDays: 30 } })
+      return
+    }
+    if (path === 'book/files/sessions' || path === 'book/files/export/candidates' || /^public-book\/[^/]+\/files$/.test(path)) {
+      await route.fulfill({ json: [] })
+      return
+    }
+    if (/^book\/[^/]+\/files$/.test(path)) {
+      await route.fulfill({ json: { files: [], snapshotId: null, usedStorageBytes: 0, maxStorageBytes: 10737418240, maxFileBytes: 104857600, maxUploadBytes: 314572800 } })
+      return
+    }
+
     if (path === 'account/refresh') {
       await route.fulfill({
         json: {
