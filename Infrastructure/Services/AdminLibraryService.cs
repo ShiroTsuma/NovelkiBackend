@@ -30,7 +30,10 @@ public sealed class AdminLibraryService : IAdminLibraryService
                 cancellationToken)
             : await DeleteAllBooksCoreAsync(ownerId, cancellationToken);
         foreach (var storagePath in outcome.StoragePaths)
+        {
             await _storage.DeleteIfExistsAsync(storagePath, cancellationToken);
+        }
+
         await _cacheInvalidator.InvalidateBooksAsync(ownerId, cancellationToken);
         return outcome.Result;
     }
@@ -83,7 +86,10 @@ public sealed class AdminLibraryService : IAdminLibraryService
                                  !author.Books.Any())
                 .ExecuteDeleteAsync(cancellationToken);
 
-        if (transaction != null) await transaction.CommitAsync(cancellationToken);
+        if (transaction != null)
+        {
+            await transaction.CommitAsync(cancellationToken);
+        }
 
         return (new AdminLibraryPurgeResult(deletedBooks, deletedAuthors, deletedTags), storagePaths);
     }

@@ -37,16 +37,18 @@ public sealed class UpdateReadingTimeSettingsHandler(
                 string.IsNullOrWhiteSpace(setting.ContentType) ||
                 setting.MinutesPerChapter < 0 ||
                 setting.MinutesPerChapter > 1440) ||
-            request.Settings.Select(setting => setting.ContentType.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Count() != request.Settings.Count)
+            request.Settings.Select(setting => setting.ContentType.Trim()).Distinct(StringComparer.OrdinalIgnoreCase)
+                .Count() != request.Settings.Count)
         {
-            throw new ValidationException("Reading-time settings must use unique content types and values from 0 to 1440.");
+            throw new ValidationException(
+                "Reading-time settings must use unique content types and values from 0 to 1440.");
         }
 
         var minutesByContentType = new Dictionary<Guid, decimal>();
         foreach (var setting in request.Settings)
         {
             var contentType = await typeRepository.GetByNameAsync(setting.ContentType, cancellationToken)
-                ?? throw new EntityNotFoundException<ContentType, string>(setting.ContentType);
+                              ?? throw new EntityNotFoundException<ContentType, string>(setting.ContentType);
             minutesByContentType.Add(contentType.Id, setting.MinutesPerChapter);
         }
 

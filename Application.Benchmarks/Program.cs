@@ -8,8 +8,7 @@ BenchmarkRunner.Run<BookSearchQueryParserBenchmarks>();
 [ShortRunJob]
 public class BookSearchQueryParserBenchmarks
 {
-    [ParamsSource(nameof(Queries))]
-    public string Query { get; set; } = string.Empty;
+    [ParamsSource(nameof(Queries))] public string Query { get; set; } = string.Empty;
 
     public IEnumerable<string> Queries =>
     [
@@ -20,5 +19,8 @@ public class BookSearchQueryParserBenchmarks
     ];
 
     [Benchmark]
-    public object Parse() => BookSearchQueryParser.Parse(Query);
+    public object Parse()
+    {
+        return BookSearchQueryParser.Parse(Query);
+    }
 }

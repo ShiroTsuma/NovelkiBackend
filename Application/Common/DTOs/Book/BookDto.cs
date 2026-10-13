@@ -25,11 +25,15 @@ public record BookDto
 
     public BookCoverDto? Cover { get; set; }
     public IReadOnlyCollection<string> Genres { get; set; } = Array.Empty<string>();
+
     public IReadOnlyDictionary<string, string?> GenreDescriptions { get; set; } =
         new Dictionary<string, string?>();
+
     public IReadOnlyCollection<string> Tags { get; set; } = Array.Empty<string>();
+
     public IReadOnlyDictionary<string, string?> TagDescriptions { get; set; } =
         new Dictionary<string, string?>();
+
     public IReadOnlyCollection<BookLinkDto> Links { get; set; } = Array.Empty<BookLinkDto>();
 }
 
@@ -54,12 +58,16 @@ public record BookListItemDto
     public string? Notes { get; set; }
     public BookCoverSummaryDto? Cover { get; set; }
     public IReadOnlyCollection<string> Genres { get; set; } = Array.Empty<string>();
+
     public IReadOnlyDictionary<string, string?> GenreDescriptions { get; set; } =
         new Dictionary<string, string?>();
+
     public int GenresCount { get; set; }
     public IReadOnlyCollection<string> Tags { get; set; } = Array.Empty<string>();
+
     public IReadOnlyDictionary<string, string?> TagDescriptions { get; set; } =
         new Dictionary<string, string?>();
+
     public int TagsCount { get; set; }
     public int LinksCount { get; set; }
 }

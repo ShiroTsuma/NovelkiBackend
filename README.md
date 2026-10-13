@@ -9,7 +9,8 @@ serii. Repozytorium zawiera API w ASP.NET Core, frontend w React oraz gotowy sta
 - wyszukiwanie PostgreSQL z filtrami pól, wykluczeniami, fuzzy matchingiem, wildcardami i sugestiami;
 - import i eksport CSV oraz pełne archiwum ZIP razem z okładkami;
 - automatyczne pobieranie i przetwarzanie okładek, zapis lokalny albo w magazynie zgodnym z S3;
-- parser HTML metadanych stron NovelUpdates, Royal Road, Scribble Hub, WebNovel, Anime-Planet, Baka-Updates/MangaUpdates,
+- parser HTML metadanych stron NovelUpdates, Royal Road, Scribble Hub, WebNovel, Anime-Planet,
+  Baka-Updates/MangaUpdates,
   RanobeDB, Wuxiaworld, AniList, J-Novel Club, Seven Seas, Yen Press, Syosetu i Kakuyomu;
 - publiczne snapshoty książek, katalog odkrywania i kopiowanie pozycji do własnej biblioteki;
 - statystyki biblioteki, wykresy aktywności i kontrola kompletności metadanych;
@@ -18,14 +19,14 @@ serii. Repozytorium zawiera API w ASP.NET Core, frontend w React oraz gotowy sta
 
 ## Stos
 
-| Warstwa | Technologie |
-| --- | --- |
-| API | .NET 10, ASP.NET Core, MediatR, FluentValidation |
-| Dane | EF Core 10, PostgreSQL, `pg_trgm`, `fuzzystrmatch`, opcjonalny Redis |
-| Tożsamość | ASP.NET Core Identity, JWT Bearer |
-| Frontend | React 19, TypeScript 6, Vite 6, Tailwind CSS 4, TanStack Query |
-| Testy | xUnit, SQLite, Testcontainers PostgreSQL, Vitest, Testing Library, Playwright |
-| Monitoring | OpenTelemetry, Grafana, Prometheus, Loki, Tempo |
+| Warstwa    | Technologie                                                                   |
+|------------|-------------------------------------------------------------------------------|
+| API        | .NET 10, ASP.NET Core, MediatR, FluentValidation                              |
+| Dane       | EF Core 10, PostgreSQL, `pg_trgm`, `fuzzystrmatch`, opcjonalny Redis          |
+| Tożsamość  | ASP.NET Core Identity, JWT Bearer                                             |
+| Frontend   | React 19, TypeScript 6, Vite 6, Tailwind CSS 4, TanStack Query                |
+| Testy      | xUnit, SQLite, Testcontainers PostgreSQL, Vitest, Testing Library, Playwright |
+| Monitoring | OpenTelemetry, Grafana, Prometheus, Loki, Tempo                               |
 
 ## Szybki start z Docker Compose
 
@@ -46,9 +47,9 @@ ale nie tworzy PostgreSQL ani Redis.
 
 2. Uzupełnij w `.env`:
 
-   - `DB_CONNECTION_STRING` z hostem osiągalnym z kontenera;
-   - `JWT_KEY`, `JWT_ISSUER` i `JWT_AUDIENCE`;
-   - `ADMIN_EMAIL`, jeżeli aplikacja ma nadać rolę administratora przy starcie.
+    - `DB_CONNECTION_STRING` z hostem osiągalnym z kontenera;
+    - `JWT_KEY`, `JWT_ISSUER` i `JWT_AUDIENCE`;
+    - `ADMIN_EMAIL`, jeżeli aplikacja ma nadać rolę administratora przy starcie.
 
    Redis jest opcjonalny. Ustaw pusty `REDIS_CONNECTION_STRING`, aby użyć cache in-memory. Jeśli nie korzystasz z S3,
    wyczyść wartości `BOOK_COVERS__S3__*`; API zapisze wtedy okładki w `storage/covers`.
@@ -64,7 +65,7 @@ ale nie tworzy PostgreSQL ani Redis.
 4. Otwórz aplikację:
 
    | Usługa | Adres |
-   | --- | --- |
+         | --- | --- |
    | Web HTTPS | `https://localhost:8080` |
    | Web HTTP | `http://localhost:8081` |
    | API | `http://localhost:5232` |
@@ -169,17 +170,17 @@ ustawisz przez `VITE_API_PROXY_TARGET`.
 
 Najczęściej używane zmienne:
 
-| Zmienna | Wymagana | Opis |
-| --- | --- | --- |
-| `DB_CONNECTION_STRING` | tak | Connection string PostgreSQL |
-| `JWT_KEY` | tak | Klucz podpisujący tokeny |
-| `JWT_ISSUER`, `JWT_AUDIENCE` | tak | Issuer i audience JWT |
-| `ADMIN_EMAIL` | nie | Konto, które dostanie rolę `Admin` |
-| `REDIS_CONNECTION_STRING` | nie | Redis dla cache listy książek |
-| `WEB_PUBLIC_ORIGIN` | nie | Publiczny origin dodawany do CORS |
-| `API_PORT`, `WEB_PORT`, `WEB_HTTP_PORT` | nie | Porty wystawiane przez Compose |
-| `BOOK_COVERS__S3__*` | nie | Endpoint, dane dostępowe i bucket storage S3 |
-| `GRAFANA_ADMIN_USER`, `GRAFANA_ADMIN_PASSWORD` | nie | Konto lokalnej Grafany |
+| Zmienna                                        | Wymagana | Opis                                         |
+|------------------------------------------------|----------|----------------------------------------------|
+| `DB_CONNECTION_STRING`                         | tak      | Connection string PostgreSQL                 |
+| `JWT_KEY`                                      | tak      | Klucz podpisujący tokeny                     |
+| `JWT_ISSUER`, `JWT_AUDIENCE`                   | tak      | Issuer i audience JWT                        |
+| `ADMIN_EMAIL`                                  | nie      | Konto, które dostanie rolę `Admin`           |
+| `REDIS_CONNECTION_STRING`                      | nie      | Redis dla cache listy książek                |
+| `WEB_PUBLIC_ORIGIN`                            | nie      | Publiczny origin dodawany do CORS            |
+| `API_PORT`, `WEB_PORT`, `WEB_HTTP_PORT`        | nie      | Porty wystawiane przez Compose               |
+| `BOOK_COVERS__S3__*`                           | nie      | Endpoint, dane dostępowe i bucket storage S3 |
+| `GRAFANA_ADMIN_USER`, `GRAFANA_ADMIN_PASSWORD` | nie      | Konto lokalnej Grafany                       |
 
 Pełny zestaw wartości znajduje się w `.env.example`.
 

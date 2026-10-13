@@ -1,7 +1,6 @@
 namespace Application.Common;
 
 using System.Globalization;
-using Domain.Repositories;
 using Pidgin;
 using static Pidgin.Parser;
 using static Pidgin.Parser<char>;
@@ -123,10 +122,7 @@ public static class BookSearchQueryParser
             missing.AddRange(parsed.Missing);
         }
 
-        return new BookSearchCriteria(terms, fields, numbers, dates, missing)
-        {
-            Exclusions = exclusions
-        };
+        return new BookSearchCriteria(terms, fields, numbers, dates, missing) { Exclusions = exclusions };
     }
 
     private static BookSearchCriteria ParseToken(string token)
@@ -156,7 +152,7 @@ public static class BookSearchQueryParser
             return Criteria(fields: [fieldFilter]);
         }
 
-        return Criteria(terms: [token]);
+        return Criteria([token]);
     }
 
     private static bool IsEmptyKnownFilterToken(string token)
@@ -545,10 +541,10 @@ public static class BookSearchQueryParser
         };
     }
 
-    private readonly record struct DatePeriod(DateOnly Start, DateOnly EndExclusive);
-
     private static string NormalizeAliases(string query)
     {
         return query.Replace("total chapters", "total-chapters", StringComparison.OrdinalIgnoreCase);
     }
+
+    private readonly record struct DatePeriod(DateOnly Start, DateOnly EndExclusive);
 }

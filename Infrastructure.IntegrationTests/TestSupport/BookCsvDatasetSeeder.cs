@@ -1,14 +1,14 @@
+namespace Infrastructure.IntegrationTests.TestSupport;
+
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Application.Common;
+using Contexts;
 using Domain.Associations;
 using Domain.Entities;
-using Infrastructure.Contexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.VisualBasic.FileIO;
-
-namespace Infrastructure.IntegrationTests.TestSupport;
 
 public static class BookCsvDatasetSeeder
 {
@@ -22,6 +22,7 @@ public static class BookCsvDatasetSeeder
 
     private static readonly string[] CsvRelativePaths =
         ["Sample/books-export.csv", "Infrastructure.IntegrationTests/Sample/books-export.csv"];
+
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         PropertyNameCaseInsensitive = true

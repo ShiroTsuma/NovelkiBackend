@@ -24,8 +24,11 @@ public sealed partial class BookFileService(
     private readonly BookFileOptions _options = options.Value;
     private readonly BookImportSecurityOptions _security = securityOptions.Value;
 
-    public BookFileLimitsDto Limits() => new(_options.MaxFileBytes, _options.MaxUploadBytes, _options.MaxFilesPerImport,
-        _options.MaxLibraryArchiveBytes, _options.Retention.TotalDays);
+    public BookFileLimitsDto Limits()
+    {
+        return new BookFileLimitsDto(_options.MaxFileBytes, _options.MaxUploadBytes, _options.MaxFilesPerImport,
+            _options.MaxLibraryArchiveBytes, _options.Retention.TotalDays);
+    }
 
     public async Task<BookFileListDto> ListAsync(Guid bookId, CancellationToken ct)
     {
@@ -49,7 +52,10 @@ public sealed partial class BookFileService(
     {
         _ = user.RequiredId;
         if (!await context.PublicBookSnapshots.AnyAsync(s => s.Id == snapshotId, ct))
+        {
             throw new EntityNotFoundException<PublicBookSnapshot, Guid>(snapshotId);
+        }
+
         return (await (from p in context.PublicBookFiles
             join f in context.BookFiles on p.BookFileId equals f.Id
             join s in context.PublicBookSnapshots on p.SnapshotId equals s.Id
@@ -61,7 +67,11 @@ public sealed partial class BookFileService(
     public async Task UpdateAsync(Guid bookId, Guid fileId, string title, CancellationToken ct)
     {
         var file = await OwnedFileAsync(bookId, fileId, ct);
-        if (file.DeletedAtUtc != null) throw new ValidationException("Restore the file before editing it.");
+        if (file.DeletedAtUtc != null)
+        {
+            throw new ValidationException("Restore the file before editing it.");
+        }
+
         file.Title = ValidateTitle(title);
         await context.SaveChangesAsync(ct);
     }
@@ -72,8 +82,15 @@ public sealed partial class BookFileService(
         var files = await context.BookFiles
             .Where(f => f.BookId == bookId && f.OwnerId == user.RequiredId && f.DeletedAtUtc == null).ToListAsync(ct);
         if (ids.Count != files.Count || ids.Distinct().Count() != ids.Count || files.Any(f => !ids.Contains(f.Id)))
+        {
             throw new ValidationException("The file list changed. Reload it before changing the order.");
-        for (var i = 0; i < ids.Count; i++) files.Single(f => f.Id == ids[i]).SortOrder = i;
+        }
+
+        for (var i = 0; i < ids.Count; i++)
+        {
+            files.Single(f => f.Id == ids[i]).SortOrder = i;
+        }
+
         await context.SaveChangesAsync(ct);
     }
 
@@ -81,7 +98,11 @@ public sealed partial class BookFileService(
     {
         await using var transaction = await LockAsync(user.RequiredId, ct);
         var file = await OwnedFileAsync(bookId, fileId, ct);
-        if (file.DeletedAtUtc != null) return;
+        if (file.DeletedAtUtc != null)
+        {
+            return;
+        }
+
         file.DeletedAtUtc = DateTime.UtcNow;
         await context.PublicBookFiles.Where(p => p.BookFileId == fileId).ExecuteDeleteAsync(ct);
         await cleanup.EnqueueBookFilesAsync([file.StoragePath], file.DeletedAtUtc.Value + _options.Retention, ct);
@@ -93,12 +114,22 @@ public sealed partial class BookFileService(
     {
         await using var transaction = await LockAsync(user.RequiredId, ct);
         var file = await OwnedFileAsync(bookId, fileId, ct);
-        if (file.DeletedAtUtc == null) return;
+        if (file.DeletedAtUtc == null)
+        {
+            return;
+        }
+
         if (file.DeletedAtUtc + _options.Retention <= DateTime.UtcNow)
+        {
             throw new ValidationException("This file's retention period has expired.");
+        }
+
         if (await context.BookFiles.AnyAsync(
                 f => f.BookId == bookId && f.DeletedAtUtc == null && f.Sha256 == file.Sha256, ct))
+        {
             throw new ValidationException("An identical EPUB already exists in this book.");
+        }
+
         file.DeletedAtUtc = null;
         await context.PublicBookFiles.Where(p => p.BookFileId == fileId).ExecuteDeleteAsync(ct);
         await context.StorageCleanupQueueItems
@@ -115,9 +146,12 @@ public sealed partial class BookFileService(
             await context.PublicBookSnapshots.SingleOrDefaultAsync(
                 s => s.SourceBookId == bookId && s.OwnerId == user.RequiredId, ct)
             ?? throw new ValidationException("Publish this book before sharing EPUB files.");
-        await AuthorizedFilesAsync(ids, user.RequiredId, null, ct, allowEmpty: true);
+        await AuthorizedFilesAsync(ids, user.RequiredId, null, ct, true);
         if (await context.BookFiles.AnyAsync(f => ids.Contains(f.Id) && f.BookId != bookId, ct))
+        {
             throw new ValidationException("Every shared file must belong to this book.");
+        }
+
         await context.PublicBookFiles.Where(p => p.SnapshotId == snapshot.Id).ExecuteDeleteAsync(ct);
         context.PublicBookFiles.AddRange(ids.Distinct()
             .Select(id => new PublicBookFile { SnapshotId = snapshot.Id, BookFileId = id }));
@@ -161,10 +195,12 @@ public sealed partial class BookFileService(
             filesByBook[b.Id].Select(f => ToDto(f, false)).ToList())).ToList();
     }
 
-    private async Task<Book> OwnedBookAsync(Guid id, Guid ownerId, CancellationToken ct) =>
-        await context.Books.Include(b => b.ContentType)
-            .SingleOrDefaultAsync(b => b.Id == id && b.OwnerId == ownerId, ct)
-        ?? throw new EntityNotFoundException<Book, Guid>(id);
+    private async Task<Book> OwnedBookAsync(Guid id, Guid ownerId, CancellationToken ct)
+    {
+        return await context.Books.Include(b => b.ContentType)
+                   .SingleOrDefaultAsync(b => b.Id == id && b.OwnerId == ownerId, ct)
+               ?? throw new EntityNotFoundException<Book, Guid>(id);
+    }
 
     private async Task<BookFile> OwnedFileAsync(Guid bookId, Guid fileId, CancellationToken ct)
     {
@@ -174,16 +210,24 @@ public sealed partial class BookFileService(
                ?? throw new EntityNotFoundException<BookFile, Guid>(fileId);
     }
 
-    private async Task<long> UsedBytesAsync(Guid ownerId, CancellationToken ct) =>
-        await context.BookFiles.Where(f => f.OwnerId == ownerId).SumAsync(f => (long?)f.SizeBytes, ct) ?? 0;
+    private async Task<long> UsedBytesAsync(Guid ownerId, CancellationToken ct)
+    {
+        return await context.BookFiles.Where(f => f.OwnerId == ownerId).SumAsync(f => (long?)f.SizeBytes, ct) ?? 0;
+    }
 
-    internal static BookFileDto ToDto(BookFile f, bool shared) => new(f.Id, f.BookId, f.Title, f.OriginalFileName,
-        f.SortOrder, f.SizeBytes, f.Created, f.DeletedAtUtc, shared, f.FirstContentLabel, f.LastContentLabel);
+    internal static BookFileDto ToDto(BookFile f, bool shared)
+    {
+        return new BookFileDto(f.Id, f.BookId, f.Title, f.OriginalFileName,
+            f.SortOrder, f.SizeBytes, f.Created, f.DeletedAtUtc, shared, f.FirstContentLabel, f.LastContentLabel);
+    }
 
     private static string ValidateTitle(string title)
     {
         if (string.IsNullOrWhiteSpace(title) || title.Trim().Length > 250 || title.Any(char.IsControl))
+        {
             throw new ValidationException("File title must contain 1–250 characters and no control characters.");
+        }
+
         return title.Trim();
     }
 
@@ -191,9 +235,12 @@ public sealed partial class BookFileService(
     {
         var transaction = await context.Database.BeginTransactionAsync(ct);
         if (context.Database.IsNpgsql())
+        {
             await context.Database.ExecuteSqlInterpolatedAsync(
                 $"SELECT pg_advisory_xact_lock({(global ? 914732821L : BitConverter.ToInt64(ownerId.ToByteArray()))})",
                 ct);
+        }
+
         return transaction;
     }
 
@@ -202,12 +249,17 @@ public sealed partial class BookFileService(
         var root = Path.GetFullPath(_options.StagingRoot);
         var directory = Path.Combine(root, id.ToString("N"));
         if (name.Length > 0 && (Path.GetFileName(name) != name || name.Any(char.IsControl)))
+        {
             throw new ValidationException("Invalid staging path.");
+        }
+
         return Path.Combine(directory, name);
     }
 
-    internal static BookFileJobPayload Payload(BookFileJob job) =>
-        JsonSerializer.Deserialize<BookFileJobPayload>(job.PayloadJson, JsonOptions)!;
+    internal static BookFileJobPayload Payload(BookFileJob job)
+    {
+        return JsonSerializer.Deserialize<BookFileJobPayload>(job.PayloadJson, JsonOptions)!;
+    }
 
     private static void SetPayload(BookFileJob job, BookFileJobPayload payload)
     {
@@ -218,10 +270,15 @@ public sealed partial class BookFileService(
     internal static BookFileJobDto JobDto(BookFileJob job)
     {
         if (WorkingStatuses.Contains(job.Status))
-            return new(job.Id, job.BookId, job.Kind, job.Status, job.ProcessedFiles, job.TotalFiles, job.ExpiresAtUtc,
+        {
+            return new BookFileJobDto(job.Id, job.BookId, job.Kind, job.Status, job.ProcessedFiles, job.TotalFiles,
+                job.ExpiresAtUtc,
                 job.Error, [], [], job.ImportedCount, job.SkippedCount);
+        }
+
         var p = Payload(job);
-        return new(job.Id, job.BookId, job.Kind, job.Status, job.ProcessedFiles, job.TotalFiles, job.ExpiresAtUtc,
+        return new BookFileJobDto(job.Id, job.BookId, job.Kind, job.Status, job.ProcessedFiles, job.TotalFiles,
+            job.ExpiresAtUtc,
             job.Error,
             p.Entries.Select(e => new BookFileImportEntryDto(e.Id, e.BookId, e.BookTitle, e.ContentType, e.Title,
                 e.FileName,

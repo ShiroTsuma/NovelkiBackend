@@ -1,9 +1,9 @@
 namespace Application.UnitTests;
 
-using Application.Common.DTOs.Book;
-using Application.Common.Interfaces;
-using Application.Features.BookFeatures.Queries.GetBook;
+using Common.DTOs.Book;
+using Common.Interfaces;
 using Domain.Repositories;
+using Features.BookFeatures.Queries.GetBook;
 using FluentValidation;
 
 public sealed class BookSearchSuggestionTests

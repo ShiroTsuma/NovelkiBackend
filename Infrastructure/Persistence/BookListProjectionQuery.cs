@@ -1,7 +1,6 @@
 namespace Infrastructure.Persistence;
 
 using Application.Common.DTOs.Book;
-using Domain.Entities;
 
 public sealed class BookListProjectionQuery
 {
@@ -59,16 +58,13 @@ public sealed class BookListProjectionQuery
             .Where(snapshot => bookIds.Contains(snapshot.SourceBookId))
             .Select(snapshot => new ManagedBookListingDto
             {
-                Id = snapshot.Id,
-                SourceBookId = snapshot.SourceBookId,
-                SnapshotAt = snapshot.SnapshotAt
+                Id = snapshot.Id, SourceBookId = snapshot.SourceBookId, SnapshotAt = snapshot.SnapshotAt
             })
             .ToDictionaryAsync(listing => listing.SourceBookId, cancellationToken);
 
         return page.Select(book => new ManagedBookListItemDto
         {
-            Book = BookListProjectionMapper.MapListProjection(book),
-            Listing = listings.GetValueOrDefault(book.Id)
+            Book = BookListProjectionMapper.MapListProjection(book), Listing = listings.GetValueOrDefault(book.Id)
         }).ToList();
     }
 
@@ -180,8 +176,7 @@ public sealed class BookListProjectionQuery
                     .OrderBy(bookGenre => bookGenre.Genre.Name)
                     .Select(bookGenre => new BookListRelationProjection
                     {
-                        Name = bookGenre.Genre.Name,
-                        Description = bookGenre.Genre.Description
+                        Name = bookGenre.Genre.Name, Description = bookGenre.Genre.Description
                     })
                     .ToList(),
                 GenresCount = book.BookGenres.Count(),
@@ -189,8 +184,7 @@ public sealed class BookListProjectionQuery
                     .OrderBy(bookTag => bookTag.Tag.Name)
                     .Select(bookTag => new BookListRelationProjection
                     {
-                        Name = bookTag.Tag.Name,
-                        Description = bookTag.Tag.Description
+                        Name = bookTag.Tag.Name, Description = bookTag.Tag.Description
                     })
                     .ToList(),
                 TagsCount = book.BookTags.Count(),

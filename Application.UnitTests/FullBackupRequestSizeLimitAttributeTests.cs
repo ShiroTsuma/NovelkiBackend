@@ -23,8 +23,7 @@ public class FullBackupRequestSizeLimitAttributeTests
     {
         var options = Options.Create(new BookImportSecurityOptions
         {
-            MaxFullBackupRequestBytes = 300L * 1024 * 1024,
-            AdminMaxFullBackupRequestBytes = 600L * 1024 * 1024
+            MaxFullBackupRequestBytes = 300L * 1024 * 1024, AdminMaxFullBackupRequestBytes = 600L * 1024 * 1024
         });
         using var services = new ServiceCollection()
             .AddSingleton<IOptions<BookImportSecurityOptions>>(options)

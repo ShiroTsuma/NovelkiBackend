@@ -1,10 +1,10 @@
 namespace Infrastructure.IntegrationTests;
 
 using Application.Common;
+using Contexts;
 using Domain.Associations;
 using Domain.Entities;
-using Infrastructure.Contexts;
-using Infrastructure.Identity;
+using Identity;
 using Persistence;
 using TestSupport;
 

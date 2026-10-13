@@ -1,6 +1,6 @@
 namespace Application.UnitTests;
 
-using Application.Common.Interfaces;
+using Common.Interfaces;
 using Domain.Entities;
 using Domain.Exceptions;
 using Infrastructure.BookCovers;
@@ -63,19 +63,25 @@ public sealed class StorageCleanupQueueProcessorTests
     }
 
     private static StorageCleanupQueueProcessor CreateProcessor(ApplicationDbContext context,
-        IBookCoverStorage storage, TimeProvider timeProvider) => new(
-        context, storage, timeProvider, Mock.Of<ILogger<StorageCleanupQueueProcessor>>());
-
-    private static StorageCleanupQueueItem Item(string path, DateTimeOffset nextAttemptAt) => new()
+        IBookCoverStorage storage, TimeProvider timeProvider)
     {
-        StoragePath = path,
-        NextAttemptAt = nextAttemptAt.UtcDateTime
-    };
+        return new StorageCleanupQueueProcessor(
+            context, storage, timeProvider, Mock.Of<ILogger<StorageCleanupQueueProcessor>>());
+    }
+
+    private static StorageCleanupQueueItem Item(string path, DateTimeOffset nextAttemptAt)
+    {
+        return new StorageCleanupQueueItem { StoragePath = path, NextAttemptAt = nextAttemptAt.UtcDateTime };
+    }
 
     private sealed class TestTimeProvider(DateTimeOffset utcNow) : TimeProvider
     {
         public DateTimeOffset UtcNow { get; set; } = utcNow;
-        public override DateTimeOffset GetUtcNow() => UtcNow;
+
+        public override DateTimeOffset GetUtcNow()
+        {
+            return UtcNow;
+        }
     }
 
     private sealed class ProcessorStorage(Func<string, int, Exception?> failureFactory) : IBookCoverStorage
@@ -83,10 +89,15 @@ public sealed class StorageCleanupQueueProcessorTests
         public List<string> RequestedPaths { get; } = [];
 
         public Task<BookCoverStoredFiles> SaveAsync(Guid ownerId, Guid bookId, Stream content, string fileName,
-            string? contentType, CancellationToken cancellationToken) => throw new NotSupportedException();
-
-        public Task<Stream> OpenReadAsync(string storagePath, CancellationToken cancellationToken) =>
+            string? contentType, CancellationToken cancellationToken)
+        {
             throw new NotSupportedException();
+        }
+
+        public Task<Stream> OpenReadAsync(string storagePath, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException();
+        }
 
         public Task DeleteIfExistsAsync(string? storagePath, CancellationToken cancellationToken)
         {
@@ -102,6 +113,12 @@ public sealed class StorageCleanupQueueProcessorTests
     {
         public ApplicationDbContext Context { get; } = context;
 
+        public async ValueTask DisposeAsync()
+        {
+            await Context.DisposeAsync();
+            await connection.DisposeAsync();
+        }
+
         public static async Task<ProcessorDatabase> CreateAsync()
         {
             var connection = new SqliteConnection("DataSource=:memory:");
@@ -111,12 +128,6 @@ public sealed class StorageCleanupQueueProcessorTests
             var context = new ApplicationDbContext(options, user);
             await context.Database.EnsureCreatedAsync();
             return new ProcessorDatabase(connection, context);
-        }
-
-        public async ValueTask DisposeAsync()
-        {
-            await Context.DisposeAsync();
-            await connection.DisposeAsync();
         }
     }
 }

@@ -73,11 +73,13 @@ public class BookFeatureTests
     {
         var fixture = CreateFixture();
         var command = ValidCreateCommand(new[]
-        {
-            new BookTitleInput("MEMORIZE"),
-            new BookTitleInput("m e m o r i z e"),
-            new BookTitleInput("Memorize: The Second Coming")
-        }) with { PrimaryTitle = "MEMORIZE" };
+            {
+                new BookTitleInput("MEMORIZE"), new BookTitleInput("m e m o r i z e"),
+                new BookTitleInput("Memorize: The Second Coming")
+            }) with
+            {
+                PrimaryTitle = "MEMORIZE"
+            };
 
         await fixture.Handler.Handle(command, CancellationToken.None);
 

@@ -2,9 +2,9 @@ namespace Infrastructure.IntegrationTests.PostgreSql;
 
 using System.Diagnostics;
 using Application.Common;
-using Infrastructure.Contexts;
-using Infrastructure.Persistence;
-using Microsoft.EntityFrameworkCore;
+using Contexts;
+using Identity;
+using Persistence;
 using TestSupport;
 using Xunit.Abstractions;
 
@@ -80,7 +80,7 @@ public sealed class SearchSuggestionSystemPostgreSqlTests(PostgreSqlFixture fixt
 
     private static async Task AddUserAsync(ApplicationDbContext context, Guid ownerId)
     {
-        context.Users.Add(new Infrastructure.Identity.User
+        context.Users.Add(new User
         {
             Id = ownerId,
             UserName = $"reader-{ownerId:N}",

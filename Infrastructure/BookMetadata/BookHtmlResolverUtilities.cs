@@ -202,7 +202,8 @@ internal static partial class BookHtmlResolverUtilities
         return type.ValueKind switch
         {
             JsonValueKind.String => string.Equals(type.GetString(), "Book", StringComparison.OrdinalIgnoreCase)
-                                    || string.Equals(type.GetString(), "BookSeries", StringComparison.OrdinalIgnoreCase),
+                                    || string.Equals(type.GetString(), "BookSeries",
+                                        StringComparison.OrdinalIgnoreCase),
             JsonValueKind.Array => type.EnumerateArray().Any(IsBookType),
             _ => false
         };

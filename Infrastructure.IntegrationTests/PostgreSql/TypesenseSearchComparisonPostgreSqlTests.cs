@@ -7,9 +7,11 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using Application.Common;
-using Infrastructure.Contexts;
-using Infrastructure.Persistence;
+using Contexts;
+using Domain.Repositories;
+using Identity;
 using Microsoft.EntityFrameworkCore;
+using Persistence;
 using TestSupport;
 using Xunit.Abstractions;
 
@@ -68,15 +70,17 @@ public sealed class TypesenseSearchComparisonPostgreSqlTests(PostgreSqlFixture f
             {
                 await using var context = fixture.CreateContext(ownerId);
                 var parserQuery = EncodeForQueryGrammar(workItem.Query);
-                Domain.Repositories.BookSearchCriteria criteria;
+                BookSearchCriteria criteria;
                 try
                 {
                     criteria = BookSearchQueryParser.Parse(parserQuery);
                 }
                 catch (Exception exception)
                 {
-                    throw new InvalidOperationException($"Generated general query is invalid: {parserQuery}", exception);
+                    throw new InvalidOperationException($"Generated general query is invalid: {parserQuery}",
+                        exception);
                 }
+
                 var criteriaApplier = new BookSearchCriteriaApplier(context);
 
                 var postgresStarted = Stopwatch.GetTimestamp();
@@ -117,21 +121,27 @@ public sealed class TypesenseSearchComparisonPostgreSqlTests(PostgreSqlFixture f
         var typesenseSourceHits = outcomes.Count(outcome => outcome.TypesenseSourceRank != null);
         var typesenseMrr = outcomes.Average(outcome => outcome.TypesenseSourceRank is { } rank ? 1d / rank : 0d);
 
-        output.WriteLine($"Dataset: {csvPath}; books: {dataset.BookCount}; general operations: {TotalOperations}; parallelism: {parallelism}");
-        output.WriteLine($"PostgreSQL search stage: p50={Percentile(postgresDurations, 0.50):F2} ms; p95={Percentile(postgresDurations, 0.95):F2} ms; p99={Percentile(postgresDurations, 0.99):F2} ms");
-        output.WriteLine($"Typesense search stage: p50={Percentile(typesenseDurations, 0.50):F2} ms; p95={Percentile(typesenseDurations, 0.95):F2} ms; p99={Percentile(typesenseDurations, 0.99):F2} ms");
-        output.WriteLine($"Exact ID-set matches: {exactSetMatches}/{TotalOperations}; PostgreSQL hits: {totalPostgresHits}; Typesense hits: {totalTypesenseHits}; wall-clock: {elapsed.Elapsed.TotalSeconds:F2} s");
+        output.WriteLine(
+            $"Dataset: {csvPath}; books: {dataset.BookCount}; general operations: {TotalOperations}; parallelism: {parallelism}");
+        output.WriteLine(
+            $"PostgreSQL search stage: p50={Percentile(postgresDurations, 0.50):F2} ms; p95={Percentile(postgresDurations, 0.95):F2} ms; p99={Percentile(postgresDurations, 0.99):F2} ms");
+        output.WriteLine(
+            $"Typesense search stage: p50={Percentile(typesenseDurations, 0.50):F2} ms; p95={Percentile(typesenseDurations, 0.95):F2} ms; p99={Percentile(typesenseDurations, 0.99):F2} ms");
+        output.WriteLine(
+            $"Exact ID-set matches: {exactSetMatches}/{TotalOperations}; PostgreSQL hits: {totalPostgresHits}; Typesense hits: {totalTypesenseHits}; wall-clock: {elapsed.Elapsed.TotalSeconds:F2} s");
         output.WriteLine("Known-source retrieval (source book chosen before randomizing its searchable value):");
         output.WriteLine($"all: PostgreSQL source recall@{PageSize}={postgresSourceHits}/{TotalOperations}; " +
                          $"Typesense source recall@{PageSize}={typesenseSourceHits}/{TotalOperations}; Typesense MRR@{PageSize}={typesenseMrr:F4}");
-        foreach (var group in outcomes.GroupBy(outcome => outcome.Field).OrderBy(group => group.Key, StringComparer.Ordinal))
+        foreach (var group in outcomes.GroupBy(outcome => outcome.Field)
+                     .OrderBy(group => group.Key, StringComparer.Ordinal))
         {
             var count = group.Count();
             var postgresGroupSourceHits = group.Count(outcome => outcome.PostgreSqlContainsSource);
             var typesenseGroupSourceHits = group.Count(outcome => outcome.TypesenseSourceRank != null);
             var typesenseGroupMrr = group.Average(outcome => outcome.TypesenseSourceRank is { } rank ? 1d / rank : 0d);
-            output.WriteLine($"{group.Key}: count={count}; PostgreSQL source recall@{PageSize}={postgresGroupSourceHits}/{count}; " +
-                             $"Typesense source recall@{PageSize}={typesenseGroupSourceHits}/{count}; Typesense MRR@{PageSize}={typesenseGroupMrr:F4}");
+            output.WriteLine(
+                $"{group.Key}: count={count}; PostgreSQL source recall@{PageSize}={postgresGroupSourceHits}/{count}; " +
+                $"Typesense source recall@{PageSize}={typesenseGroupSourceHits}/{count}; Typesense MRR@{PageSize}={typesenseGroupMrr:F4}");
         }
 
         Assert.Equal(TotalOperations, outcomes.Count);
@@ -205,22 +215,28 @@ public sealed class TypesenseSearchComparisonPostgreSqlTests(PostgreSqlFixture f
         var postgresTotal = ordered.Sum(outcome => outcome.PostgreSqlCount);
         var typesenseTotal = ordered.Sum(outcome => outcome.TypesenseCount);
         var exactMatches = ordered.Count(outcome => outcome.PostgreSqlCount == outcome.TypesenseCount &&
-            outcome.IntersectionCount == outcome.PostgreSqlCount);
-        var sourceMissingFromTypesense = ordered.Count(outcome => outcome.PostgreSqlContainsSource && !outcome.TypesenseContainsSource);
-        var sourceBelowTypesensePage = ordered.Count(outcome => outcome.TypesenseContainsSource && !outcome.TypesenseSourceOnFirstPage);
+                                                    outcome.IntersectionCount == outcome.PostgreSqlCount);
+        var sourceMissingFromTypesense =
+            ordered.Count(outcome => outcome.PostgreSqlContainsSource && !outcome.TypesenseContainsSource);
+        var sourceBelowTypesensePage =
+            ordered.Count(outcome => outcome.TypesenseContainsSource && !outcome.TypesenseSourceOnFirstPage);
 
-        output.WriteLine($"Full-set divergence: {FullSetAnalysisOperations} queries, {dataset.BookCount} books, page size={PageSize}");
-        output.WriteLine($"Exact full result sets: {exactMatches}/{FullSetAnalysisOperations}; shared IDs={intersection}; " +
-                         $"Typesense precision vs PostgreSQL={Ratio(intersection, typesenseTotal):P2}; " +
-                         $"Typesense recall vs PostgreSQL={Ratio(intersection, postgresTotal):P2}");
-        output.WriteLine($"Known source present in PostgreSQL but absent from all Typesense pages: {sourceMissingFromTypesense}/{FullSetAnalysisOperations}; " +
-                         $"known source present in Typesense but below its first page: {sourceBelowTypesensePage}/{FullSetAnalysisOperations}");
+        output.WriteLine(
+            $"Full-set divergence: {FullSetAnalysisOperations} queries, {dataset.BookCount} books, page size={PageSize}");
+        output.WriteLine(
+            $"Exact full result sets: {exactMatches}/{FullSetAnalysisOperations}; shared IDs={intersection}; " +
+            $"Typesense precision vs PostgreSQL={Ratio(intersection, typesenseTotal):P2}; " +
+            $"Typesense recall vs PostgreSQL={Ratio(intersection, postgresTotal):P2}");
+        output.WriteLine(
+            $"Known source present in PostgreSQL but absent from all Typesense pages: {sourceMissingFromTypesense}/{FullSetAnalysisOperations}; " +
+            $"known source present in Typesense but below its first page: {sourceBelowTypesensePage}/{FullSetAnalysisOperations}");
         foreach (var group in ordered.GroupBy(outcome => outcome.Field))
         {
             var groupIntersection = group.Sum(outcome => outcome.IntersectionCount);
             var groupPostgresTotal = group.Sum(outcome => outcome.PostgreSqlCount);
             var groupTypesenseTotal = group.Sum(outcome => outcome.TypesenseCount);
-            var missingSource = group.Count(outcome => outcome.PostgreSqlContainsSource && !outcome.TypesenseContainsSource);
+            var missingSource =
+                group.Count(outcome => outcome.PostgreSqlContainsSource && !outcome.TypesenseContainsSource);
             output.WriteLine($"{group.Key}: precision={Ratio(groupIntersection, groupTypesenseTotal):P2}; " +
                              $"recall={Ratio(groupIntersection, groupPostgresTotal):P2}; source missing={missingSource}/{group.Count()}");
         }
@@ -236,7 +252,8 @@ public sealed class TypesenseSearchComparisonPostgreSqlTests(PostgreSqlFixture f
         return client;
     }
 
-    private static async Task RecreateCollectionAsync(HttpClient client, IReadOnlyCollection<TypesenseDocument> documents)
+    private static async Task RecreateCollectionAsync(HttpClient client,
+        IReadOnlyCollection<TypesenseDocument> documents)
     {
         using var deleteResponse = await client.DeleteAsync($"collections/{CollectionName}");
         if (deleteResponse.StatusCode != HttpStatusCode.NotFound)
@@ -250,7 +267,8 @@ public sealed class TypesenseSearchComparisonPostgreSqlTests(PostgreSqlFixture f
         using var createResponse = await client.PostAsJsonAsync("collections", schema, JsonOptions);
         createResponse.EnsureSuccessStatusCode();
 
-        var jsonLines = string.Join('\n', documents.Select(document => JsonSerializer.Serialize(document, JsonOptions)));
+        var jsonLines = string.Join('\n',
+            documents.Select(document => JsonSerializer.Serialize(document, JsonOptions)));
         using var content = new StringContent(jsonLines, Encoding.UTF8, "text/plain");
         using var importResponse = await client.PostAsync(
             $"collections/{CollectionName}/documents/import?action=upsert",
@@ -271,7 +289,8 @@ public sealed class TypesenseSearchComparisonPostgreSqlTests(PostgreSqlFixture f
     {
         var requestUri = $"collections/{CollectionName}/documents/search?q={Uri.EscapeDataString(query)}" +
                          $"&query_by=document&prefix=false&drop_tokens_threshold=0&typo_tokens_threshold=0&num_typos=1&per_page={PageSize}&page={page}";
-        var response = await client.GetFromJsonAsync<TypesenseSearchResponse>(requestUri, JsonOptions, cancellationToken);
+        var response =
+            await client.GetFromJsonAsync<TypesenseSearchResponse>(requestUri, JsonOptions, cancellationToken);
         return Assert.IsType<TypesenseSearchResponse>(response);
     }
 
@@ -308,9 +327,7 @@ public sealed class TypesenseSearchComparisonPostgreSqlTests(PostgreSqlFixture f
             var sample = samples[random.Next(samples.Count)];
             var candidates = new List<(string Field, string Value)>
             {
-                ("title", sample.PrimaryTitle),
-                ("type", sample.ContentType),
-                ("status", sample.Status)
+                ("title", sample.PrimaryTitle), ("type", sample.ContentType), ("status", sample.Status)
             };
             if (!string.IsNullOrWhiteSpace(sample.Author))
             {
@@ -384,7 +401,7 @@ public sealed class TypesenseSearchComparisonPostgreSqlTests(PostgreSqlFixture f
 
     private static async Task AddUserAsync(ApplicationDbContext context, Guid ownerId)
     {
-        context.Users.Add(new Infrastructure.Identity.User
+        context.Users.Add(new User
         {
             Id = ownerId,
             UserName = $"reader-{ownerId:N}",
@@ -405,32 +422,6 @@ public sealed class TypesenseSearchComparisonPostgreSqlTests(PostgreSqlFixture f
         return denominator == 0 ? 1 : (double)numerator / denominator;
     }
 
-    private sealed record TypesenseField(string Name, string Type);
-    private sealed record TypesenseCollection(string Name, IReadOnlyList<TypesenseField> Fields);
-    private sealed record TypesenseDocument(string Id, string Document);
-    private sealed record TypesenseHit(TypesenseDocument Document);
-    private sealed record TypesenseSearchResponse(int Found, IReadOnlyList<TypesenseHit> Hits);
-    private sealed record GeneralSearchWorkItem(Guid SourceBookId, string Field, string Query);
-    private sealed record ComparisonOutcome(
-        string Field,
-        string Query,
-        double PostgreSqlDuration,
-        double TypesenseDuration,
-        bool SameIds,
-        int PostgreSqlCount,
-        int TypesenseCount,
-        bool PostgreSqlContainsSource,
-        int? TypesenseSourceRank);
-    private sealed record FullSetComparisonOutcome(
-        string Field,
-        string Query,
-        int PostgreSqlCount,
-        int TypesenseCount,
-        int IntersectionCount,
-        bool PostgreSqlContainsSource,
-        bool TypesenseContainsSource,
-        bool TypesenseSourceOnFirstPage);
-
     private static int? GetRank(IReadOnlyList<string> ids, string sourceBookId)
     {
         for (var index = 0; index < ids.Count; index++)
@@ -443,4 +434,37 @@ public sealed class TypesenseSearchComparisonPostgreSqlTests(PostgreSqlFixture f
 
         return null;
     }
+
+    private sealed record TypesenseField(string Name, string Type);
+
+    private sealed record TypesenseCollection(string Name, IReadOnlyList<TypesenseField> Fields);
+
+    private sealed record TypesenseDocument(string Id, string Document);
+
+    private sealed record TypesenseHit(TypesenseDocument Document);
+
+    private sealed record TypesenseSearchResponse(int Found, IReadOnlyList<TypesenseHit> Hits);
+
+    private sealed record GeneralSearchWorkItem(Guid SourceBookId, string Field, string Query);
+
+    private sealed record ComparisonOutcome(
+        string Field,
+        string Query,
+        double PostgreSqlDuration,
+        double TypesenseDuration,
+        bool SameIds,
+        int PostgreSqlCount,
+        int TypesenseCount,
+        bool PostgreSqlContainsSource,
+        int? TypesenseSourceRank);
+
+    private sealed record FullSetComparisonOutcome(
+        string Field,
+        string Query,
+        int PostgreSqlCount,
+        int TypesenseCount,
+        int IntersectionCount,
+        bool PostgreSqlContainsSource,
+        bool TypesenseContainsSource,
+        bool TypesenseSourceOnFirstPage);
 }

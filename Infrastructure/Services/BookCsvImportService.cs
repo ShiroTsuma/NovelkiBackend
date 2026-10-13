@@ -911,8 +911,10 @@ public sealed class BookCsvImportService : IBookCsvImportService
 
     private Dictionary<string, ZipArchiveEntry> ValidateArchiveMetadata(ZipArchive archive,
         long maxUncompressedArchiveBytes)
-        => ArchiveSafety.Validate(archive, _securityOptions, maxUncompressedArchiveBytes,
+    {
+        return ArchiveSafety.Validate(archive, _securityOptions, maxUncompressedArchiveBytes,
             _securityOptions.MaxArchiveEntries);
+    }
 
     private static ZipArchiveEntry GetRequiredEntry(IReadOnlyDictionary<string, ZipArchiveEntry> entries,
         string entryName)
@@ -968,8 +970,15 @@ public sealed class BookCsvImportService : IBookCsvImportService
         }
     }
 
-    private static bool IsSafeArchiveEntryName(string name) => ArchiveSafety.IsSafeName(name);
-    private static bool IsTraversalOrRootAttempt(string name) => ArchiveSafety.IsTraversal(name);
+    private static bool IsSafeArchiveEntryName(string name)
+    {
+        return ArchiveSafety.IsSafeName(name);
+    }
+
+    private static bool IsTraversalOrRootAttempt(string name)
+    {
+        return ArchiveSafety.IsTraversal(name);
+    }
 
     private static bool IsSafeCoverEntryName(string name)
     {
@@ -1061,7 +1070,9 @@ public sealed class BookCsvImportService : IBookCsvImportService
 
     private static Task CopyBoundedAsync(Stream source, Stream destination, long maximumBytes,
         long declaredLength, string entryName, ArchiveReadBudget budget, CancellationToken cancellationToken)
-        => ArchiveSafety.CopyAsync(source, destination, maximumBytes, declaredLength, budget, cancellationToken);
+    {
+        return ArchiveSafety.CopyAsync(source, destination, maximumBytes, declaredLength, budget, cancellationToken);
+    }
 
     private static async Task<string?> DetectCoverMimeTypeAsync(string path, CancellationToken cancellationToken)
     {

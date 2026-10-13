@@ -39,9 +39,7 @@ public sealed class ReadingTimeSettingRepository(ApplicationDbContext context) :
             {
                 context.Set<ReadingTimeSetting>().Add(new ReadingTimeSetting
                 {
-                    UserId = userId,
-                    ContentTypeId = contentTypeId,
-                    MinutesPerChapter = minutesPerChapter
+                    UserId = userId, ContentTypeId = contentTypeId, MinutesPerChapter = minutesPerChapter
                 });
             }
         }

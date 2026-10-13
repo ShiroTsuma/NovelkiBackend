@@ -85,10 +85,7 @@ public class BookControllerTests
     [Fact]
     public async Task GetSearchSuggestions_ShouldForwardScopeQueryWithEmptySearch()
     {
-        var expected = new[]
-        {
-            new BookSearchSuggestionDto("Reading", 3, false, true)
-        };
+        var expected = new[] { new BookSearchSuggestionDto("Reading", 3, false, true) };
         var mediator = new Mock<IMediator>();
         mediator
             .Setup(mock => mock.Send(
@@ -97,7 +94,8 @@ public class BookControllerTests
             .ReturnsAsync(expected);
         var controller = CreateController(mediator.Object);
 
-        var result = await controller.GetSearchSuggestions("status", null, 10, "type:\"Novel\"", CancellationToken.None);
+        var result =
+            await controller.GetSearchSuggestions("status", null, 10, "type:\"Novel\"", CancellationToken.None);
 
         Assert.Same(expected, Assert.IsType<OkObjectResult>(result).Value);
         mediator.Verify(mock => mock.Send(

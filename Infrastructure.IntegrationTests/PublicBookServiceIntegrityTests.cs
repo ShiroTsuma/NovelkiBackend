@@ -1,17 +1,19 @@
 namespace Infrastructure.IntegrationTests;
 
+using System.Text.Json;
 using Application.Common;
 using Application.Common.Interfaces;
+using BookCovers;
+using Contexts;
 using Domain.Associations;
 using Domain.Entities;
+using Domain.Exceptions;
 using FluentValidation;
-using Infrastructure.BookCovers;
-using Infrastructure.Contexts;
-using Infrastructure.Identity;
-using Infrastructure.Services;
-using Infrastructure.IntegrationTests.TestSupport;
+using Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Services;
+using TestSupport;
 
 public sealed class PublicBookServiceIntegrityTests
 {
@@ -105,7 +107,7 @@ public sealed class PublicBookServiceIntegrityTests
         Assert.Equal(published.Id, republished.Id);
         Assert.Equal("Edited source", republished.PrimaryTitle);
         Assert.Single(await context.PublicBookSnapshots.ToListAsync());
-        await Assert.ThrowsAsync<Domain.Exceptions.EntityNotFoundException<Book, Guid>>(() =>
+        await Assert.ThrowsAsync<EntityNotFoundException<Book, Guid>>(() =>
             service.PublishAsync(foreign.Id, CancellationToken.None));
     }
 
@@ -182,7 +184,10 @@ public sealed class PublicBookServiceIntegrityTests
         book.Description = "refreshed";
         context.BookTitles.Add(new BookTitle
         {
-            BookId = book.Id, Title = "Fresh Alias", NormalizedTitle = "FRESHALIAS", IsPrimary = false,
+            BookId = book.Id,
+            Title = "Fresh Alias",
+            NormalizedTitle = "FRESHALIAS",
+            IsPrimary = false,
             Source = "test"
         });
         await context.SaveChangesAsync();
@@ -224,7 +229,8 @@ public sealed class PublicBookServiceIntegrityTests
         var reusedDto = await service.PublishAsync(reused.Id, CancellationToken.None);
         var reusedSnapshot = await context.PublicBookSnapshots.SingleAsync(item => item.Id == reusedDto.Id);
         Assert.Equal(publicAuthor.Id, reusedSnapshot.PublicAuthorId);
-        Assert.Contains(publicTag.Id, System.Text.Json.JsonSerializer.Deserialize<Guid[]>(reusedSnapshot.PublicTagIdsJson)!);
+        Assert.Contains(publicTag.Id,
+            JsonSerializer.Deserialize<Guid[]>(reusedSnapshot.PublicTagIdsJson)!);
         Assert.Null(await context.BookShareAuthorPromotions.FindAsync(publicAuthor.Id));
         Assert.Null(await context.BookShareTagPromotions.FindAsync(publicTag.Id));
         Assert.False(privateAuthor.IsPublic);
@@ -306,7 +312,8 @@ public sealed class PublicBookServiceIntegrityTests
         Assert.Empty(copied.Links);
         Assert.Empty(copied.ProgressHistory);
 
-        var counts = (await context.Books.CountAsync(), await context.Authors.CountAsync(), await context.Tags.CountAsync());
+        var counts = (await context.Books.CountAsync(), await context.Authors.CountAsync(),
+            await context.Tags.CountAsync());
         await Assert.ThrowsAsync<ValidationException>(() =>
             copyService.CopyAsync(snapshot.Id, CancellationToken.None));
         Assert.Equal(counts,
@@ -366,6 +373,7 @@ public sealed class PublicBookServiceIntegrityTests
         {
             Assert.Equal(3, opened.Length);
         }
+
         var copiedId = (await CreateService(context, targetOwner, storage)
             .CopyAsync(published.Id, CancellationToken.None)).BookId;
         Assert.NotNull((await context.BookCovers.SingleAsync(item => item.BookId == copiedId)).ThumbnailStoragePath);
@@ -413,6 +421,7 @@ public sealed class PublicBookServiceIntegrityTests
                 CreateService(context, database.UserId, failingStorage)
                     .PublishAsync(bookId, CancellationToken.None));
         }
+
         await using (var verify = database.CreateContext())
         {
             Assert.False(await verify.PublicBookSnapshots.AnyAsync());
@@ -429,6 +438,7 @@ public sealed class PublicBookServiceIntegrityTests
             await Assert.ThrowsAsync<DbUpdateException>(() =>
                 CreateService(context, database.UserId, storage).PublishAsync(bookId, CancellationToken.None));
         }
+
         await using (var verify = database.CreateContext())
         {
             Assert.False(await verify.PublicBookSnapshots.AnyAsync());
@@ -458,6 +468,7 @@ public sealed class PublicBookServiceIntegrityTests
         {
             Assert.True(cover.Length > 0);
         }
+
         await service.UnlistBySourceBookAsync(first.Id, CancellationToken.None);
         Assert.False(await context.PublicBookSnapshots.AnyAsync(item => item.Id == firstSnapshot.Id));
 
@@ -467,13 +478,13 @@ public sealed class PublicBookServiceIntegrityTests
         Assert.False(await context.PublicBookSnapshots.AnyAsync());
 
         var missing = Guid.NewGuid();
-        await Assert.ThrowsAsync<Domain.Exceptions.EntityNotFoundException<PublicBookSnapshot, Guid>>(() =>
+        await Assert.ThrowsAsync<EntityNotFoundException<PublicBookSnapshot, Guid>>(() =>
             service.RefreshAsync(missing, CancellationToken.None));
-        await Assert.ThrowsAsync<Domain.Exceptions.EntityNotFoundException<PublicBookSnapshot, Guid>>(() =>
+        await Assert.ThrowsAsync<EntityNotFoundException<PublicBookSnapshot, Guid>>(() =>
             service.UnlistAsync(missing, CancellationToken.None));
-        await Assert.ThrowsAsync<Domain.Exceptions.EntityNotFoundException<PublicBookSnapshot, Guid>>(() =>
+        await Assert.ThrowsAsync<EntityNotFoundException<PublicBookSnapshot, Guid>>(() =>
             service.CopyAsync(missing, CancellationToken.None));
-        await Assert.ThrowsAsync<Domain.Exceptions.EntityNotFoundException<PublicBookSnapshot, Guid>>(() =>
+        await Assert.ThrowsAsync<EntityNotFoundException<PublicBookSnapshot, Guid>>(() =>
             service.OpenCoverAsync(missing, CancellationToken.None));
     }
 
@@ -572,27 +583,30 @@ public sealed class PublicBookServiceIntegrityTests
     }
 
     private static PublicBookSnapshot Snapshot(Book book, Guid ownerId, string title, string alternatives,
-        string? author, string aliases) => new()
+        string? author, string aliases)
     {
-        SourceBookId = book.Id,
-        SourceBook = book,
-        OwnerId = ownerId,
-        PrimaryTitle = title,
-        NormalizedPrimaryTitle = MappingExtensions.NormalizeName(title),
-        AlternativeTitlesJson = alternatives,
-        AuthorName = author,
-        AuthorOtherNamesJson = aliases,
-        ContentType = "Novel",
-        GenresJson = "[]",
-        TagsJson = "[]",
-        PublicTagIdsJson = "[]",
-        SnapshotAt = DateTimeOffset.UtcNow
-    };
+        return new PublicBookSnapshot
+        {
+            SourceBookId = book.Id,
+            SourceBook = book,
+            OwnerId = ownerId,
+            PrimaryTitle = title,
+            NormalizedPrimaryTitle = MappingExtensions.NormalizeName(title),
+            AlternativeTitlesJson = alternatives,
+            AuthorName = author,
+            AuthorOtherNamesJson = aliases,
+            ContentType = "Novel",
+            GenresJson = "[]",
+            TagsJson = "[]",
+            PublicTagIdsJson = "[]",
+            SnapshotAt = DateTimeOffset.UtcNow
+        };
+    }
 
-    private static User User(Guid id, string name) => new()
+    private static User User(Guid id, string name)
     {
-        Id = id, UserName = name, NormalizedUserName = name.ToUpperInvariant()
-    };
+        return new User { Id = id, UserName = name, NormalizedUserName = name.ToUpperInvariant() };
+    }
 
     private sealed record TestUser(Guid UserId) : IUser
     {
@@ -607,7 +621,10 @@ public sealed class PublicBookServiceIntegrityTests
 
     private sealed class NoopCache : IBookListCacheInvalidator
     {
-        public Task InvalidateBooksAsync(Guid ownerId, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task InvalidateBooksAsync(Guid ownerId, CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class MemoryStorage : IBookCoverStorage
@@ -620,7 +637,11 @@ public sealed class PublicBookServiceIntegrityTests
         public async Task<BookCoverStoredFiles> SaveAsync(Guid ownerId, Guid bookId, Stream content, string fileName,
             string? contentType, CancellationToken cancellationToken)
         {
-            if (FailSave) throw new IOException("forced storage failure");
+            if (FailSave)
+            {
+                throw new IOException("forced storage failure");
+            }
+
             using var buffer = new MemoryStream();
             await content.CopyToAsync(buffer, cancellationToken);
             var originalPath = $"{ownerId:N}/{bookId:N}.jpg";
@@ -632,10 +653,12 @@ public sealed class PublicBookServiceIntegrityTests
                 new BookCoverStoredVariant(thumbnailPath, "image/jpeg", buffer.Length, 5, 10));
         }
 
-        public Task<Stream> OpenReadAsync(string storagePath, CancellationToken cancellationToken) =>
-            Files.TryGetValue(storagePath, out var bytes)
+        public Task<Stream> OpenReadAsync(string storagePath, CancellationToken cancellationToken)
+        {
+            return Files.TryGetValue(storagePath, out var bytes)
                 ? Task.FromResult<Stream>(new MemoryStream(bytes, false))
                 : Task.FromResult<Stream>(new MemoryStream([1], false));
+        }
 
         public Task DeleteIfExistsAsync(string? storagePath, CancellationToken cancellationToken)
         {
@@ -648,14 +671,17 @@ public sealed class PublicBookServiceIntegrityTests
                     throw new IOException("forced delete failure");
                 }
             }
+
             return Task.CompletedTask;
         }
     }
 
     private sealed class ThrowingCleanupQueue : IStorageCleanupQueue
     {
-        public Task EnqueueAsync(IEnumerable<string?> storagePaths, CancellationToken cancellationToken) =>
-            Task.FromException(new DbUpdateException("forced cleanup queue failure"));
+        public Task EnqueueAsync(IEnumerable<string?> storagePaths, CancellationToken cancellationToken)
+        {
+            return Task.FromException(new DbUpdateException("forced cleanup queue failure"));
+        }
     }
 
     private sealed class FailSnapshotSaveInterceptor : SaveChangesInterceptor

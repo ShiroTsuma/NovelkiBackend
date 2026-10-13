@@ -1413,21 +1413,24 @@ public class RepositoryTests
         Assert.Equal([privateA.Id, privateB.Id], secondPage.Select(item => item.Book.Id));
         Assert.All(secondPage, item => Assert.Null(item.Listing));
 
-        PublicBookSnapshot CreateSnapshot(Book book) => new()
+        PublicBookSnapshot CreateSnapshot(Book book)
         {
-            SourceBookId = book.Id,
-            SourceBook = book,
-            OwnerId = database.UserId,
-            PrimaryTitle = book.PrimaryTitle,
-            NormalizedPrimaryTitle = book.NormalizedPrimaryTitle,
-            AlternativeTitlesJson = "[]",
-            AuthorOtherNamesJson = "[]",
-            ContentType = "Novel",
-            GenresJson = "[]",
-            TagsJson = "[]",
-            PublicTagIdsJson = "[]",
-            SnapshotAt = DateTimeOffset.Parse("2026-07-27T12:00:00+00:00")
-        };
+            return new PublicBookSnapshot
+            {
+                SourceBookId = book.Id,
+                SourceBook = book,
+                OwnerId = database.UserId,
+                PrimaryTitle = book.PrimaryTitle,
+                NormalizedPrimaryTitle = book.NormalizedPrimaryTitle,
+                AlternativeTitlesJson = "[]",
+                AuthorOtherNamesJson = "[]",
+                ContentType = "Novel",
+                GenresJson = "[]",
+                TagsJson = "[]",
+                PublicTagIdsJson = "[]",
+                SnapshotAt = DateTimeOffset.Parse("2026-07-27T12:00:00+00:00")
+            };
+        }
     }
 
     [Fact]

@@ -4,12 +4,12 @@ using System.IO.Compression;
 using System.Net.Mime;
 using System.Security.Claims;
 using System.Threading.RateLimiting;
-using Api.Observability;
 using Domain.Exceptions;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi;
+using Observability;
 
 internal static class DependencyInjection
 {
@@ -52,11 +52,7 @@ internal static class DependencyInjection
                     status,
                     detail,
                     instance = context.HttpContext.Request.Path.Value
-                })
-                {
-                    StatusCode = status,
-                    ContentTypes = { ProblemJsonMediaType }
-                };
+                }) { StatusCode = status, ContentTypes = { ProblemJsonMediaType } };
             };
         });
         builder.Services.Configure<ForwardedHeadersOptions>(options =>

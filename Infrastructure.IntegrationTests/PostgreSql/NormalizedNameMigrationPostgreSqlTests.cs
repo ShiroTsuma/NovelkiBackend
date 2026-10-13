@@ -3,8 +3,7 @@ namespace Infrastructure.IntegrationTests.PostgreSql;
 using System.Text.Json;
 using Domain.Associations;
 using Domain.Entities;
-using Infrastructure.Contexts;
-using Infrastructure.Identity;
+using Identity;
 using Microsoft.EntityFrameworkCore;
 
 [Collection(PostgreSqlCollection.CollectionName)]
@@ -15,8 +14,15 @@ public sealed class NormalizedNameMigrationPostgreSqlTests(PostgreSqlFixture fix
     private static readonly Guid ContentTypeId = Guid.Parse("10000000-0000-0000-0000-000000000001");
     private static readonly Guid StatusId = Guid.Parse("20000000-0000-0000-0000-000000000001");
 
-    public Task InitializeAsync() => fixture.ResetDatabaseAsync(PreviousMigration);
-    public Task DisposeAsync() => Task.CompletedTask;
+    public Task InitializeAsync()
+    {
+        return fixture.ResetDatabaseAsync(PreviousMigration);
+    }
+
+    public Task DisposeAsync()
+    {
+        return Task.CompletedTask;
+    }
 
     [Fact]
     public async Task Migration_ShouldCompactKeysAndMergeCollisionsWithoutLosingRelations()
@@ -91,11 +97,11 @@ public sealed class NormalizedNameMigrationPostgreSqlTests(PostgreSqlFixture fix
         // The test intentionally runs the database on an older migration while using the current EF model.
         // Keep the newly mapped store-generated column available only for the seed operation.
         await context.Database.ExecuteSqlRawAsync("""
-            ALTER TABLE "Books"
-            ADD COLUMN "SearchDocument" text NOT NULL DEFAULT '',
-            ADD COLUMN "SearchVector" tsvector NOT NULL DEFAULT ''::tsvector,
-            ADD COLUMN "LastProgressUpdatedAt" timestamp with time zone NOT NULL DEFAULT now();
-            """);
+                                                  ALTER TABLE "Books"
+                                                  ADD COLUMN "SearchDocument" text NOT NULL DEFAULT '',
+                                                  ADD COLUMN "SearchVector" tsvector NOT NULL DEFAULT ''::tsvector,
+                                                  ADD COLUMN "LastProgressUpdatedAt" timestamp with time zone NOT NULL DEFAULT now();
+                                                  """);
         var user = new User
         {
             Id = OwnerId,
@@ -104,25 +110,15 @@ public sealed class NormalizedNameMigrationPostgreSqlTests(PostgreSqlFixture fix
             Email = "mailbox@example.com",
             NormalizedEmail = "MAIL BOX@EXAMPLE.COM"
         };
-        var firstTag = new Tag
-        {
-            Name = "Sci Fi",
-            NormalizedName = "SCI FI",
-            IsGlobal = true
-        };
+        var firstTag = new Tag { Name = "Sci Fi", NormalizedName = "SCI FI", IsGlobal = true };
         var secondTag = new Tag
         {
-            Name = "SciFi",
-            NormalizedName = "SCIFI",
-            IsGlobal = true,
-            Description = "Merged tag description"
+            Name = "SciFi", NormalizedName = "SCIFI", IsGlobal = true, Description = "Merged tag description"
         };
         var firstGenre = new Genre { Name = "Slice Of Life", NormalizedName = "SLICE OF LIFE" };
         var secondGenre = new Genre
         {
-            Name = "SliceOfLife",
-            NormalizedName = "SLICEOFLIFE",
-            Description = "Merged genre description"
+            Name = "SliceOfLife", NormalizedName = "SLICEOFLIFE", Description = "Merged genre description"
         };
         var firstAuthor = Author("Er Gen", "ER GEN");
         var secondAuthor = Author("ErGen", "ERGEN");
@@ -135,12 +131,11 @@ public sealed class NormalizedNameMigrationPostgreSqlTests(PostgreSqlFixture fix
         secondBook.BookGenres.Add(new BookGenre { Book = secondBook, Genre = secondGenre });
         secondBook.Titles.Add(new BookTitle
         {
-            Title = "A Different Alias",
-            NormalizedTitle = "A DIFFERENT ALIAS",
-            Source = "Test"
+            Title = "A Different Alias", NormalizedTitle = "A DIFFERENT ALIAS", Source = "Test"
         });
 
-        var firstSnapshot = Snapshot(firstBook, firstAuthor, firstTag, "public/first", DateTimeOffset.UtcNow.AddDays(-1));
+        var firstSnapshot = Snapshot(firstBook, firstAuthor, firstTag, "public/first",
+            DateTimeOffset.UtcNow.AddDays(-1));
         var secondSnapshot = Snapshot(secondBook, secondAuthor, secondTag, "public/second", DateTimeOffset.UtcNow);
 
         context.AddRange(
@@ -156,21 +151,18 @@ public sealed class NormalizedNameMigrationPostgreSqlTests(PostgreSqlFixture fix
         await context.SaveChangesAsync();
         context.ChangeTracker.Clear();
         await context.Database.ExecuteSqlRawAsync("""
-            ALTER TABLE "Books"
-            DROP COLUMN "SearchDocument",
-            DROP COLUMN "SearchVector",
-            DROP COLUMN "LastProgressUpdatedAt";
-            """);
+                                                  ALTER TABLE "Books"
+                                                  DROP COLUMN "SearchDocument",
+                                                  DROP COLUMN "SearchVector",
+                                                  DROP COLUMN "LastProgressUpdatedAt";
+                                                  """);
     }
 
     private static Author Author(string name, string normalizedName)
     {
         var author = new Author
         {
-            OwnerId = OwnerId,
-            IsPublic = true,
-            PrimaryName = name,
-            NormalizedPrimaryName = normalizedName
+            OwnerId = OwnerId, IsPublic = true, PrimaryName = name, NormalizedPrimaryName = normalizedName
         };
         author.Names.Add(new AuthorName
         {
@@ -216,17 +208,10 @@ public sealed class NormalizedNameMigrationPostgreSqlTests(PostgreSqlFixture fix
             IsPrimary = true,
             Source = "Test"
         });
-        book.Links.Add(new BookLink
-        {
-            Book = book,
-            Url = $"https://example.com/{storagePrefix}",
-            SourceType = "Test"
-        });
+        book.Links.Add(new BookLink { Book = book, Url = $"https://example.com/{storagePrefix}", SourceType = "Test" });
         book.ProgressHistory.Add(new BookProgressHistory
         {
-            Book = book,
-            ChapterNumber = currentChapter,
-            ChangedAt = DateTimeOffset.UtcNow
+            Book = book, ChapterNumber = currentChapter, ChangedAt = DateTimeOffset.UtcNow
         });
         return book;
     }

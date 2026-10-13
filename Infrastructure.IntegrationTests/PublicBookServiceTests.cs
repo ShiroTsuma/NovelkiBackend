@@ -2,6 +2,7 @@ namespace Infrastructure.IntegrationTests;
 
 using Application.Common.Interfaces;
 using BookCovers;
+using Contexts;
 using Domain.Associations;
 using Domain.Entities;
 using Identity;
@@ -17,21 +18,12 @@ public sealed class PublicBookServiceTests
         using var database = new SqliteTestDatabase();
         await using var context = database.CreateContext();
         var otherOwnerId = Guid.Parse("77777777-7777-7777-7777-777777777777");
-        context.Users.Add(new User
-        {
-            Id = otherOwnerId,
-            UserName = "other-reader",
-            NormalizedUserName = "OTHER-READER"
-        });
+        context.Users.Add(
+            new User { Id = otherOwnerId, UserName = "other-reader", NormalizedUserName = "OTHER-READER" });
 
         var author = TestData.Author("Cuttlefish That Loves Diving", database.UserId, false);
-        author.Names.Add(new AuthorName
-        {
-            Name = "Squid",
-            NormalizedName = "SQUID",
-            IsPrimary = false,
-            Source = "Test"
-        });
+        author.Names.Add(
+            new AuthorName { Name = "Squid", NormalizedName = "SQUID", IsPrimary = false, Source = "Test" });
         var tag = TestData.Tag(database.UserId, "Mystery");
         tag.Description = "Secrets and investigations";
         var genre = TestData.Genre("Fantasy");
@@ -40,10 +32,7 @@ public sealed class PublicBookServiceTests
         book.Description = "A snapshot description";
         book.Titles.Add(new BookTitle
         {
-            Title = "Guimi Zhi Zhu",
-            NormalizedTitle = "GUIMIZHIZHU",
-            IsPrimary = false,
-            Source = "Test"
+            Title = "Guimi Zhi Zhu", NormalizedTitle = "GUIMIZHIZHU", IsPrimary = false, Source = "Test"
         });
         book.BookTags.Add(new BookTag { Book = book, Tag = tag });
         book.BookGenres.Add(new BookGenre { Book = book, Genre = genre });
@@ -173,7 +162,7 @@ public sealed class PublicBookServiceTests
     }
 
     private static PublicBookService CreateService(
-        Contexts.ApplicationDbContext context,
+        ApplicationDbContext context,
         IUser user,
         IBookCoverStorage storage,
         IBookListCacheInvalidator cache)
@@ -195,20 +184,30 @@ public sealed class PublicBookServiceTests
 
     private sealed class NoopCache : IBookListCacheInvalidator
     {
-        public Task InvalidateBooksAsync(Guid ownerId, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task InvalidateBooksAsync(Guid ownerId, CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class NoopStorage : IBookCoverStorage
     {
         public Task<BookCoverStoredFiles> SaveAsync(Guid ownerId, Guid bookId, Stream content, string fileName,
-            string? contentType, CancellationToken cancellationToken) => Task.FromResult(new BookCoverStoredFiles(
+            string? contentType, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new BookCoverStoredFiles(
                 new BookCoverStoredVariant($"{ownerId:N}/{bookId:N}.jpg", "image/jpeg", 1, 10, 20),
                 new BookCoverStoredVariant($"{ownerId:N}/{bookId:N}.thumb.jpg", "image/jpeg", 1, 5, 10)));
+        }
 
-        public Task<Stream> OpenReadAsync(string storagePath, CancellationToken cancellationToken) =>
-            Task.FromResult<Stream>(new MemoryStream([1], false));
+        public Task<Stream> OpenReadAsync(string storagePath, CancellationToken cancellationToken)
+        {
+            return Task.FromResult<Stream>(new MemoryStream([1], false));
+        }
 
-        public Task DeleteIfExistsAsync(string? storagePath, CancellationToken cancellationToken) =>
-            Task.CompletedTask;
+        public Task DeleteIfExistsAsync(string? storagePath, CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
     }
 }

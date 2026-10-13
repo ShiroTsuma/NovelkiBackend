@@ -88,6 +88,7 @@ public sealed class BookCoverProcessor
 {
     private const string CoverDownloadFailureMessage =
         "A cover was found, but the image could not be downloaded. Try searching again or upload a cover manually.";
+
     private const string ManualCoverDownloadFailureMessage =
         "The selected cover URL could not be downloaded. Try another URL or upload a cover manually.";
 
@@ -125,6 +126,7 @@ public sealed class BookCoverProcessor
         {
             return;
         }
+
         if (cover.Source == BookCoverSource.ManualUpload && cover.PendingUploadToken != null)
         {
             return;
@@ -133,7 +135,7 @@ public sealed class BookCoverProcessor
         cover.LastAttemptAt = DateTimeOffset.UtcNow;
         await _coverRepository.SaveAsync(cancellationToken);
         var hasQueuedManualUrl = cover.Source == BookCoverSource.ManualUrl &&
-                                  !string.IsNullOrWhiteSpace(cover.OriginalImageUrl);
+                                 !string.IsNullOrWhiteSpace(cover.OriginalImageUrl);
 
         try
         {

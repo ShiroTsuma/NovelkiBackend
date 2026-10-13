@@ -22,11 +22,13 @@ public sealed class StorageCleanupQueue(ApplicationDbContext context, TimeProvid
         CancellationToken cancellationToken)
     {
         foreach (var path in storagePaths.Distinct(StringComparer.Ordinal))
+        {
             await context.Database.ExecuteSqlInterpolatedAsync($"""
                                                                 INSERT INTO "StorageCleanupQueueItems"
                                                                     ("Id", "StoragePath", "StorageKind", "AttemptCount", "NextAttemptAt", "LastError")
                                                                 VALUES ({Guid.NewGuid()}, {path}, {"BookFile"}, {0}, {notBeforeUtc}, {null})
                                                                 ON CONFLICT ("StorageKind", "StoragePath") DO UPDATE SET "NextAttemptAt" = {notBeforeUtc}
                                                                 """, cancellationToken);
+        }
     }
 }

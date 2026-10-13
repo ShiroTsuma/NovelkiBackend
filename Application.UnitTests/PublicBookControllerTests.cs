@@ -1,9 +1,9 @@
 namespace Application.UnitTests;
 
 using Api.Controllers;
-using Application.Common.DTOs.Book;
-using Application.Common.Interfaces;
-using Application.Common.Models;
+using Common.DTOs.Book;
+using Common.Interfaces;
+using Common.Models;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 
@@ -102,12 +102,15 @@ public sealed class PublicBookControllerTests
         await stream.DisposeAsync();
     }
 
-    private static PublicBookSnapshotDto Snapshot() => new()
+    private static PublicBookSnapshotDto Snapshot()
     {
-        Id = Guid.NewGuid(),
-        SourceBookId = Guid.NewGuid(),
-        PrimaryTitle = "Snapshot",
-        ContentType = "Novel",
-        SnapshotAt = DateTimeOffset.UtcNow
-    };
+        return new PublicBookSnapshotDto
+        {
+            Id = Guid.NewGuid(),
+            SourceBookId = Guid.NewGuid(),
+            PrimaryTitle = "Snapshot",
+            ContentType = "Novel",
+            SnapshotAt = DateTimeOffset.UtcNow
+        };
+    }
 }

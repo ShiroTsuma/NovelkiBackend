@@ -32,13 +32,14 @@ public class AutocompleteFeatureTests
     public async Task SearchAuthors_ShouldMarkAnotherUsersPublicAuthorAsNotOwned()
     {
         var repository = new FakeAuthorRepository();
-        await repository.AddAsync(new Author
-        {
-            OwnerId = Guid.NewGuid(),
-            IsPublic = true,
-            PrimaryName = "Global Author",
-            NormalizedPrimaryName = "GLOBALAUTHOR"
-        }, CancellationToken.None);
+        await repository.AddAsync(
+            new Author
+            {
+                OwnerId = Guid.NewGuid(),
+                IsPublic = true,
+                PrimaryName = "Global Author",
+                NormalizedPrimaryName = "GLOBALAUTHOR"
+            }, CancellationToken.None);
         var handler = new SearchAuthorsQueryHandler(repository, new FakeUser());
 
         var result = await handler.Handle(new SearchAuthorsQuery("Global", 10), CancellationToken.None);

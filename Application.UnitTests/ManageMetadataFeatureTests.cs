@@ -243,8 +243,9 @@ public class ManageMetadataFeatureTests
         {
             var normalized = MappingExtensions.NormalizeName(name);
             return Task.FromResult(_authors.FirstOrDefault(author => author.IsPublic &&
-                (author.NormalizedPrimaryName == normalized ||
-                 author.Names.Any(alias => alias.NormalizedName == normalized))));
+                                                                     (author.NormalizedPrimaryName == normalized ||
+                                                                      author.Names.Any(alias =>
+                                                                          alias.NormalizedName == normalized))));
         }
 
         public Task<IEnumerable<Author>> SearchAsync(Guid ownerId, string? search, int take,

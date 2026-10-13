@@ -2,9 +2,11 @@ namespace Infrastructure.IntegrationTests.PostgreSql;
 
 using System.Diagnostics;
 using Application.Common;
-using Infrastructure.Contexts;
-using Infrastructure.Persistence;
+using Application.Common.DTOs.Book;
+using Contexts;
+using Identity;
 using Microsoft.EntityFrameworkCore;
+using Persistence;
 using TestSupport;
 using Xunit.Abstractions;
 
@@ -45,8 +47,10 @@ public sealed class SearchResponsivenessSystemPostgreSqlTests(PostgreSqlFixture 
         var title = await MeasureAsync(ownerId, $"title:\"{term}\"");
 
         output.WriteLine($"Dataset: {csvPath}; books: {dataset.BookCount}; search term: {term}");
-        output.WriteLine($"General search ({Iterations} warm-cache single-user operations; returned {general.Results.Count}): {Format(general.Durations)}");
-        output.WriteLine($"Title field search ({Iterations} warm-cache single-user operations; returned {title.Results.Count}): {Format(title.Durations)}");
+        output.WriteLine(
+            $"General search ({Iterations} warm-cache single-user operations; returned {general.Results.Count}): {Format(general.Durations)}");
+        output.WriteLine(
+            $"Title field search ({Iterations} warm-cache single-user operations; returned {title.Results.Count}): {Format(title.Durations)}");
 
         Assert.NotEmpty(general.Results);
         Assert.NotEmpty(title.Results);
@@ -62,7 +66,7 @@ public sealed class SearchResponsivenessSystemPostgreSqlTests(PostgreSqlFixture 
         }
 
         var durations = new List<double>(Iterations);
-        IReadOnlyCollection<Application.Common.DTOs.Book.BookListItemDto> results = [];
+        IReadOnlyCollection<BookListItemDto> results = [];
         for (var iteration = 0; iteration < Iterations; iteration++)
         {
             await using var context = fixture.CreateContext(ownerId);
@@ -97,7 +101,7 @@ public sealed class SearchResponsivenessSystemPostgreSqlTests(PostgreSqlFixture 
 
     private static async Task AddUserAsync(ApplicationDbContext context, Guid ownerId)
     {
-        context.Users.Add(new Infrastructure.Identity.User
+        context.Users.Add(new User
         {
             Id = ownerId,
             UserName = $"reader-{ownerId:N}",
@@ -108,13 +112,18 @@ public sealed class SearchResponsivenessSystemPostgreSqlTests(PostgreSqlFixture 
         await context.SaveChangesAsync();
     }
 
-    private static string Format(IReadOnlyList<double> sorted) =>
-        $"p50={Percentile(sorted, 0.50):F2} ms; p95={Percentile(sorted, 0.95):F2} ms; p99={Percentile(sorted, 0.99):F2} ms";
+    private static string Format(IReadOnlyList<double> sorted)
+    {
+        return
+            $"p50={Percentile(sorted, 0.50):F2} ms; p95={Percentile(sorted, 0.95):F2} ms; p99={Percentile(sorted, 0.99):F2} ms";
+    }
 
-    private static double Percentile(IReadOnlyList<double> sorted, double percentile) =>
-        sorted[(int)Math.Ceiling(percentile * sorted.Count) - 1];
+    private static double Percentile(IReadOnlyList<double> sorted, double percentile)
+    {
+        return sorted[(int)Math.Ceiling(percentile * sorted.Count) - 1];
+    }
 
     private sealed record SearchMeasurement(
         IReadOnlyList<double> Durations,
-        IReadOnlyCollection<Application.Common.DTOs.Book.BookListItemDto> Results);
+        IReadOnlyCollection<BookListItemDto> Results);
 }

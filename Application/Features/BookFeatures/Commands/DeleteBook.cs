@@ -36,14 +36,24 @@ public class DeleteBookHandler : IRequestHandler<DeleteBookCommand>
 
         async Task<bool> Delete(CancellationToken ct)
         {
-            if (_publicBooks is not null) await _publicBooks.UnlistBySourceBookAsync(book.Id, ct);
+            if (_publicBooks is not null)
+            {
+                await _publicBooks.UnlistBySourceBookAsync(book.Id, ct);
+            }
+
             await _repository.DeleteAsync(request.Id, _user.RequiredId, ct);
             return true;
         }
 
         if (_bookFiles is not null)
+        {
             await _bookFiles.ExecuteBookDeletionAsync(_user.RequiredId, book.Id, Delete, cancellationToken);
-        else await Delete(cancellationToken);
+        }
+        else
+        {
+            await Delete(cancellationToken);
+        }
+
         await _storage.DeleteIfExistsAsync(storagePath, cancellationToken);
         await _storage.DeleteIfExistsAsync(thumbnailStoragePath, cancellationToken);
         await _cacheInvalidator.InvalidateBooksAsync(_user.RequiredId, cancellationToken);

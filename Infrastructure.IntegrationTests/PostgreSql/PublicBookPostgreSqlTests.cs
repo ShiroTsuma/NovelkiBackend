@@ -1,27 +1,34 @@
 namespace Infrastructure.IntegrationTests.PostgreSql;
 
-using Application.Common;
-using Application.Common.Interfaces;
+using System.Text.Json;
 using Application.Common.DTOs.Book;
+using Application.Common.Interfaces;
+using BookCovers;
+using Contexts;
 using Domain.Associations;
 using Domain.Entities;
 using Domain.Exceptions;
 using FluentValidation;
-using Infrastructure.BookCovers;
-using Infrastructure.Contexts;
-using Infrastructure.Identity;
-using Infrastructure.Services;
-using Infrastructure.IntegrationTests.TestSupport;
+using Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Services;
+using TestSupport;
 
 [Collection(PostgreSqlCollection.CollectionName)]
 public sealed class PublicBookPostgreSqlTests(PostgreSqlFixture fixture) : IAsyncLifetime
 {
     private static readonly Guid OwnerId = Guid.Parse("90000000-0000-0000-0000-000000000001");
 
-    public Task InitializeAsync() => fixture.ResetDatabaseAsync();
-    public Task DisposeAsync() => Task.CompletedTask;
+    public Task InitializeAsync()
+    {
+        return fixture.ResetDatabaseAsync();
+    }
+
+    public Task DisposeAsync()
+    {
+        return Task.CompletedTask;
+    }
 
     [Fact]
     public async Task Migrations_ShouldApplyCompletelyToEmptyDatabase()
@@ -114,7 +121,7 @@ public sealed class PublicBookPostgreSqlTests(PostgreSqlFixture fixture) : IAsyn
         Assert.Equal(2, snapshots.Count);
         Assert.Single(snapshots.Select(item => item.PublicAuthorId).Distinct());
         var tagIds = snapshots.SelectMany(item =>
-            System.Text.Json.JsonSerializer.Deserialize<Guid[]>(item.PublicTagIdsJson)!).Distinct().ToArray();
+            JsonSerializer.Deserialize<Guid[]>(item.PublicTagIdsJson)!).Distinct().ToArray();
         Assert.Single(tagIds);
         Assert.Single(await verify.Authors.Where(author => author.IsPublic).ToListAsync());
         Assert.Single(await verify.Tags.Where(tag => tag.IsGlobal).ToListAsync());
@@ -169,8 +176,10 @@ public sealed class PublicBookPostgreSqlTests(PostgreSqlFixture fixture) : IAsyn
         await using (var secondContext = fixture.CreateContext(OwnerId))
         {
             var outcomes = await Task.WhenAll(
-                CaptureAsync(() => CreateService(firstContext, OwnerId).UnlistAsync(snapshotId, CancellationToken.None)),
-                CaptureAsync(() => CreateService(secondContext, OwnerId).UnlistAsync(snapshotId, CancellationToken.None)));
+                CaptureAsync(() =>
+                    CreateService(firstContext, OwnerId).UnlistAsync(snapshotId, CancellationToken.None)),
+                CaptureAsync(() =>
+                    CreateService(secondContext, OwnerId).UnlistAsync(snapshotId, CancellationToken.None)));
             Assert.Single(outcomes, error => error is null);
             Assert.IsType<EntityNotFoundException<PublicBookSnapshot, Guid>>(
                 Assert.Single(outcomes, error => error is not null));
@@ -181,6 +190,7 @@ public sealed class PublicBookPostgreSqlTests(PostgreSqlFixture fixture) : IAsyn
             snapshotId = (await CreateService(publishContext, OwnerId)
                 .PublishAsync(bookId, CancellationToken.None)).Id;
         }
+
         await using (var refreshContext = fixture.CreateContext(OwnerId))
         await using (var unlistContext = fixture.CreateContext(OwnerId))
         {
@@ -192,7 +202,7 @@ public sealed class PublicBookPostgreSqlTests(PostgreSqlFixture fixture) : IAsyn
                 CreateService(unlistContext, OwnerId).UnlistAsync(snapshotId, CancellationToken.None));
             var outcomes = await Task.WhenAll(refresh, unlist);
             Assert.DoesNotContain(outcomes, error => error is not null &&
-                error is not EntityNotFoundException<PublicBookSnapshot, Guid>);
+                                                     error is not EntityNotFoundException<PublicBookSnapshot, Guid>);
         }
 
         await using var verify = fixture.CreateContext(OwnerId);
@@ -240,21 +250,24 @@ public sealed class PublicBookPostgreSqlTests(PostgreSqlFixture fixture) : IAsyn
         return book;
     }
 
-    private static PublicBookSnapshot Snapshot(Book book) => new()
+    private static PublicBookSnapshot Snapshot(Book book)
     {
-        SourceBookId = book.Id,
-        SourceBook = book,
-        OwnerId = book.OwnerId,
-        PrimaryTitle = book.PrimaryTitle,
-        NormalizedPrimaryTitle = book.NormalizedPrimaryTitle,
-        AlternativeTitlesJson = "[]",
-        AuthorOtherNamesJson = "[]",
-        ContentType = "Novel",
-        GenresJson = "[]",
-        TagsJson = "[]",
-        PublicTagIdsJson = "[]",
-        SnapshotAt = DateTimeOffset.UtcNow
-    };
+        return new PublicBookSnapshot
+        {
+            SourceBookId = book.Id,
+            SourceBook = book,
+            OwnerId = book.OwnerId,
+            PrimaryTitle = book.PrimaryTitle,
+            NormalizedPrimaryTitle = book.NormalizedPrimaryTitle,
+            AlternativeTitlesJson = "[]",
+            AuthorOtherNamesJson = "[]",
+            ContentType = "Novel",
+            GenresJson = "[]",
+            TagsJson = "[]",
+            PublicTagIdsJson = "[]",
+            SnapshotAt = DateTimeOffset.UtcNow
+        };
+    }
 
     private static PublicBookService CreateService(ApplicationDbContext context, Guid userId)
     {
@@ -290,12 +303,10 @@ public sealed class PublicBookPostgreSqlTests(PostgreSqlFixture fixture) : IAsyn
         }
     }
 
-    private static User User(Guid id, string name) => new()
+    private static User User(Guid id, string name)
     {
-        Id = id,
-        UserName = name,
-        NormalizedUserName = name.ToUpperInvariant()
-    };
+        return new User { Id = id, UserName = name, NormalizedUserName = name.ToUpperInvariant() };
+    }
 
     private sealed record TestUser(Guid UserId) : IUser
     {
@@ -310,21 +321,31 @@ public sealed class PublicBookPostgreSqlTests(PostgreSqlFixture fixture) : IAsyn
 
     private sealed class NoopCache : IBookListCacheInvalidator
     {
-        public Task InvalidateBooksAsync(Guid ownerId, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task InvalidateBooksAsync(Guid ownerId, CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class NoopStorage : IBookCoverStorage
     {
         public Task<BookCoverStoredFiles> SaveAsync(Guid ownerId, Guid bookId, Stream content, string fileName,
-            string? contentType, CancellationToken cancellationToken) => Task.FromResult(new BookCoverStoredFiles(
+            string? contentType, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new BookCoverStoredFiles(
                 new BookCoverStoredVariant($"{ownerId:N}/{bookId:N}.jpg", "image/jpeg", 1, 10, 20),
                 new BookCoverStoredVariant($"{ownerId:N}/{bookId:N}.thumb.jpg", "image/jpeg", 1, 5, 10)));
+        }
 
-        public Task<Stream> OpenReadAsync(string storagePath, CancellationToken cancellationToken) =>
-            Task.FromResult<Stream>(new MemoryStream([1], false));
+        public Task<Stream> OpenReadAsync(string storagePath, CancellationToken cancellationToken)
+        {
+            return Task.FromResult<Stream>(new MemoryStream([1], false));
+        }
 
-        public Task DeleteIfExistsAsync(string? storagePath, CancellationToken cancellationToken) =>
-            Task.CompletedTask;
+        public Task DeleteIfExistsAsync(string? storagePath, CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class FailSnapshotSaveInterceptor : SaveChangesInterceptor

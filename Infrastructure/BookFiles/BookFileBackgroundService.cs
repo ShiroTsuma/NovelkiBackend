@@ -18,9 +18,12 @@ public sealed class BookFileBackgroundService(
     IOptions<BookFileOptions> options,
     ILogger<BookFileBackgroundService> logger) : BackgroundService
 {
-    protected override Task ExecuteAsync(CancellationToken stoppingToken) => Task.WhenAll(
-        Enumerable.Range(0, options.Value.MaxConcurrentOperations).Select(_ => WorkerAsync(stoppingToken))
-            .Append(MaintenanceAsync(stoppingToken)));
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        return Task.WhenAll(
+            Enumerable.Range(0, options.Value.MaxConcurrentOperations).Select(_ => WorkerAsync(stoppingToken))
+                .Append(MaintenanceAsync(stoppingToken)));
+    }
 
     private async Task WorkerAsync(CancellationToken ct)
     {
@@ -29,7 +32,10 @@ public sealed class BookFileBackgroundService(
             try
             {
                 using var scope = scopes.CreateScope();
-                if (await scope.ServiceProvider.GetRequiredService<BookFileService>().ProcessNextAsync(ct)) continue;
+                if (await scope.ServiceProvider.GetRequiredService<BookFileService>().ProcessNextAsync(ct))
+                {
+                    continue;
+                }
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
@@ -73,7 +79,10 @@ public sealed class BookFileBackgroundService(
                     .ToListAsync(ct);
                 foreach (var job in jobs)
                 {
-                    if (job.ExpiresAtUtc <= now) context.BookFileJobs.Remove(job);
+                    if (job.ExpiresAtUtc <= now)
+                    {
+                        context.BookFileJobs.Remove(job);
+                    }
                     else if (job.Status is "Processing" or "Committing" or "Uploading")
                     {
                         job.Status = "Failed";
@@ -90,14 +99,19 @@ public sealed class BookFileBackgroundService(
                 var activeIds = await context.BookFileJobs.Select(j => j.Id.ToString("N")).ToListAsync(ct);
                 var root = Path.GetFullPath(options.Value.StagingRoot);
                 if (Directory.Exists(root))
+                {
                     foreach (var directory in Directory.EnumerateDirectories(root))
                     {
                         // Generated UUID directories only, never follow external links or delete another tree.
                         var info = new DirectoryInfo(directory);
                         if (Guid.TryParseExact(info.Name, "N", out var id) && !activeIds.Contains(info.Name) &&
                             (info.Attributes & FileAttributes.ReparsePoint) == 0 &&
-                            info.LastWriteTimeUtc < now.AddHours(-2)) files.DeleteJobDirectory(id);
+                            info.LastWriteTimeUtc < now.AddHours(-2))
+                        {
+                            files.DeleteJobDirectory(id);
+                        }
                     }
+                }
 
                 BookFileTelemetry.StagingBytes.Record(
                     await context.BookFileJobs.SumAsync(j => (long?)j.ReservedBytes, ct) ?? 0);

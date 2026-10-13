@@ -1,11 +1,10 @@
 namespace Application.Common.Interfaces;
 
-using Application.Common.DTOs.Book;
-using Domain.Repositories;
+using DTOs.Book;
 
 public interface IBookSearchSuggestionQueryService
 {
-    Task<IReadOnlyCollection<BookSearchSuggestionDto>> GetSuggestionsAsync(
+    public Task<IReadOnlyCollection<BookSearchSuggestionDto>> GetSuggestionsAsync(
         Guid ownerId,
         string field,
         string? search,

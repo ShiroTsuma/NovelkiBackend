@@ -18,8 +18,16 @@ using TestSupport;
 public sealed class BookFilePostgreSqlTests(PostgreSqlFixture fixture) : IAsyncLifetime
 {
     private readonly Guid _owner = Guid.NewGuid();
-    public Task InitializeAsync() => fixture.ResetDatabaseAsync();
-    public Task DisposeAsync() => Task.CompletedTask;
+
+    public Task InitializeAsync()
+    {
+        return fixture.ResetDatabaseAsync();
+    }
+
+    public Task DisposeAsync()
+    {
+        return Task.CompletedTask;
+    }
 
     [Fact]
     public async Task ActiveHashesAreUnique_TrashCanKeepPreviousContent_AndBookCascadeRemovesFiles()
@@ -126,16 +134,19 @@ public sealed class BookFilePostgreSqlTests(PostgreSqlFixture fixture) : IAsyncL
         Assert.Equal(4, cancelled.ProcessedFiles);
     }
 
-    private BookFile File(Guid bookId) => new()
+    private BookFile File(Guid bookId)
     {
-        BookId = bookId,
-        OwnerId = _owner,
-        StoragePath = $"epubs/{_owner:N}/{Guid.NewGuid():N}.epub",
-        Title = "Volume",
-        OriginalFileName = "volume.epub",
-        SizeBytes = 100,
-        Sha256 = new string('a', 64)
-    };
+        return new BookFile
+        {
+            BookId = bookId,
+            OwnerId = _owner,
+            StoragePath = $"epubs/{_owner:N}/{Guid.NewGuid():N}.epub",
+            Title = "Volume",
+            OriginalFileName = "volume.epub",
+            SizeBytes = 100,
+            Sha256 = new string('a', 64)
+        };
+    }
 
     private BookFileService Service(ApplicationDbContext context)
     {
@@ -143,7 +154,7 @@ public sealed class BookFilePostgreSqlTests(PostgreSqlFixture fixture) : IAsyncL
         var guard = new AccountAbuseGuard(
             new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions())), security,
             NullLogger<AccountAbuseGuard>.Instance);
-        return new(context, new Actor(_owner), new UnusedStorage(),
+        return new BookFileService(context, new Actor(_owner), new UnusedStorage(),
             new StorageCleanupQueue(context, TimeProvider.System), Options.Create(new BookFileOptions()), security,
             guard);
     }
@@ -160,8 +171,19 @@ public sealed class BookFilePostgreSqlTests(PostgreSqlFixture fixture) : IAsyncL
 
     private sealed class UnusedStorage : IBookFileStorage
     {
-        public Task SaveAsync(string path, Stream content, CancellationToken ct) => throw new NotSupportedException();
-        public Task<Stream> OpenReadAsync(string path, CancellationToken ct) => throw new NotSupportedException();
-        public Task DeleteIfExistsAsync(string path, CancellationToken ct) => throw new NotSupportedException();
+        public Task SaveAsync(string path, Stream content, CancellationToken ct)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task<Stream> OpenReadAsync(string path, CancellationToken ct)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task DeleteIfExistsAsync(string path, CancellationToken ct)
+        {
+            throw new NotSupportedException();
+        }
     }
 }

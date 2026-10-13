@@ -1,8 +1,7 @@
 namespace Application.UnitTests;
 
 using AngleSharp.Html.Parser;
-using Application.Common.DTOs.Book;
-using Common.Interfaces;
+using Common.DTOs.Book;
 using Domain.Entities;
 using Domain.Repositories;
 using FluentValidation;
@@ -11,13 +10,19 @@ using Moq;
 
 public sealed class AdditionalBookHtmlParserTests
 {
-    private static IBookHtmlResolver[] Resolvers() =>
-    [
-        new NovelUpdatesHtmlResolver(), new RoyalRoadHtmlResolver(), new ScribbleHubHtmlResolver(), new WebNovelHtmlResolver(),
-        new AnimePlanetHtmlResolver(), new MangaUpdatesHtmlResolver(), new RanobeDbHtmlResolver(), new WuxiaWorldHtmlResolver(),
-        new AniListHtmlResolver(), new JNovelClubHtmlResolver(), new SevenSeasHtmlResolver(), new YenPressHtmlResolver(),
-        new SyosetuHtmlResolver(), new KakuyomuHtmlResolver()
-    ];
+    private static IBookHtmlResolver[] Resolvers()
+    {
+        return
+        [
+            new NovelUpdatesHtmlResolver(), new RoyalRoadHtmlResolver(), new ScribbleHubHtmlResolver(),
+            new WebNovelHtmlResolver(),
+            new AnimePlanetHtmlResolver(), new MangaUpdatesHtmlResolver(), new RanobeDbHtmlResolver(),
+            new WuxiaWorldHtmlResolver(),
+            new AniListHtmlResolver(), new JNovelClubHtmlResolver(), new SevenSeasHtmlResolver(),
+            new YenPressHtmlResolver(),
+            new SyosetuHtmlResolver(), new KakuyomuHtmlResolver()
+        ];
+    }
 
     private static BookHtmlParser Parser()
     {
@@ -27,13 +32,22 @@ public sealed class AdditionalBookHtmlParserTests
         var genres = new Mock<IGenreRepository>();
         genres.Setup(repository => repository.GetByNameAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string name, CancellationToken _) =>
-                new[] { "Fantasy", "Adventure", "Drama", "Mystery", "Romance", "Action" }.Contains(name, StringComparer.OrdinalIgnoreCase)
-                    ? new Genre { Id = Guid.NewGuid(), Name = name, NormalizedName = name.ToUpperInvariant() } : null);
+                new[] { "Fantasy", "Adventure", "Drama", "Mystery", "Romance", "Action" }.Contains(name,
+                    StringComparer.OrdinalIgnoreCase)
+                    ? new Genre { Id = Guid.NewGuid(), Name = name, NormalizedName = name.ToUpperInvariant() }
+                    : null);
         return new BookHtmlParser(Resolvers(), genres.Object, types.Object);
     }
 
-    private static string Fixture(string name) => File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", name + ".html"));
-    private static Task<BookHtmlParseResult> Parse(string name) => Parser().ParseAsync(Fixture(name), CancellationToken.None);
+    private static string Fixture(string name)
+    {
+        return File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", name + ".html"));
+    }
+
+    private static Task<BookHtmlParseResult> Parse(string name)
+    {
+        return Parser().ParseAsync(Fixture(name), CancellationToken.None);
+    }
 
     [Theory]
     [InlineData("animeplanet", "AnimePlanet", "The Apothecary Diaries (Light Novel)", "Natsu HYUUGA")]
@@ -44,7 +58,8 @@ public sealed class AdditionalBookHtmlParserTests
     [InlineData("anilist", "AniList", "Mushoku Tensei: Isekai Ittara Honki Dasu", "Rifujin na Magonote")]
     [InlineData("jnovelclub", "JNovelClub", "Ascendance of a Bookworm", "Miya Kazuki")]
     [InlineData("sevenseas", "SevenSeas", "Mushoku Tensei: Jobless Reincarnation (Light Novel)", "Rifujin na Magonote")]
-    [InlineData("sevenseas-book", "SevenSeas", "Mushoku Tensei: Jobless Reincarnation (Light Novel) Vol. 1", "Rifujin na Magonote")]
+    [InlineData("sevenseas-book", "SevenSeas", "Mushoku Tensei: Jobless Reincarnation (Light Novel) Vol. 1",
+        "Rifujin na Magonote")]
     [InlineData("yenpress", "YenPress", "86--EIGHTY-SIX (light novel)", "Asato Asato")]
     [InlineData("yenpress-book", "YenPress", "86--EIGHTY-SIX, Vol. 1 (light novel)", "Asato Asato")]
     [InlineData("syosetu", "Syosetu", "無職転生 - 異世界行ったら本気だす -", "理不尽な孫の手")]
@@ -59,9 +74,20 @@ public sealed class AdditionalBookHtmlParserTests
         Assert.Equal(author, result.AuthorName);
         Assert.Equal("Novel", result.ContentType?.Name);
         Assert.DoesNotContain(result.PrimaryTitle!, result.AlternativeTitles);
-        if (fixture != "yenpress") Assert.False(string.IsNullOrWhiteSpace(result.Description));
-        if (fixture != "yenpress-book") Assert.StartsWith("https://", result.CanonicalUrl);
-        if (!fixture.StartsWith("syosetu", StringComparison.Ordinal)) Assert.StartsWith("https://", result.CoverUrl);
+        if (fixture != "yenpress")
+        {
+            Assert.False(string.IsNullOrWhiteSpace(result.Description));
+        }
+
+        if (fixture != "yenpress-book")
+        {
+            Assert.StartsWith("https://", result.CanonicalUrl);
+        }
+
+        if (!fixture.StartsWith("syosetu", StringComparison.Ordinal))
+        {
+            Assert.StartsWith("https://", result.CoverUrl);
+        }
     }
 
     [Fact]
@@ -221,7 +247,8 @@ public sealed class AdditionalBookHtmlParserTests
     {
         var document = new HtmlParser().ParseDocument(Fixture(fixture));
         document.QuerySelector(selector)!.TextContent = "Manga";
-        await Assert.ThrowsAsync<ValidationException>(() => Parser().ParseAsync(document.DocumentElement!.OuterHtml, CancellationToken.None));
+        await Assert.ThrowsAsync<ValidationException>(() =>
+            Parser().ParseAsync(document.DocumentElement!.OuterHtml, CancellationToken.None));
     }
 
     [Theory]
@@ -231,12 +258,18 @@ public sealed class AdditionalBookHtmlParserTests
     {
         var document = new HtmlParser().ParseDocument(Fixture(fixture));
         foreach (var script in document.QuerySelectorAll("script[type='application/ld+json'],script#__NEXT_DATA__"))
+        {
             script.TextContent = "{bad json <script>throw new Error('must not run')</script>";
+        }
+
         var result = await Parser().ParseAsync(document.DocumentElement!.OuterHtml, CancellationToken.None);
         Assert.NotNull(result.PrimaryTitle);
         Assert.NotNull(result.AuthorName);
         Assert.NotNull(result.Description);
-        if (fixture == "kakuyomu") Assert.Contains(result.Warnings, warning => warning.Contains("JSON", StringComparison.Ordinal));
+        if (fixture == "kakuyomu")
+        {
+            Assert.Contains(result.Warnings, warning => warning.Contains("JSON", StringComparison.Ordinal));
+        }
     }
 
     [Theory]
@@ -253,12 +286,21 @@ public sealed class AdditionalBookHtmlParserTests
     public async Task WrongCanonicalHost_DoesNotMatchEvenWithRealProviderMarkup(string fixture)
     {
         var document = new HtmlParser().ParseDocument(Fixture(fixture));
-        foreach (var canonical in document.QuerySelectorAll("link[rel='canonical']")) canonical.Remove();
-        foreach (var meta in document.QuerySelectorAll("meta[property='og:url']")) meta.Remove();
+        foreach (var canonical in document.QuerySelectorAll("link[rel='canonical']"))
+        {
+            canonical.Remove();
+        }
+
+        foreach (var meta in document.QuerySelectorAll("meta[property='og:url']"))
+        {
+            meta.Remove();
+        }
+
         var link = document.CreateElement("link");
         link.SetAttribute("rel", "canonical");
         link.SetAttribute("href", "https://unrelated.example/series/book");
         document.Head!.AppendChild(link);
-        await Assert.ThrowsAsync<ValidationException>(() => Parser().ParseAsync(document.DocumentElement!.OuterHtml, CancellationToken.None));
+        await Assert.ThrowsAsync<ValidationException>(() =>
+            Parser().ParseAsync(document.DocumentElement!.OuterHtml, CancellationToken.None));
     }
 }

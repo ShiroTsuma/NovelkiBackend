@@ -1,7 +1,7 @@
 namespace Application.Common;
 
-using Application.Common.DTOs.Book;
 using Domain.Models;
+using DTOs.Book;
 
 public static partial class MappingExtensions
 {
@@ -133,7 +133,9 @@ public static partial class MappingExtensions
                 FieldCompleteness = source.Quality.FieldCompleteness
                     .Select(item => new BookAnalyticsFieldCompletenessDto
                     {
-                        Field = item.Field, BookCount = item.BookCount, ShareOfBooks = ToPercentage(item.ShareOfBooks)
+                        Field = item.Field,
+                        BookCount = item.BookCount,
+                        ShareOfBooks = ToPercentage(item.ShareOfBooks)
                     })
                     .ToList(),
                 LinkSources = source.Quality.LinkSources
@@ -148,13 +150,17 @@ public static partial class MappingExtensions
                 CoverStatuses = source.Quality.CoverStatuses
                     .Select(item => new BookAnalyticsCoverStatusDto
                     {
-                        Status = item.Status, BookCount = item.BookCount, ShareOfBooks = ToPercentage(item.ShareOfBooks)
+                        Status = item.Status,
+                        BookCount = item.BookCount,
+                        ShareOfBooks = ToPercentage(item.ShareOfBooks)
                     })
                     .ToList(),
                 CoverSources = source.Quality.CoverSources
                     .Select(item => new BookAnalyticsCoverSourceDto
                     {
-                        Source = item.Source, BookCount = item.BookCount, ShareOfBooks = ToPercentage(item.ShareOfBooks)
+                        Source = item.Source,
+                        BookCount = item.BookCount,
+                        ShareOfBooks = ToPercentage(item.ShareOfBooks)
                     })
                     .ToList()
             }

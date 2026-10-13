@@ -2,16 +2,17 @@ namespace Infrastructure.IntegrationTests.PostgreSql;
 
 using Application.Common;
 using Application.Common.Interfaces;
+using BookSearch;
+using Contexts;
 using Domain.Associations;
 using Domain.Entities;
-using Infrastructure.BookSearch;
-using Infrastructure.Contexts;
-using Infrastructure.Identity;
-using Infrastructure.Persistence;
+using Domain.Repositories;
+using Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Logging.Abstractions;
+using Persistence;
 using TestSupport;
 
 [Collection(PostgreSqlCollection.CollectionName)]
@@ -28,9 +29,7 @@ public sealed class BookSearchIndexPostgreSqlTests(PostgreSqlFixture fixture)
         var author = TestData.Author("Cultivator");
         author.Names.Add(new AuthorName
         {
-            Name = "Meng Hao",
-            NormalizedName = MappingExtensions.NormalizeName("Meng Hao"),
-            Source = "Test"
+            Name = "Meng Hao", NormalizedName = MappingExtensions.NormalizeName("Meng Hao"), Source = "Test"
         });
         var action = TestData.Genre("Action");
         var xianxia = TestData.Genre("Xianxia");
@@ -46,16 +45,8 @@ public sealed class BookSearchIndexPostgreSqlTests(PostgreSqlFixture fixture)
         fuzzyBook.ContentTypeId = Guid.Parse("10000000-0000-0000-0000-000000000004");
         fuzzyBook.BookGenres.Add(new BookGenre { Book = fuzzyBook, Genre = TestData.Genre("Mystery") });
         fuzzyBook.BookGenres.Add(new BookGenre { Book = fuzzyBook, Genre = TestData.Genre("Drama") });
-        fuzzyBook.BookTags.Add(new BookTag
-        {
-            Book = fuzzyBook,
-            Tag = TestData.Tag(ownerId, "Manhua")
-        });
-        fuzzyBook.BookTags.Add(new BookTag
-        {
-            Book = fuzzyBook,
-            Tag = TestData.Tag(ownerId, "Full Color")
-        });
+        fuzzyBook.BookTags.Add(new BookTag { Book = fuzzyBook, Tag = TestData.Tag(ownerId, "Manhua") });
+        fuzzyBook.BookTags.Add(new BookTag { Book = fuzzyBook, Tag = TestData.Tag(ownerId, "Full Color") });
         context.Books.Add(fuzzyBook);
         var exactManga = TestData.Book(ownerId, "Ink Adventure");
         exactManga.ContentTypeId = Guid.Parse("10000000-0000-0000-0000-000000000002");
@@ -182,25 +173,25 @@ public sealed class BookSearchIndexPostgreSqlTests(PostgreSqlFixture fixture)
         var bookId = Guid.NewGuid();
         var now = DateTimeOffset.UtcNow;
         await context.Database.ExecuteSqlInterpolatedAsync($"""
-            INSERT INTO "Books" (
-                "Id", "OwnerId", "PrimaryTitle", "NormalizedPrimaryTitle", "ContentTypeId", "StatusId",
-                "Created", "CreatedBy", "LastModified", "LastModifiedBy")
-            VALUES (
-                {bookId}, {ownerId}, {"Upgrade Search Document"},
-                {MappingExtensions.NormalizeName("Upgrade Search Document")},
-                {Guid.Parse("10000000-0000-0000-0000-000000000001")},
-                {Guid.Parse("20000000-0000-0000-0000-000000000001")},
-                {now}, {ownerId}, {now}, {ownerId});
-            """);
+                                                            INSERT INTO "Books" (
+                                                                "Id", "OwnerId", "PrimaryTitle", "NormalizedPrimaryTitle", "ContentTypeId", "StatusId",
+                                                                "Created", "CreatedBy", "LastModified", "LastModifiedBy")
+                                                            VALUES (
+                                                                {bookId}, {ownerId}, {"Upgrade Search Document"},
+                                                                {MappingExtensions.NormalizeName("Upgrade Search Document")},
+                                                                {Guid.Parse("10000000-0000-0000-0000-000000000001")},
+                                                                {Guid.Parse("20000000-0000-0000-0000-000000000001")},
+                                                                {now}, {ownerId}, {now}, {ownerId});
+                                                            """);
         await context.Database.ExecuteSqlInterpolatedAsync($"""
-            INSERT INTO "BookTitles" (
-                "Id", "BookId", "Title", "NormalizedTitle", "IsPrimary",
-                "Created", "CreatedBy", "LastModified", "LastModifiedBy")
-            VALUES (
-                {Guid.NewGuid()}, {bookId}, {"Upgrade Search Document"},
-                {MappingExtensions.NormalizeName("Upgrade Search Document")}, TRUE,
-                {now}, {ownerId}, {now}, {ownerId});
-            """);
+                                                            INSERT INTO "BookTitles" (
+                                                                "Id", "BookId", "Title", "NormalizedTitle", "IsPrimary",
+                                                                "Created", "CreatedBy", "LastModified", "LastModifiedBy")
+                                                            VALUES (
+                                                                {Guid.NewGuid()}, {bookId}, {"Upgrade Search Document"},
+                                                                {MappingExtensions.NormalizeName("Upgrade Search Document")}, TRUE,
+                                                                {now}, {ownerId}, {now}, {ownerId});
+                                                            """);
         await context.Database.ExecuteSqlInterpolatedAsync($"SELECT refresh_book_search_index({bookId})");
 
         var beforeUpgrade = await GetSearchDocumentAsync(context, bookId);
@@ -258,7 +249,7 @@ public sealed class BookSearchIndexPostgreSqlTests(PostgreSqlFixture fixture)
 
     private static Task<Guid[]> SearchAsync(
         ApplicationDbContext context,
-        Domain.Repositories.BookSearchCriteria criteria)
+        BookSearchCriteria criteria)
     {
         return new BookSearchCriteriaApplier(context)
             .Apply(context.Books.AsNoTracking(), criteria)
@@ -333,15 +324,15 @@ public sealed class BookSearchIndexPostgreSqlTests(PostgreSqlFixture fixture)
 
             await using var command = connection.CreateCommand();
             command.CommandText = """
-                EXPLAIN (COSTS OFF)
-                SELECT "Id"
-                FROM "Books"
-                WHERE "SearchVector" @@ plainto_tsquery('simple', @term)
-                   OR (
-                        @term <% "SearchDocument"
-                        AND public.book_search_has_close_lexeme("SearchVector", @term)
-                   );
-                """;
+                                  EXPLAIN (COSTS OFF)
+                                  SELECT "Id"
+                                  FROM "Books"
+                                  WHERE "SearchVector" @@ plainto_tsquery('simple', @term)
+                                     OR (
+                                          @term <% "SearchDocument"
+                                          AND public.book_search_has_close_lexeme("SearchVector", @term)
+                                     );
+                                  """;
             var parameter = command.CreateParameter();
             parameter.ParameterName = "term";
             parameter.Value = term;

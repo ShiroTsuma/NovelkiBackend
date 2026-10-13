@@ -1,7 +1,7 @@
-using Application.Common;
-using Domain.Repositories;
-
 namespace Application.UnitTests;
+
+using Common;
+using Domain.Repositories;
 
 public class BookSearchQueryParserTests
 {
@@ -211,7 +211,8 @@ public class BookSearchQueryParserTests
         16)]
     [InlineData("createDate:>=15.07.2026", BookSearchDateField.Created, BookSearchOperator.GreaterThanOrEqual, 2026, 7,
         15)]
-    [InlineData("updateDate:<15/07/2026", BookSearchDateField.LastProgressUpdated, BookSearchOperator.LessThan, 2026, 7, 15)]
+    [InlineData("updateDate:<15/07/2026", BookSearchDateField.LastProgressUpdated, BookSearchOperator.LessThan, 2026, 7,
+        15)]
     [InlineData("lastModified:<=5/7/2026", BookSearchDateField.LastModified, BookSearchOperator.LessThan, 2026, 7, 6)]
     public void Parse_ShouldReadDateFiltersWithSupportedDateFormats(
         string query,

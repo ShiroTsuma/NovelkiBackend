@@ -118,17 +118,9 @@ public sealed class BookSearchCriteriaApplierTests
         });
         var authorAlias = TestData.Book(database.UserId, "Alias Author Book", aliasAuthor);
         var tagged = TestData.Book(database.UserId, "Tagged Book");
-        tagged.BookTags.Add(new BookTag
-        {
-            Book = tagged,
-            Tag = TestData.Tag(database.UserId, "Tag Needle")
-        });
+        tagged.BookTags.Add(new BookTag { Book = tagged, Tag = TestData.Tag(database.UserId, "Tag Needle") });
         var genre = TestData.Book(database.UserId, "Genre Book");
-        genre.BookGenres.Add(new BookGenre
-        {
-            Book = genre,
-            Genre = TestData.Genre("Genre Needle")
-        });
+        genre.BookGenres.Add(new BookGenre { Book = genre, Genre = TestData.Genre("Genre Needle") });
         var status = TestData.Book(database.UserId, "Status Book");
         status.StatusId = Guid.Parse("20000000-0000-0000-0000-000000000002");
         var type = TestData.Book(database.UserId, "Type Book");
@@ -303,7 +295,7 @@ public sealed class BookSearchCriteriaApplierTests
     [Fact]
     public void ShortPostgresGeneralTextSearch_ShouldSkipFuzzyLexemeValidation()
     {
-        using var context = CreateQueryContext(postgres: true);
+        using var context = CreateQueryContext(true);
 
         var sql = Apply(context, Criteria(["ma"])).ToQueryString();
 
@@ -351,17 +343,9 @@ public sealed class BookSearchCriteriaApplierTests
         using var database = new SqliteTestDatabase();
         await using var context = database.CreateContext();
         var allowed = TestData.Book(database.UserId, "Allowed");
-        allowed.BookTags.Add(new BookTag
-        {
-            Book = allowed,
-            Tag = TestData.Tag(database.UserId, "Favorite")
-        });
+        allowed.BookTags.Add(new BookTag { Book = allowed, Tag = TestData.Tag(database.UserId, "Favorite") });
         var blocked = TestData.Book(database.UserId, "Blocked");
-        blocked.BookTags.Add(new BookTag
-        {
-            Book = blocked,
-            Tag = TestData.Tag(database.UserId, "Dropped")
-        });
+        blocked.BookTags.Add(new BookTag { Book = blocked, Tag = TestData.Tag(database.UserId, "Dropped") });
         context.Books.AddRange(allowed, blocked);
         await context.SaveChangesAsync();
 

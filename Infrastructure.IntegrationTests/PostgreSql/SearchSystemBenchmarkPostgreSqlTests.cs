@@ -3,11 +3,10 @@ namespace Infrastructure.IntegrationTests.PostgreSql;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using Application.Common;
-using Domain.Entities;
-using Infrastructure.Contexts;
-using Infrastructure.Persistence;
+using Contexts;
+using Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging.Abstractions;
+using Persistence;
 using TestSupport;
 using Xunit.Abstractions;
 
@@ -36,6 +35,7 @@ public sealed class SearchSystemBenchmarkPostgreSqlTests(PostgreSqlFixture fixtu
             throw new InvalidOperationException(
                 "SEARCH_BENCHMARK_CSV must point to the local production-like CSV dataset for this system benchmark.");
         }
+
         var dataset = await BookCsvDatasetSeeder.SeedAsync(
             context,
             ownerId,
@@ -58,48 +58,53 @@ public sealed class SearchSystemBenchmarkPostgreSqlTests(PostgreSqlFixture fixtu
             Enumerable.Range(0, workload.Count),
             new ParallelOptions { MaxDegreeOfParallelism = parallelism },
             async (operation, cancellationToken) =>
-        {
-            var item = workload[operation];
-            var started = Stopwatch.GetTimestamp();
-            try
             {
-                await using var requestContext = fixture.CreateContext(ownerId);
-                var service = CreateReadQueryService(requestContext);
-                var result = await service.GetBooksAsync(
-                    ownerId,
-                    BookSearchQueryParser.Parse(item.Query),
-                    0,
-                    20,
-                    null,
-                    null,
-                    cancellationToken);
-                var duration = Stopwatch.GetElapsedTime(started).TotalMilliseconds;
-                durations.Add(duration);
-                durationsByKind.GetOrAdd(item.Kind, _ => []).Add(duration);
-                Interlocked.Add(ref resultCount, result.Count);
-            }
-            catch (Exception exception)
-            {
-                throw new InvalidOperationException(
-                    $"Search workload failed at operation {operation + 1}/{TotalOperations} ({item.Kind}): {item.Query}",
-                    exception);
-            }
-        });
+                var item = workload[operation];
+                var started = Stopwatch.GetTimestamp();
+                try
+                {
+                    await using var requestContext = fixture.CreateContext(ownerId);
+                    var service = CreateReadQueryService(requestContext);
+                    var result = await service.GetBooksAsync(
+                        ownerId,
+                        BookSearchQueryParser.Parse(item.Query),
+                        0,
+                        20,
+                        null,
+                        null,
+                        cancellationToken);
+                    var duration = Stopwatch.GetElapsedTime(started).TotalMilliseconds;
+                    durations.Add(duration);
+                    durationsByKind.GetOrAdd(item.Kind, _ => []).Add(duration);
+                    Interlocked.Add(ref resultCount, result.Count);
+                }
+                catch (Exception exception)
+                {
+                    throw new InvalidOperationException(
+                        $"Search workload failed at operation {operation + 1}/{TotalOperations} ({item.Kind}): {item.Query}",
+                        exception);
+                }
+            });
         elapsed.Stop();
 
         var ordered = durations.OrderBy(duration => duration).ToArray();
         var plans = await GetRepresentativePlansAsync(context, ownerId);
         output.WriteLine($"Dataset: {csvPath}");
-        output.WriteLine($"Search workload: {TotalOperations} backend operations across {dataset.BookCount} books, results: {resultCount}");
-        output.WriteLine($"Parallelism: {parallelism}; wall-clock: {elapsed.Elapsed.TotalSeconds:F2} s; throughput: {TotalOperations / elapsed.Elapsed.TotalSeconds:F2} requests/s");
-        output.WriteLine($"Query mix: {string.Join(", ", workload.GroupBy(item => item.Kind).OrderBy(group => group.Key).Select(group => $"{group.Key}={group.Count()}"))}");
-        output.WriteLine($"p50: {Percentile(ordered, 0.50):F2} ms; p95: {Percentile(ordered, 0.95):F2} ms; p99: {Percentile(ordered, 0.99):F2} ms; aggregate: {durations.Sum():F2} ms");
+        output.WriteLine(
+            $"Search workload: {TotalOperations} backend operations across {dataset.BookCount} books, results: {resultCount}");
+        output.WriteLine(
+            $"Parallelism: {parallelism}; wall-clock: {elapsed.Elapsed.TotalSeconds:F2} s; throughput: {TotalOperations / elapsed.Elapsed.TotalSeconds:F2} requests/s");
+        output.WriteLine(
+            $"Query mix: {string.Join(", ", workload.GroupBy(item => item.Kind).OrderBy(group => group.Key).Select(group => $"{group.Key}={group.Count()}"))}");
+        output.WriteLine(
+            $"p50: {Percentile(ordered, 0.50):F2} ms; p95: {Percentile(ordered, 0.95):F2} ms; p99: {Percentile(ordered, 0.99):F2} ms; aggregate: {durations.Sum():F2} ms");
         foreach (var (kind, kindDurations) in durationsByKind.OrderBy(item => item.Key, StringComparer.Ordinal))
         {
             var orderedByKind = kindDurations.OrderBy(duration => duration).ToArray();
             output.WriteLine($"{kind}: count={orderedByKind.Length}; p50={Percentile(orderedByKind, 0.50):F2} ms; " +
                              $"p95={Percentile(orderedByKind, 0.95):F2} ms; p99={Percentile(orderedByKind, 0.99):F2} ms");
         }
+
         foreach (var (name, plan) in plans)
         {
             output.WriteLine($"{name} EXPLAIN (ANALYZE, BUFFERS):{Environment.NewLine}{plan}");
@@ -158,9 +163,7 @@ public sealed class SearchSystemBenchmarkPostgreSqlTests(PostgreSqlFixture fixtu
         var book = samples[random.Next(samples.Count)];
         var fields = new List<(string Name, string Value)>
         {
-            ("title", book.PrimaryTitle),
-            ("type", book.ContentType),
-            ("status", book.Status)
+            ("title", book.PrimaryTitle), ("type", book.ContentType), ("status", book.Status)
         };
         if (!string.IsNullOrWhiteSpace(book.Author))
         {
@@ -211,7 +214,8 @@ public sealed class SearchSystemBenchmarkPostgreSqlTests(PostgreSqlFixture fixtu
         }
 
         Shuffle(components, random);
-        return new SearchWorkloadItem(hasGeneral ? "generator-general" : "generator-split", string.Join(' ', components));
+        return new SearchWorkloadItem(hasGeneral ? "generator-general" : "generator-split",
+            string.Join(' ', components));
     }
 
     private static int RollAttributeCount(Random random)
@@ -260,16 +264,16 @@ public sealed class SearchSystemBenchmarkPostgreSqlTests(PostgreSqlFixture fixtu
         return new Dictionary<string, string>
         {
             ["fts-fuzzy"] = await ExplainAsync(context, ownerId, """
-                "SearchVector" @@ plainto_tsquery('simple', 'devil')
-                OR ('devil' <% "SearchDocument" AND public.book_search_has_close_lexeme("SearchVector", 'devil'))
-                """),
+                                                                 "SearchVector" @@ plainto_tsquery('simple', 'devil')
+                                                                 OR ('devil' <% "SearchDocument" AND public.book_search_has_close_lexeme("SearchVector", 'devil'))
+                                                                 """),
             ["wildcard"] = await ExplainAsync(context, ownerId, """
-                "SearchDocument" ILIKE '%devi%king%' ESCAPE '\'
-                """),
+                                                                "SearchDocument" ILIKE '%devi%king%' ESCAPE '\'
+                                                                """),
             ["structured"] = await ExplainAsync(context, ownerId, """
-                "ContentTypeId" = '10000000-0000-0000-0000-000000000001'
-                AND "StatusId" = '20000000-0000-0000-0000-000000000001'
-                """)
+                                                                  "ContentTypeId" = '10000000-0000-0000-0000-000000000001'
+                                                                  AND "StatusId" = '20000000-0000-0000-0000-000000000001'
+                                                                  """)
         };
     }
 
@@ -281,12 +285,12 @@ public sealed class SearchSystemBenchmarkPostgreSqlTests(PostgreSqlFixture fixtu
         {
             await using var command = connection.CreateCommand();
             command.CommandText = $"""
-                EXPLAIN (ANALYZE, BUFFERS)
-                SELECT "Id"
-                FROM "Books"
-                WHERE "OwnerId" = @ownerId
-                  AND ({predicate});
-                """;
+                                   EXPLAIN (ANALYZE, BUFFERS)
+                                   SELECT "Id"
+                                   FROM "Books"
+                                   WHERE "OwnerId" = @ownerId
+                                     AND ({predicate});
+                                   """;
             var ownerParameter = command.CreateParameter();
             ownerParameter.ParameterName = "ownerId";
             ownerParameter.Value = ownerId;
@@ -321,7 +325,7 @@ public sealed class SearchSystemBenchmarkPostgreSqlTests(PostgreSqlFixture fixtu
 
     private static async Task AddUserAsync(ApplicationDbContext context, Guid ownerId)
     {
-        context.Users.Add(new Infrastructure.Identity.User
+        context.Users.Add(new User
         {
             Id = ownerId,
             UserName = $"reader-{ownerId:N}",

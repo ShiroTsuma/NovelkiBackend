@@ -127,7 +127,7 @@ public sealed class BookFileServiceTests
         var book = await h.AddBook("Volumes");
         using var zip = Zip(("nested/volume10.epub", Epub("Ten")), ("nested/volume2.epub", Epub("Two")),
             ("readme.txt", Encoding.UTF8.GetBytes("ignored")));
-        var job = await h.Service.CreateImportAsync(book.Id, Uploads(new(zip, "volumes.zip")), default);
+        var job = await h.Service.CreateImportAsync(book.Id, Uploads(new BookFileUpload(zip, "volumes.zip")), default);
         Assert.True(await h.Service.ProcessNextAsync(default));
         var preview = await h.Service.GetJobAsync(job.Id, default);
         Assert.Equal("Ready", preview.Status);
@@ -151,7 +151,8 @@ public sealed class BookFileServiceTests
         var book = await h.AddBook("Duplicates");
         await h.Import(book.Id, Epub("Original"), "volume.epub");
         using var identical = new MemoryStream(Epub("Original"));
-        var job = await h.Service.CreateImportAsync(book.Id, Uploads(new(identical, "renamed.epub")), default);
+        var job = await h.Service.CreateImportAsync(book.Id, Uploads(new BookFileUpload(identical, "renamed.epub")),
+            default);
         await h.Service.ProcessNextAsync(default);
         var preview = await h.Service.GetJobAsync(job.Id, default);
         Assert.True(Assert.Single(preview.Entries).IsDuplicate);
@@ -201,7 +202,11 @@ public sealed class BookFileServiceTests
             h.For(Guid.NewGuid()).CreateDownloadsAsync([file.Id], null, default));
         var ticket = Assert.Single(await h.Service.CreateDownloadsAsync([file.Id], null, default));
         var downloaded = await h.Service.ConsumeDownloadAsync(TicketId(ticket), Token(ticket), default);
-        using (downloaded.Content) Assert.Equal(file.SizeBytes, downloaded.Content.Length);
+        using (downloaded.Content)
+        {
+            Assert.Equal(file.SizeBytes, downloaded.Content.Length);
+        }
+
         await Assert.ThrowsAsync<EntityNotFoundException<BookFileDownloadTicket, Guid>>(() =>
             h.Service.ConsumeDownloadAsync(TicketId(ticket), Token(ticket), default));
     }
@@ -241,13 +246,17 @@ public sealed class BookFileServiceTests
         await archive.Content.CopyToAsync(saved);
         await archive.Content.DisposeAsync();
         using (var zip = new ZipArchive(new MemoryStream(saved.ToArray()), ZipArchiveMode.Read))
+        {
             Assert.NotNull(zip.GetEntry("manifest.json"));
+        }
+
         await h.Context.Books.Where(b => b.Id == book.Id).ExecuteDeleteAsync();
         h.Context.ChangeTracker.Clear();
         var replacement = await h.AddBook("Restore me");
         saved.Position = 0;
         var import =
-            await h.Service.CreateImportAsync(null, Uploads(new(saved, "novelki-epubs.zip")), default, saved.Length);
+            await h.Service.CreateImportAsync(null, Uploads(new BookFileUpload(saved, "novelki-epubs.zip")), default,
+                saved.Length);
         await h.Service.ProcessNextAsync(default);
         var preview = await h.Service.GetJobAsync(import.Id, default);
         Assert.All(preview.Entries, e =>
@@ -268,7 +277,7 @@ public sealed class BookFileServiceTests
         using var h = new Harness();
         var book = await h.AddBook("Invalid");
         using var zip = Zip(("not-an-epub.txt", Encoding.UTF8.GetBytes("hello")));
-        var job = await h.Service.CreateImportAsync(book.Id, Uploads(new(zip, "fake.epub")), default);
+        var job = await h.Service.CreateImportAsync(book.Id, Uploads(new BookFileUpload(zip, "fake.epub")), default);
         await h.Service.ProcessNextAsync(default);
         var preview = await h.Service.GetJobAsync(job.Id, default);
         Assert.NotNull(Assert.Single(preview.Entries).Error);
@@ -288,11 +297,14 @@ public sealed class BookFileServiceTests
         if (attributes != 0)
         {
             using (var archive = new ZipArchive(zip, ZipArchiveMode.Update, true))
+            {
                 archive.GetEntry(name)!.ExternalAttributes = attributes;
+            }
+
             zip.Position = 0;
         }
 
-        var job = await h.Service.CreateImportAsync(book.Id, Uploads(new(zip, "unsafe.zip")), default);
+        var job = await h.Service.CreateImportAsync(book.Id, Uploads(new BookFileUpload(zip, "unsafe.zip")), default);
         await h.Service.ProcessNextAsync(default);
         Assert.Equal("Failed", (await h.Service.GetJobAsync(job.Id, default)).Status);
         await Assert.ThrowsAsync<AccountTemporarilyBlockedException>(() =>
@@ -306,7 +318,7 @@ public sealed class BookFileServiceTests
         var book = await h.AddBook("Bomb");
         var epub = Epub("Bomb", new string('A', 1024 * 1024));
         using var zip = Zip(("bomb.epub", epub));
-        var job = await h.Service.CreateImportAsync(book.Id, Uploads(new(zip, "bomb.zip")), default);
+        var job = await h.Service.CreateImportAsync(book.Id, Uploads(new BookFileUpload(zip, "bomb.zip")), default);
         await h.Service.ProcessNextAsync(default);
         Assert.Equal("Failed", (await h.Service.GetJobAsync(job.Id, default)).Status);
         Assert.Empty((await h.Service.ListAsync(book.Id, default)).Files);
@@ -315,10 +327,11 @@ public sealed class BookFileServiceTests
     [Fact]
     public async Task FailedStorageWrite_HasDurableCompensatingCleanup()
     {
-        using var h = new Harness(failWrite: true);
+        using var h = new Harness(true);
         var book = await h.AddBook("Failure");
         using var file = new MemoryStream(Epub("Failure"));
-        var job = await h.Service.CreateImportAsync(book.Id, Uploads(new(file, "failure.epub")), default);
+        var job = await h.Service.CreateImportAsync(book.Id, Uploads(new BookFileUpload(file, "failure.epub")),
+            default);
         await h.Service.ProcessNextAsync(default);
         await h.Service.FinalizeAsync(job.Id, Select(await h.Service.GetJobAsync(job.Id, default), book.Id), default);
         await h.Service.ProcessNextAsync(default);
@@ -366,11 +379,21 @@ public sealed class BookFileServiceTests
         Assert.Single(await h.Context.StorageCleanupQueueItems.ToListAsync());
     }
 
-    private static BookFileImportSelection[] Select(BookFileJobDto preview, Guid bookId) => preview.Entries
-        .Select(e => new BookFileImportSelection(e.Id, bookId, e.Title, e.SortOrder)).ToArray();
+    private static BookFileImportSelection[] Select(BookFileJobDto preview, Guid bookId)
+    {
+        return preview.Entries
+            .Select(e => new BookFileImportSelection(e.Id, bookId, e.Title, e.SortOrder)).ToArray();
+    }
 
-    private static Guid TicketId(BookFileDownloadDto ticket) => Guid.Parse(ticket.Url.Split('?')[0].Split('/').Last());
-    private static string Token(BookFileDownloadDto ticket) => ticket.Url.Split("token=")[1];
+    private static Guid TicketId(BookFileDownloadDto ticket)
+    {
+        return Guid.Parse(ticket.Url.Split('?')[0].Split('/').Last());
+    }
+
+    private static string Token(BookFileDownloadDto ticket)
+    {
+        return ticket.Url.Split("token=")[1];
+    }
 
     private static async IAsyncEnumerable<BookFileUpload> Uploads(BookFileUpload upload,
         [EnumeratorCancellation] CancellationToken ct = default)
@@ -398,14 +421,16 @@ public sealed class BookFileServiceTests
             navigationPath ??= legacy ? "toc.ncx" : "nav.xhtml";
             var manifest = navigation == null
                 ? ""
-                :
-                legacy
-                    ?
-                    $"<manifest><item id='ncx' href='{navigationPath}' media-type='application/x-dtbncx+xml'/></manifest><spine toc='ncx'/>"
+                : legacy
+                    ? $"<manifest><item id='ncx' href='{navigationPath}' media-type='application/x-dtbncx+xml'/></manifest><spine toc='ncx'/>"
                     : $"<manifest><item id='nav' href='{navigationPath}' media-type='application/xhtml+xml' properties='nav'/></manifest>";
             Write("content.opf",
                 $"<package xmlns='http://www.idpf.org/2007/opf'><metadata><dc:title xmlns:dc='http://purl.org/dc/elements/1.1/'>{title}</dc:title></metadata>{manifest}</package>");
-            if (navigation != null) Write(navigationPath, navigation);
+            if (navigation != null)
+            {
+                Write(navigationPath, navigation);
+            }
+
             Write("chapter.xhtml", body, CompressionLevel.Optimal);
         }
 
@@ -416,11 +441,13 @@ public sealed class BookFileServiceTests
     {
         var stream = new MemoryStream();
         using (var zip = new ZipArchive(stream, ZipArchiveMode.Create, true))
+        {
             foreach (var file in files)
             {
                 using var target = zip.CreateEntry(file.Name, CompressionLevel.NoCompression).Open();
                 target.Write(file.Bytes);
             }
+        }
 
         stream.Position = 0;
         return stream;
@@ -464,11 +491,17 @@ public sealed class BookFileServiceTests
         {
             Context.Dispose();
             Database.Dispose();
-            if (Directory.Exists(_root)) Directory.Delete(_root, true);
+            if (Directory.Exists(_root))
+            {
+                Directory.Delete(_root, true);
+            }
         }
 
-        public BookFileService For(Guid id) => new(Context, new Reader(id), Storage,
-            new StorageCleanupQueue(Context, TimeProvider.System), _options, _security, Guard);
+        public BookFileService For(Guid id)
+        {
+            return new BookFileService(Context, new Reader(id), Storage,
+                new StorageCleanupQueue(Context, TimeProvider.System), _options, _security, Guard);
+        }
 
         public async Task<Book> AddBook(string title)
         {
@@ -481,7 +514,7 @@ public sealed class BookFileServiceTests
         public async Task Import(Guid bookId, byte[] bytes, string filename = "volume.epub")
         {
             using var stream = new MemoryStream(bytes);
-            var job = await Service.CreateImportAsync(bookId, Uploads(new(stream, filename)), default);
+            var job = await Service.CreateImportAsync(bookId, Uploads(new BookFileUpload(stream, filename)), default);
             await Service.ProcessNextAsync(default);
             var preview = await Service.GetJobAsync(job.Id, default);
             Assert.Equal("Ready", preview.Status);
@@ -529,11 +562,14 @@ public sealed class BookFileServiceTests
         UrlEncoder encoder)
         : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
     {
-        protected override Task<AuthenticateResult> HandleAuthenticateAsync() => Task.FromResult(
-            AuthenticateResult.Success(
-                new AuthenticationTicket(
-                    new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "test")],
-                        Scheme.Name)), Scheme.Name)));
+        protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+        {
+            return Task.FromResult(
+                AuthenticateResult.Success(
+                    new AuthenticationTicket(
+                        new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "test")],
+                            Scheme.Name)), Scheme.Name)));
+        }
     }
 
     private sealed class BrokenStorage(IBookFileStorage inner) : IBookFileStorage
@@ -544,18 +580,33 @@ public sealed class BookFileServiceTests
             throw new IOException("Storage response lost.");
         }
 
-        public Task<Stream> OpenReadAsync(string path, CancellationToken ct) => inner.OpenReadAsync(path, ct);
-        public Task DeleteIfExistsAsync(string path, CancellationToken ct) => inner.DeleteIfExistsAsync(path, ct);
+        public Task<Stream> OpenReadAsync(string path, CancellationToken ct)
+        {
+            return inner.OpenReadAsync(path, ct);
+        }
+
+        public Task DeleteIfExistsAsync(string path, CancellationToken ct)
+        {
+            return inner.DeleteIfExistsAsync(path, ct);
+        }
     }
 
     private sealed class CoverStorage : IBookCoverStorage
     {
         public Task<BookCoverStoredFiles> SaveAsync(Guid ownerId, Guid bookId, Stream content, string fileName,
-            string? contentType, CancellationToken ct) => throw new NotSupportedException();
-
-        public Task<Stream> OpenReadAsync(string storagePath, CancellationToken ct) =>
+            string? contentType, CancellationToken ct)
+        {
             throw new NotSupportedException();
+        }
 
-        public Task DeleteIfExistsAsync(string? path, CancellationToken ct) => Task.CompletedTask;
+        public Task<Stream> OpenReadAsync(string storagePath, CancellationToken ct)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task DeleteIfExistsAsync(string? path, CancellationToken ct)
+        {
+            return Task.CompletedTask;
+        }
     }
 }

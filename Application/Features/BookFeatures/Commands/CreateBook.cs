@@ -1,6 +1,6 @@
 namespace Application.Features.BookFeatures.Commands;
 
-using Application.Common.DTOs.Book;
+using Common.DTOs.Book;
 using Domain.Associations;
 
 public sealed record CreateBookCommand(
@@ -26,14 +26,14 @@ public sealed record CreateBookCommand(
 
 public class CreateBookHandler : IRequestHandler<CreateBookCommand, Guid>
 {
-    private readonly IBookRepository _bookRepository;
     private readonly IAuthorRepository _authorRepository;
-    private readonly ITypeRepository _typeRepository;
-    private readonly IStatusRepository _statusRepository;
-    private readonly IGenreRepository _genreRepository;
-    private readonly ITagRepository _tagRepository;
     private readonly IBookCoverQueue _bookCoverQueue;
+    private readonly IBookRepository _bookRepository;
     private readonly IBookListCacheInvalidator _cacheInvalidator;
+    private readonly IGenreRepository _genreRepository;
+    private readonly IStatusRepository _statusRepository;
+    private readonly ITagRepository _tagRepository;
+    private readonly ITypeRepository _typeRepository;
     private readonly IUser _user;
 
     public CreateBookHandler(
@@ -106,7 +106,9 @@ public class CreateBookHandler : IRequestHandler<CreateBookCommand, Guid>
             {
                 Source = initialCoverUrl != null
                     ? BookCoverSource.ManualUrl
-                    : request.InitialCoverUploadToken != null ? BookCoverSource.ManualUpload : null,
+                    : request.InitialCoverUploadToken != null
+                        ? BookCoverSource.ManualUpload
+                        : null,
                 OriginalImageUrl = initialCoverUrl,
                 PendingUploadToken = request.InitialCoverUploadToken
             }

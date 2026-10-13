@@ -1,7 +1,7 @@
 namespace Application.UnitTests;
 
-using Application.Features.BookFeatures.Queries.GetBook;
-using Application.Features.BookFeatures.Validators;
+using Features.BookFeatures.Queries.GetBook;
+using Features.BookFeatures.Validators;
 
 public sealed class BookListQueryValidatorTests
 {

@@ -1,7 +1,7 @@
 namespace Application.UnitTests;
 
 using System.Text.Json;
-using Application.Common.DTOs.Book;
+using Common.DTOs.Book;
 
 public sealed class BookCoverDtoTests
 {

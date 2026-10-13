@@ -1,6 +1,5 @@
 namespace Api.Observability;
 
-using System.Diagnostics;
 using System.Diagnostics.Metrics;
 
 public static class NovelkiTelemetry
@@ -19,6 +18,7 @@ public static class NovelkiTelemetry
         Meter.CreateCounter<long>("novelki.book.progress_updated");
 
     public static readonly Counter<long> BookSearchRequests = Meter.CreateCounter<long>("novelki.search.requests");
+
     public static readonly Counter<long> RateLimitRejections =
         Meter.CreateCounter<long>("novelki.security.rate_limit_rejections");
 

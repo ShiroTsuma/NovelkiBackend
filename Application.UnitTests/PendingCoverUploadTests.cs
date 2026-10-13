@@ -1,9 +1,9 @@
 namespace Application.UnitTests;
 
-using Application.Common.Interfaces;
-using Application.Features.BookFeatures.Queries;
+using Common.Interfaces;
 using Domain.Entities;
 using Domain.Repositories;
+using Features.BookFeatures.Queries;
 
 public class PendingCoverUploadTests
 {
@@ -19,9 +19,7 @@ public class PendingCoverUploadTests
             PendingUploadToken = token,
             Book = new Book
             {
-                OwnerId = ownerId,
-                PrimaryTitle = "Pending cover",
-                NormalizedPrimaryTitle = "PENDINGCOVER"
+                OwnerId = ownerId, PrimaryTitle = "Pending cover", NormalizedPrimaryTitle = "PENDINGCOVER"
             }
         });
         var handler = new ResolvePendingCoverUploadHandler(repository, new FakeUser(ownerId));
@@ -36,21 +34,43 @@ public class PendingCoverUploadTests
 
     private sealed class FakeBookCoverRepository(BookCover cover) : IBookCoverRepository
     {
-        public Task<BookCover?> GetByBookIdAsync(Guid bookId, Guid ownerId, CancellationToken cancellationToken) =>
-            Task.FromResult<BookCover?>(null);
+        public Task<BookCover?> GetByBookIdAsync(Guid bookId, Guid ownerId, CancellationToken cancellationToken)
+        {
+            return Task.FromResult<BookCover?>(null);
+        }
 
-        public Task<BookCover?> GetByBookIdAsync(Guid bookId, CancellationToken cancellationToken) =>
-            Task.FromResult<BookCover?>(null);
+        public Task<BookCover?> GetByBookIdAsync(Guid bookId, CancellationToken cancellationToken)
+        {
+            return Task.FromResult<BookCover?>(null);
+        }
 
-        public Task<BookCover?> GetByPendingUploadTokenAsync(Guid token, Guid ownerId, CancellationToken cancellationToken) =>
-            Task.FromResult<BookCover?>(cover.PendingUploadToken == token && cover.Book.OwnerId == ownerId ? cover : null);
+        public Task<BookCover?> GetByPendingUploadTokenAsync(Guid token, Guid ownerId,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult<BookCover?>(cover.PendingUploadToken == token && cover.Book.OwnerId == ownerId
+                ? cover
+                : null);
+        }
 
-        public Task<IReadOnlyCollection<BookCover>> GetPendingAsync(int take, CancellationToken cancellationToken) =>
-            Task.FromResult<IReadOnlyCollection<BookCover>>([]);
+        public Task<IReadOnlyCollection<BookCover>> GetPendingAsync(int take, CancellationToken cancellationToken)
+        {
+            return Task.FromResult<IReadOnlyCollection<BookCover>>([]);
+        }
 
-        public Task AddAsync(BookCover value, CancellationToken cancellationToken) => Task.CompletedTask;
-        public Task DeleteAsync(BookCover value, CancellationToken cancellationToken) => Task.CompletedTask;
-        public Task SaveAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task AddAsync(BookCover value, CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task DeleteAsync(BookCover value, CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task SaveAsync(CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class FakeUser(Guid ownerId) : IUser

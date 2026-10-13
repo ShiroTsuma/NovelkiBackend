@@ -28,27 +28,25 @@ public class ErrorHandlingMiddlewareTests
             "NotFound"
         },
         {
-            new EntityAlreadyExistsException<Genre, Guid>("Fantasy", Guid.NewGuid()),
-            StatusCodes.Status409Conflict, "Conflict", "Conflict"
+            new EntityAlreadyExistsException<Genre, Guid>("Fantasy", Guid.NewGuid()), StatusCodes.Status409Conflict,
+            "Conflict", "Conflict"
         },
         {
             new EntityNotFoundException<Book, Guid>(Guid.NewGuid()), StatusCodes.Status404NotFound, "Not Found",
             "NotFound"
         },
-        {
-            new EntityInUseException<Tag>("favorite"), StatusCodes.Status409Conflict, "Conflict", "Conflict"
-        },
+        { new EntityInUseException<Tag>("favorite"), StatusCodes.Status409Conflict, "Conflict", "Conflict" },
         {
             new FullImportCapacityExceededException("Full import capacity reached."),
             StatusCodes.Status429TooManyRequests, "Too Many Requests", "RateLimitExceeded"
         },
         {
-            new BookImportProcessingTimeoutException("Full import timed out."),
-            StatusCodes.Status408RequestTimeout, "Request Timeout", "RequestTimeout"
+            new BookImportProcessingTimeoutException("Full import timed out."), StatusCodes.Status408RequestTimeout,
+            "Request Timeout", "RequestTimeout"
         },
         {
-            new InvalidOperationException("secret implementation detail"),
-            StatusCodes.Status500InternalServerError, "Internal Server Error", "InternalServerError"
+            new InvalidOperationException("secret implementation detail"), StatusCodes.Status500InternalServerError,
+            "Internal Server Error", "InternalServerError"
         }
     };
 

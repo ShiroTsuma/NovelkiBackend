@@ -25,19 +25,19 @@ public sealed class BookSearchIndexQueueProcessor(
         var leaseUntil = now + LeaseDuration;
 
         await context.Database.ExecuteSqlInterpolatedAsync($"""
-            UPDATE "BookSearchIndexQueueItems" AS queue
-            SET "LeaseId" = {leaseId},
-                "LeaseUntil" = {leaseUntil}
-            WHERE queue."BookId" IN (
-                SELECT candidate."BookId"
-                FROM "BookSearchIndexQueueItems" AS candidate
-                WHERE candidate."NextAttemptAt" <= {now}
-                  AND (candidate."LeaseUntil" IS NULL OR candidate."LeaseUntil" <= {now})
-                ORDER BY candidate."NextAttemptAt", candidate."EnqueuedAt", candidate."BookId"
-                LIMIT {BatchSize}
-                FOR UPDATE SKIP LOCKED
-            )
-            """, cancellationToken);
+                                                            UPDATE "BookSearchIndexQueueItems" AS queue
+                                                            SET "LeaseId" = {leaseId},
+                                                                "LeaseUntil" = {leaseUntil}
+                                                            WHERE queue."BookId" IN (
+                                                                SELECT candidate."BookId"
+                                                                FROM "BookSearchIndexQueueItems" AS candidate
+                                                                WHERE candidate."NextAttemptAt" <= {now}
+                                                                  AND (candidate."LeaseUntil" IS NULL OR candidate."LeaseUntil" <= {now})
+                                                                ORDER BY candidate."NextAttemptAt", candidate."EnqueuedAt", candidate."BookId"
+                                                                LIMIT {BatchSize}
+                                                                FOR UPDATE SKIP LOCKED
+                                                            )
+                                                            """, cancellationToken);
 
         var items = await context.BookSearchIndexQueueItems
             .AsNoTracking()
@@ -56,9 +56,9 @@ public sealed class BookSearchIndexQueueProcessor(
         {
             var bookIds = items.Select(item => item.BookId).ToArray();
             await context.Database.ExecuteSqlInterpolatedAsync($"""
-                SELECT refresh_book_search_index(requested."BookId")
-                FROM unnest({bookIds}) AS requested("BookId")
-                """, cancellationToken);
+                                                                SELECT refresh_book_search_index(requested."BookId")
+                                                                FROM unnest({bookIds}) AS requested("BookId")
+                                                                """, cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -99,11 +99,11 @@ public sealed class BookSearchIndexQueueProcessor(
             }
 
             var removed = await context.Database.ExecuteSqlInterpolatedAsync($"""
-                DELETE FROM "BookSearchIndexQueueItems"
-                WHERE "BookId" = {item.BookId}
-                  AND "LeaseId" = {leaseId}
-                  AND "EnqueuedAt" = {item.EnqueuedAt}
-                """, cancellationToken);
+                                                                              DELETE FROM "BookSearchIndexQueueItems"
+                                                                              WHERE "BookId" = {item.BookId}
+                                                                                AND "LeaseId" = {leaseId}
+                                                                                AND "EnqueuedAt" = {item.EnqueuedAt}
+                                                                              """, cancellationToken);
 
             if (removed == 0)
             {
@@ -130,16 +130,16 @@ public sealed class BookSearchIndexQueueProcessor(
         var nextAttemptAt = timeProvider.GetUtcNow() + CalculateBackoff(attemptCount);
         var lastError = Truncate(exception.Message, LastErrorMaxLength);
         var updated = await context.Database.ExecuteSqlInterpolatedAsync($"""
-            UPDATE "BookSearchIndexQueueItems"
-            SET "AttemptCount" = {attemptCount},
-                "NextAttemptAt" = {nextAttemptAt},
-                "LastError" = {lastError},
-                "LeaseId" = NULL,
-                "LeaseUntil" = NULL
-            WHERE "BookId" = {item.BookId}
-              AND "LeaseId" = {leaseId}
-              AND "EnqueuedAt" = {item.EnqueuedAt}
-            """, cancellationToken);
+                                                                          UPDATE "BookSearchIndexQueueItems"
+                                                                          SET "AttemptCount" = {attemptCount},
+                                                                              "NextAttemptAt" = {nextAttemptAt},
+                                                                              "LastError" = {lastError},
+                                                                              "LeaseId" = NULL,
+                                                                              "LeaseUntil" = NULL
+                                                                          WHERE "BookId" = {item.BookId}
+                                                                            AND "LeaseId" = {leaseId}
+                                                                            AND "EnqueuedAt" = {item.EnqueuedAt}
+                                                                          """, cancellationToken);
         if (updated == 0)
         {
             await ReleaseLeaseAsync(item.BookId, leaseId, cancellationToken);
@@ -156,12 +156,12 @@ public sealed class BookSearchIndexQueueProcessor(
     private Task ReleaseLeaseAsync(Guid bookId, Guid leaseId, CancellationToken cancellationToken)
     {
         return context.Database.ExecuteSqlInterpolatedAsync($"""
-            UPDATE "BookSearchIndexQueueItems"
-            SET "LeaseId" = NULL,
-                "LeaseUntil" = NULL
-            WHERE "BookId" = {bookId}
-              AND "LeaseId" = {leaseId}
-            """, cancellationToken);
+                                                             UPDATE "BookSearchIndexQueueItems"
+                                                             SET "LeaseId" = NULL,
+                                                                 "LeaseUntil" = NULL
+                                                             WHERE "BookId" = {bookId}
+                                                               AND "LeaseId" = {leaseId}
+                                                             """, cancellationToken);
     }
 
     internal static TimeSpan CalculateBackoff(int attemptCount)
@@ -171,6 +171,8 @@ public sealed class BookSearchIndexQueueProcessor(
         return delay <= MaximumBackoff ? delay : MaximumBackoff;
     }
 
-    private static string Truncate(string value, int maxLength) =>
-        value.Length <= maxLength ? value : value[..maxLength];
+    private static string Truncate(string value, int maxLength)
+    {
+        return value.Length <= maxLength ? value : value[..maxLength];
+    }
 }

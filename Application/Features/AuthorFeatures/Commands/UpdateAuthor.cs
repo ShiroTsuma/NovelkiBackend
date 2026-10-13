@@ -56,10 +56,8 @@ public sealed class UpdateAuthorCommandHandler(IAuthorRepository authorRepositor
                 continue;
             }
 
-            authorRepository.AddName(author, new AuthorName
-            {
-                Name = name, NormalizedName = normalizedName, IsPrimary = false, Source = "Manual"
-            });
+            authorRepository.AddName(author,
+                new AuthorName { Name = name, NormalizedName = normalizedName, IsPrimary = false, Source = "Manual" });
         }
 
         await authorRepository.SaveAsync(cancellationToken);

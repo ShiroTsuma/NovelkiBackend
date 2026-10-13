@@ -1,8 +1,6 @@
 namespace Infrastructure.Persistence;
 
 using Application.Common.DTOs.Book;
-using Domain.Entities;
-using Domain.Repositories;
 
 public sealed class BookSearchSuggestionQueryService : IBookSearchSuggestionQueryService
 {
@@ -112,7 +110,8 @@ public sealed class BookSearchSuggestionQueryService : IBookSearchSuggestionQuer
                 Key = group.Key,
                 Value = group.Min(bookTag => bookTag.Tag.Name)!,
                 Count = scoped
-                    ? group.Where(bookTag => scopedBookIds.Contains(bookTag.BookId)).Select(bookTag => bookTag.BookId).Distinct().Count()
+                    ? group.Where(bookTag => scopedBookIds.Contains(bookTag.BookId)).Select(bookTag => bookTag.BookId)
+                        .Distinct().Count()
                     : group.Select(bookTag => bookTag.BookId).Distinct().Count(),
                 IsExact = normalizedSearch.Length > 0 && group.Key == normalizedSearch
             });
@@ -142,7 +141,8 @@ public sealed class BookSearchSuggestionQueryService : IBookSearchSuggestionQuer
                 Key = group.Key,
                 Value = group.Min(bookGenre => bookGenre.Genre.Name)!,
                 Count = scoped
-                    ? group.Where(bookGenre => scopedBookIds.Contains(bookGenre.BookId)).Select(bookGenre => bookGenre.BookId).Distinct().Count()
+                    ? group.Where(bookGenre => scopedBookIds.Contains(bookGenre.BookId))
+                        .Select(bookGenre => bookGenre.BookId).Distinct().Count()
                     : group.Select(bookGenre => bookGenre.BookId).Distinct().Count(),
                 IsExact = normalizedSearch.Length > 0 && group.Key == normalizedSearch
             });

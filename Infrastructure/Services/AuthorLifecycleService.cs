@@ -38,6 +38,7 @@ public sealed class AuthorLifecycleService(
         {
             await transaction.CommitAsync(cancellationToken);
         }
+
         return author;
     }
 
@@ -158,6 +159,7 @@ public sealed class AuthorLifecycleService(
                 book.AuthorId = localAuthor.Id;
                 book.Author = localAuthor;
             }
+
             await cacheInvalidator.InvalidateBooksAsync(ownerId, cancellationToken);
         }
     }

@@ -1,6 +1,7 @@
 namespace Infrastructure.IntegrationTests;
 
 using System.IO.Compression;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Application.Common;
@@ -582,9 +583,7 @@ public class BookCsvImportServiceTests
         await using var context = database.CreateContext();
         var options = Options.Create(new BookImportSecurityOptions
         {
-            MaxUncompressedArchiveBytes = 1024,
-            AdminMaxUncompressedArchiveBytes = 2048,
-            MaxCoverBytes = 4096
+            MaxUncompressedArchiveBytes = 1024, AdminMaxUncompressedArchiveBytes = 2048, MaxCoverBytes = 4096
         });
         using var store = new BookImportSessionStore(options);
         var gate = new BookImportConcurrencyGate(options);
@@ -601,7 +600,7 @@ public class BookCsvImportServiceTests
             sessionStore: store,
             concurrencyGate: gate,
             roles: [AuthorizationRoles.Admin]);
-        var coverBytes = System.Security.Cryptography.RandomNumberGenerator.GetBytes(1400);
+        var coverBytes = RandomNumberGenerator.GetBytes(1400);
         coverBytes[0] = 0xFF;
         coverBytes[1] = 0xD8;
         coverBytes[2] = 0xFF;

@@ -20,19 +20,32 @@ internal static class EpubValidator
             true);
         if (!entries.TryGetValue("mimetype", out var mime) ||
             !entries.TryGetValue("META-INF/container.xml", out var container))
+        {
             throw new ValidationException("Not an EPUB: missing mimetype or META-INF/container.xml.");
+        }
+
         if (Encoding.ASCII.GetString(await ReadAsync(mime, 64, ct)) != "application/epub+zip")
+        {
             throw new ValidationException("Not an EPUB: incorrect mimetype.");
+        }
+
         var containerXml = ParseXml(await ReadAsync(container, 2 * 1024 * 1024, ct));
         XNamespace containerNs = "urn:oasis:names:tc:opendocument:xmlns:container";
         var opfPath = containerXml.Descendants(containerNs + "rootfile")
             .Select(e => (string?)e.Attribute("full-path")).FirstOrDefault();
         if (opfPath == null || !ArchiveSafety.IsSafeName(opfPath) ||
             !ArchiveSafety.IsSafeName(Uri.UnescapeDataString(opfPath)) || !entries.TryGetValue(opfPath, out var opf))
+        {
             throw new ValidationException("EPUB package document is missing or has an unsafe path.");
+        }
+
         var package = ParseXml(await ReadAsync(opf, 2 * 1024 * 1024, ct));
         XNamespace opfNs = "http://www.idpf.org/2007/opf";
-        if (package.Root?.Name != opfNs + "package") throw new ValidationException("EPUB package document is invalid.");
+        if (package.Root?.Name != opfNs + "package")
+        {
+            throw new ValidationException("EPUB package document is invalid.");
+        }
+
         XNamespace dc = "http://purl.org/dc/elements/1.1/";
         var title = package.Descendants(dc + "title").Select(e => e.Value.Trim()).FirstOrDefault(s => s.Length > 0);
         var contents = await ContentsAsync(package, opfPath, entries, ct);
@@ -66,7 +79,11 @@ internal static class EpubValidator
         foreach (var item in new[] { nav, legacy }.Where(i => i != null))
         {
             var path = ResolveEntry(opfPath, (string?)item!.Attribute("href"), entries);
-            if (path == null) continue;
+            if (path == null)
+            {
+                continue;
+            }
+
             try
             {
                 var doc = ParseXml(await ReadAsync(entries[path], 2 * 1024 * 1024, ct));
@@ -80,13 +97,19 @@ internal static class EpubValidator
                         ? []
                         : NavigationEntries(toc.Elements(html + "ol").Elements(html + "li"), html);
                 }
-                else candidates = LegacyEntries(doc.Descendants(ncx + "navMap").Elements(ncx + "navPoint"), ncx);
+                else
+                {
+                    candidates = LegacyEntries(doc.Descendants(ncx + "navMap").Elements(ncx + "navPoint"), ncx);
+                }
 
                 var labels = candidates.Where(c =>
                         c.Label.Length > 0 && c.Label.Length <= 500 && !c.Label.Any(char.IsControl) &&
                         ResolveEntry(path, c.Target, entries) != null && !IsFrontMatter(c.Label)).Select(c => c.Label)
                     .ToList();
-                if (labels.Count > 0) return (labels[0], labels[^1]);
+                if (labels.Count > 0)
+                {
+                    return (labels[0], labels[^1]);
+                }
             }
             catch (Exception e) when (e is XmlException or ValidationException or InvalidDataException)
             {
@@ -109,10 +132,16 @@ internal static class EpubValidator
             var label = CleanLabel(anchor?.Value ?? "");
             var children = node.Elements(html + "ol").Elements(html + "li").ToList();
             if (label.Length > 0 && !IsFrontMatter(label) && !(children.Count > 0 && IsContainer(label)))
+            {
                 yield return (label, (string?)anchor?.Attribute("href"));
+            }
             else
+            {
                 foreach (var child in children.AsEnumerable().Reverse())
+                {
                     pending.Push(child);
+                }
+            }
         }
     }
 
@@ -126,44 +155,77 @@ internal static class EpubValidator
             var label = CleanLabel(node.Element(ncx + "navLabel")?.Value ?? "");
             var children = node.Elements(ncx + "navPoint").ToList();
             if (label.Length > 0 && !IsFrontMatter(label) && !(children.Count > 0 && IsContainer(label)))
+            {
                 yield return (label, (string?)node.Element(ncx + "content")?.Attribute("src"));
+            }
             else
+            {
                 foreach (var child in children.AsEnumerable().Reverse())
+                {
                     pending.Push(child);
+                }
+            }
         }
     }
 
-    private static string CleanLabel(string label) =>
-        string.Join(" ", label.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+    private static string CleanLabel(string label)
+    {
+        return string.Join(" ", label.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+    }
 
-    private static bool IsContainer(string label) => Regex.IsMatch(label, @"^(?:volume|vol\.?|book|part)(?:\s|\d|$)",
-                                                         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
-                                                         TimeSpan.FromMilliseconds(50)) &&
-                                                     !Regex.IsMatch(label, @"\b(?:chapter|ch\.?|c)\s*\d",
-                                                         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
-                                                         TimeSpan.FromMilliseconds(50));
+    private static bool IsContainer(string label)
+    {
+        return Regex.IsMatch(label, @"^(?:volume|vol\.?|book|part)(?:\s|\d|$)",
+                   RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
+                   TimeSpan.FromMilliseconds(50)) &&
+               !Regex.IsMatch(label, @"\b(?:chapter|ch\.?|c)\s*\d",
+                   RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
+                   TimeSpan.FromMilliseconds(50));
+    }
 
-    private static bool IsFrontMatter(string label) => Regex.IsMatch(label,
-        @"^(?:cover|front\s*page|intro(?:duction|\s*page)?|title\s*page|contents|table\s+of\s+contents|copyright|colophon|(?:volume|vol\.?|book|part)\s+[\divxlcdm]+[.:]?)$",
-        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(50));
+    private static bool IsFrontMatter(string label)
+    {
+        return Regex.IsMatch(label,
+            @"^(?:cover|front\s*page|intro(?:duction|\s*page)?|title\s*page|contents|table\s+of\s+contents|copyright|colophon|(?:volume|vol\.?|book|part)\s+[\divxlcdm]+[.:]?)$",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(50));
+    }
 
     private static string? ResolveEntry(string origin, string? href,
         IReadOnlyDictionary<string, ZipArchiveEntry> entries)
     {
-        if (string.IsNullOrWhiteSpace(href) || Uri.TryCreate(href, UriKind.Absolute, out _)) return null;
+        if (string.IsNullOrWhiteSpace(href) || Uri.TryCreate(href, UriKind.Absolute, out _))
+        {
+            return null;
+        }
+
         var relative = Uri.UnescapeDataString(href.Split('#')[0].Split('?')[0]);
-        if (relative.StartsWith('/') || relative.Contains('\\')) return null;
+        if (relative.StartsWith('/') || relative.Contains('\\'))
+        {
+            return null;
+        }
+
         var prefix = origin.Contains('/') ? origin[..(origin.LastIndexOf('/') + 1)] : "";
         var segments = new List<string>();
         foreach (var segment in (relative.Length == 0 ? origin : prefix + relative).Split('/'))
         {
-            if (segment == ".") continue;
+            if (segment == ".")
+            {
+                continue;
+            }
+
             if (segment == "..")
             {
-                if (segments.Count == 0) return null;
+                if (segments.Count == 0)
+                {
+                    return null;
+                }
+
                 segments.RemoveAt(segments.Count - 1);
             }
-            else segments.Add(segment);
+            else
+            {
+                segments.Add(segment);
+            }
         }
 
         var path = string.Join('/', segments);

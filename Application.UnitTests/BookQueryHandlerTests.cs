@@ -1,12 +1,14 @@
-using Application.Common.DTOs.Book;
-using Application.Common.Interfaces;
-using Application.Common.Models;
-using Application.Features.BookFeatures.Queries.GetBook;
+namespace Application.UnitTests;
+
+using Common.DTOs.Book;
+using Common.Interfaces;
+using Common.Models;
 using Domain.Entities;
 using Domain.Exceptions;
+using Domain.Models;
 using Domain.Repositories;
-
-namespace Application.UnitTests;
+using Features.BookFeatures.Queries.GetBook;
+using FluentValidation;
 
 public class BookQueryHandlerTests
 {
@@ -54,9 +56,7 @@ public class BookQueryHandlerTests
             Book = ListItem("Listed"),
             Listing = new ManagedBookListingDto
             {
-                Id = Guid.NewGuid(),
-                SourceBookId = Guid.NewGuid(),
-                SnapshotAt = DateTimeOffset.UtcNow
+                Id = Guid.NewGuid(), SourceBookId = Guid.NewGuid(), SnapshotAt = DateTimeOffset.UtcNow
             }
         };
         var service = new FakeBookListQueryService { ManagedBooks = [managedBook], Count = 1 };
@@ -206,7 +206,7 @@ public class BookQueryHandlerTests
     {
         var handler = new GetBookAnalyticsHandler(new FakeBookAnalyticsQueryService(), new FakeUser());
 
-        await Assert.ThrowsAsync<FluentValidation.ValidationException>(() =>
+        await Assert.ThrowsAsync<ValidationException>(() =>
             handler.Handle(new GetBookAnalyticsQuery(Bucket: bucket), CancellationToken.None));
     }
 
@@ -215,7 +215,7 @@ public class BookQueryHandlerTests
     {
         var handler = new GetBookAnalyticsHandler(new FakeBookAnalyticsQueryService(), new FakeUser());
 
-        await Assert.ThrowsAsync<FluentValidation.ValidationException>(() =>
+        await Assert.ThrowsAsync<ValidationException>(() =>
             handler.Handle(new GetBookAnalyticsQuery(
                 From: new DateOnly(2026, 7, 15),
                 To: new DateOnly(2026, 7, 15)), CancellationToken.None));
@@ -369,27 +369,27 @@ public class BookQueryHandlerTests
     private sealed class FakeBookAnalyticsQueryService : IBookAnalyticsQueryService
     {
         public Guid OwnerId { get; private set; }
-        public Domain.Models.BookAnalyticsScopeSnapshot? Scope { get; private set; }
+        public BookAnalyticsScopeSnapshot? Scope { get; private set; }
 
-        public Task<Domain.Models.BookAnalyticsSnapshot> GetAnalyticsAsync(
+        public Task<BookAnalyticsSnapshot> GetAnalyticsAsync(
             Guid ownerId,
             BookSearchCriteria criteria,
-            Domain.Models.BookAnalyticsScopeSnapshot scope,
+            BookAnalyticsScopeSnapshot scope,
             CancellationToken cancellationToken)
         {
             OwnerId = ownerId;
             Scope = scope;
-            return Task.FromResult(new Domain.Models.BookAnalyticsSnapshot(
+            return Task.FromResult(new BookAnalyticsSnapshot(
                 DateTimeOffset.UtcNow,
                 scope,
-                new Domain.Models.BookAnalyticsOverviewSnapshot(0, 0, 0, null, 0, 0, 0),
-                Domain.Models.BookAnalyticsCompositionSnapshot.Empty,
-                Domain.Models.BookAnalyticsRatingsSnapshot.Empty,
-                Domain.Models.BookAnalyticsPlanningSnapshot.Empty,
-                Domain.Models.BookAnalyticsProgressSnapshot.Empty,
-                Domain.Models.BookAnalyticsActivitySnapshot.Empty,
-                Domain.Models.BookAnalyticsLibraryGrowthSnapshot.Empty,
-                Domain.Models.BookAnalyticsQualitySnapshot.Empty));
+                new BookAnalyticsOverviewSnapshot(0, 0, 0, null, 0, 0, 0),
+                BookAnalyticsCompositionSnapshot.Empty,
+                BookAnalyticsRatingsSnapshot.Empty,
+                BookAnalyticsPlanningSnapshot.Empty,
+                BookAnalyticsProgressSnapshot.Empty,
+                BookAnalyticsActivitySnapshot.Empty,
+                BookAnalyticsLibraryGrowthSnapshot.Empty,
+                BookAnalyticsQualitySnapshot.Empty));
         }
     }
 

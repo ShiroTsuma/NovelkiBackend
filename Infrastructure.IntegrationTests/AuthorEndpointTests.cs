@@ -35,10 +35,8 @@ public sealed class AuthorEndpointTests
         var authorId = await factory.SeedAuthorAsync();
         using var client = factory.CreateAuthenticatedClient();
 
-        var response = await client.PutAsJsonAsync($"/api/v1/author/{authorId}", new
-        {
-            otherNames = new[] { "耳根", "Ergen", "Eargen" }
-        });
+        var response = await client.PutAsJsonAsync($"/api/v1/author/{authorId}",
+            new { otherNames = new[] { "耳根", "Ergen", "Eargen" } });
 
         var body = await response.Content.ReadAsStringAsync();
         Assert.True(response.IsSuccessStatusCode, $"Expected success, got {(int)response.StatusCode}: {body}");
@@ -59,6 +57,7 @@ public sealed class AuthorEndpointTests
     private sealed class AuthorApiFactory : WebApplicationFactory<Program>
     {
         private readonly SqliteConnection _connection = new("DataSource=:memory:");
+
         private readonly ServiceProvider _sqliteServices = new ServiceCollection()
             .AddEntityFrameworkSqlite()
             .BuildServiceProvider();
@@ -110,7 +109,8 @@ public sealed class AuthorEndpointTests
         public HttpClient CreateAuthenticatedClient()
         {
             var client = CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(TestAuthHandler.AuthenticationScheme);
+            client.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue(TestAuthHandler.AuthenticationScheme);
             return client;
         }
 
@@ -150,7 +150,10 @@ public sealed class AuthorEndpointTests
 
     private sealed class NoopBookListCacheInvalidator : IBookListCacheInvalidator
     {
-        public Task InvalidateBooksAsync(Guid ownerId, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task InvalidateBooksAsync(Guid ownerId, CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class TestUser : IUser
@@ -175,8 +178,7 @@ public sealed class AuthorEndpointTests
         {
             var claims = new[]
             {
-                new Claim(ClaimTypes.NameIdentifier, UserId.ToString()),
-                new Claim(ClaimTypes.Name, "reader"),
+                new Claim(ClaimTypes.NameIdentifier, UserId.ToString()), new Claim(ClaimTypes.Name, "reader"),
                 new Claim(ClaimTypes.Email, "reader@example.com")
             };
             var identity = new ClaimsIdentity(claims, AuthenticationScheme);

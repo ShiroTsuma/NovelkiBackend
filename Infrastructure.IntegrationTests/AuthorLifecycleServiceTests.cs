@@ -65,6 +65,9 @@ public sealed class AuthorLifecycleServiceTests
 
     private sealed class NoopCache : IBookListCacheInvalidator
     {
-        public Task InvalidateBooksAsync(Guid ownerId, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task InvalidateBooksAsync(Guid ownerId, CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+        }
     }
 }

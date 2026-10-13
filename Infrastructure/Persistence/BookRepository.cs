@@ -1,13 +1,12 @@
 namespace Infrastructure.Persistence;
 
-using FluentValidation;
-using Infrastructure.BookSearch;
+using BookSearch;
 
 public class BookRepository : IBookRepository
 {
     private readonly ApplicationDbContext _context;
-    private readonly BookSearchIndexUpdater? _searchIndexUpdater;
     private readonly HashSet<Guid> _pendingSearchRefreshes = [];
+    private readonly BookSearchIndexUpdater? _searchIndexUpdater;
 
     public BookRepository(ApplicationDbContext context, BookSearchIndexUpdater? searchIndexUpdater = null)
     {
@@ -222,11 +221,11 @@ public class BookRepository : IBookRepository
             .Concat(_context.ChangeTracker.Entries<Book>()
                 .Where(entry =>
                     entry.State == EntityState.Added ||
-                    entry.State == EntityState.Modified &&
-                    (entry.Property(book => book.PrimaryTitle).IsModified ||
-                     entry.Property(book => book.AuthorId).IsModified ||
-                     entry.Property(book => book.ContentTypeId).IsModified ||
-                     entry.Property(book => book.StatusId).IsModified))
+                    (entry.State == EntityState.Modified &&
+                     (entry.Property(book => book.PrimaryTitle).IsModified ||
+                      entry.Property(book => book.AuthorId).IsModified ||
+                      entry.Property(book => book.ContentTypeId).IsModified ||
+                      entry.Property(book => book.StatusId).IsModified)))
                 .Select(entry => entry.Entity.Id))
             .Concat(_context.ChangeTracker.Entries<BookTitle>()
                 .Where(entry => entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)

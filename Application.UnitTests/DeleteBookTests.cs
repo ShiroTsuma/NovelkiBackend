@@ -1,11 +1,11 @@
-using Application.Common.Interfaces;
-using Application.Features.BookFeatures.Commands;
+namespace Application.UnitTests;
+
+using Common.Interfaces;
 using Domain.Entities;
 using Domain.Exceptions;
 using Domain.Repositories;
+using Features.BookFeatures.Commands;
 using Moq;
-
-namespace Application.UnitTests;
 
 public class DeleteBookTests
 {
@@ -108,15 +108,18 @@ public class DeleteBookTests
         publicBooks.VerifyAll();
     }
 
-    private static Book CreateBook() => new()
+    private static Book CreateBook()
     {
-        Id = Guid.NewGuid(),
-        OwnerId = OwnerId,
-        PrimaryTitle = "Novel",
-        NormalizedPrimaryTitle = "NOVEL",
-        ContentTypeId = Guid.NewGuid(),
-        StatusId = Guid.NewGuid()
-    };
+        return new Book
+        {
+            Id = Guid.NewGuid(),
+            OwnerId = OwnerId,
+            PrimaryTitle = "Novel",
+            NormalizedPrimaryTitle = "NOVEL",
+            ContentTypeId = Guid.NewGuid(),
+            StatusId = Guid.NewGuid()
+        };
+    }
 
     private sealed class FakeUser : IUser
     {
@@ -198,6 +201,7 @@ public class DeleteBookTests
             {
                 DeletedPaths.Add(storagePath);
             }
+
             return Task.CompletedTask;
         }
     }

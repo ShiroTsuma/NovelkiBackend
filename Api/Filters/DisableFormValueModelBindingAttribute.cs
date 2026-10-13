@@ -10,9 +10,13 @@ public sealed class DisableFormValueModelBindingAttribute : Attribute, IResource
     public void OnResourceExecuting(ResourceExecutingContext context)
     {
         for (var i = context.ValueProviderFactories.Count - 1; i >= 0; i--)
+        {
             if (context.ValueProviderFactories[i] is FormValueProviderFactory or FormFileValueProviderFactory
                 or JQueryFormValueProviderFactory)
+            {
                 context.ValueProviderFactories.RemoveAt(i);
+            }
+        }
     }
 
     public void OnResourceExecuted(ResourceExecutedContext context)

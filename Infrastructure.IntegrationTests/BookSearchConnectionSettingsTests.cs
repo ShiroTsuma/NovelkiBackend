@@ -1,6 +1,6 @@
 namespace Infrastructure.IntegrationTests;
 
-using Infrastructure.BookSearch;
+using BookSearch;
 using Npgsql;
 
 public sealed class BookSearchConnectionSettingsTests

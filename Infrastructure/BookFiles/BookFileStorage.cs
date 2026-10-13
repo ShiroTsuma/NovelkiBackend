@@ -39,11 +39,18 @@ public sealed class LocalBookFileStorage(IOptions<BookFileOptions> options) : IB
 
     private string Resolve(string key)
     {
-        if (!ArchiveSafety.IsSafeName(key)) throw new ValidationException("Invalid file storage key.");
+        if (!ArchiveSafety.IsSafeName(key))
+        {
+            throw new ValidationException("Invalid file storage key.");
+        }
+
         var root = Path.GetFullPath(options.Value.StorageRoot) + Path.DirectorySeparatorChar;
         var path = Path.GetFullPath(Path.Combine(root, key.Replace('/', Path.DirectorySeparatorChar)));
         if (!path.StartsWith(root, StringComparison.OrdinalIgnoreCase))
+        {
             throw new ValidationException("Invalid file storage key.");
+        }
+
         return path;
     }
 }
@@ -78,6 +85,8 @@ public sealed class S3BookFileStorage(IAmazonS3 s3, IOptions<BookCoverOptions> o
         }
     }
 
-    public async Task DeleteIfExistsAsync(string path, CancellationToken ct) =>
+    public async Task DeleteIfExistsAsync(string path, CancellationToken ct)
+    {
         await s3.DeleteObjectAsync(Bucket, path, ct);
+    }
 }

@@ -1,8 +1,8 @@
 namespace Infrastructure.IntegrationTests.PostgreSql;
 
 using Application.Common.Interfaces;
-using Infrastructure.Contexts;
-using Infrastructure.BookSearch;
+using BookSearch;
+using Contexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -30,7 +30,10 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
         await ResetDatabaseAsync();
     }
 
-    public Task DisposeAsync() => _container.DisposeAsync().AsTask();
+    public Task DisposeAsync()
+    {
+        return _container.DisposeAsync().AsTask();
+    }
 
     public ApplicationDbContext CreateContext(Guid userId, params IInterceptor[] interceptors)
     {

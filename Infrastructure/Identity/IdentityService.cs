@@ -1,7 +1,6 @@
 ﻿namespace Infrastructure.Identity;
 
 using System.Security.Cryptography;
-using System.Text;
 using Application.Common.DTOs.User;
 using Application.Common.Models;
 using Authentication;
@@ -13,6 +12,7 @@ public class IdentityService : IIdentityService
     private const string DummyPassword = "Dummy-password-used-only-for-timing-9!";
     private static readonly TimeSpan RefreshTokenLifetime = TimeSpan.FromDays(30);
     private static readonly User DummyUser = new() { UserName = "timing-placeholder" };
+
     private static readonly string DummyPasswordHash =
         new PasswordHasher<User>().HashPassword(DummyUser, DummyPassword);
 

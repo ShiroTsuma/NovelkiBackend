@@ -28,11 +28,11 @@ public sealed class BookSearchIndexUpdater(
             if (enqueuedAt.HasValue)
             {
                 await context.Database.ExecuteSqlInterpolatedAsync($"""
-                    DELETE FROM "BookSearchIndexQueueItems"
-                    WHERE "BookId" = {bookId}
-                      AND "EnqueuedAt" = {enqueuedAt.Value}
-                      AND "LeaseId" IS NULL
-                    """, cancellationToken);
+                                                                    DELETE FROM "BookSearchIndexQueueItems"
+                                                                    WHERE "BookId" = {bookId}
+                                                                      AND "EnqueuedAt" = {enqueuedAt.Value}
+                                                                      AND "LeaseId" IS NULL
+                                                                    """, cancellationToken);
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

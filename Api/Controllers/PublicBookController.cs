@@ -9,16 +9,22 @@ public sealed class PublicBookController(IPublicBookService service) : Controlle
 {
     [HttpGet]
     public async Task<IActionResult> Search([FromQuery] string? search, [FromQuery] int skip = 0,
-        [FromQuery] int take = 20, [FromQuery] bool mineOnly = false, CancellationToken cancellationToken = default) =>
-        Ok(await service.SearchAsync(search, skip, take, mineOnly, cancellationToken));
+        [FromQuery] int take = 20, [FromQuery] bool mineOnly = false, CancellationToken cancellationToken = default)
+    {
+        return Ok(await service.SearchAsync(search, skip, take, mineOnly, cancellationToken));
+    }
 
     [HttpPost("source/{bookId:guid}")]
-    public async Task<IActionResult> Publish(Guid bookId, CancellationToken cancellationToken) =>
-        Ok(await service.PublishAsync(bookId, cancellationToken));
+    public async Task<IActionResult> Publish(Guid bookId, CancellationToken cancellationToken)
+    {
+        return Ok(await service.PublishAsync(bookId, cancellationToken));
+    }
 
     [HttpPut("{id:guid}/refresh")]
-    public async Task<IActionResult> Refresh(Guid id, CancellationToken cancellationToken) =>
-        Ok(await service.RefreshAsync(id, cancellationToken));
+    public async Task<IActionResult> Refresh(Guid id, CancellationToken cancellationToken)
+    {
+        return Ok(await service.RefreshAsync(id, cancellationToken));
+    }
 
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Unlist(Guid id, CancellationToken cancellationToken)
@@ -28,8 +34,10 @@ public sealed class PublicBookController(IPublicBookService service) : Controlle
     }
 
     [HttpPost("{id:guid}/copy")]
-    public async Task<IActionResult> Copy(Guid id, CancellationToken cancellationToken) =>
-        Ok(await service.CopyAsync(id, cancellationToken));
+    public async Task<IActionResult> Copy(Guid id, CancellationToken cancellationToken)
+    {
+        return Ok(await service.CopyAsync(id, cancellationToken));
+    }
 
     [HttpGet("{id:guid}/cover")]
     public async Task<IActionResult> Cover(Guid id, CancellationToken cancellationToken)

@@ -1,9 +1,9 @@
+namespace Infrastructure.IntegrationTests.TestSupport;
+
 using Application.Common;
+using Contexts;
 using Domain.Associations;
 using Domain.Entities;
-using Infrastructure.Contexts;
-
-namespace Infrastructure.IntegrationTests.TestSupport;
 
 public static class TestData
 {
@@ -61,11 +61,13 @@ public static class TestData
             book.Author = Author($"Test Author {suffix}", book.OwnerId, false);
             book.AuthorId = book.Author.Id;
         }
+
         if (book.BookGenres.Count == 0)
         {
             var genre = Genre($"Test Genre {suffix}");
             book.BookGenres.Add(new BookGenre { Book = book, Genre = genre });
         }
+
         if (book.BookTags.Count == 0)
         {
             var tag = Tag(book.OwnerId, $"test-tag-{suffix}");
@@ -74,10 +76,7 @@ public static class TestData
 
         book.Cover ??= new BookCover
         {
-            Book = book,
-            BookId = book.Id,
-            StoragePath = $"source/{suffix}.jpg",
-            MimeType = "image/jpeg"
+            Book = book, BookId = book.Id, StoragePath = $"source/{suffix}.jpg", MimeType = "image/jpeg"
         };
         book.Cover.Status = BookCoverStatus.Found;
         book.Cover.StoragePath ??= $"source/{suffix}.jpg";

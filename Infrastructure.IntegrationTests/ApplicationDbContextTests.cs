@@ -1,11 +1,9 @@
-using Domain.Entities;
-using Infrastructure.Persistence;
-using Infrastructure.IntegrationTests.TestSupport;
-using Microsoft.EntityFrameworkCore;
-
 namespace Infrastructure.IntegrationTests;
 
-using Contexts;
+using Identity;
+using Microsoft.EntityFrameworkCore;
+using Persistence;
+using TestSupport;
 
 public class ApplicationDbContextTests
 {
@@ -55,14 +53,10 @@ public class ApplicationDbContextTests
         await using var context = database.CreateContext();
         var repository = new ReadingTimeSettingRepository(context);
 
-        await repository.UpsertAsync(database.UserId, new Dictionary<Guid, decimal>
-        {
-            [TestData.NovelTypeId] = 4
-        }, CancellationToken.None);
-        await repository.UpsertAsync(database.UserId, new Dictionary<Guid, decimal>
-        {
-            [TestData.NovelTypeId] = 6
-        }, CancellationToken.None);
+        await repository.UpsertAsync(database.UserId, new Dictionary<Guid, decimal> { [TestData.NovelTypeId] = 4 },
+            CancellationToken.None);
+        await repository.UpsertAsync(database.UserId, new Dictionary<Guid, decimal> { [TestData.NovelTypeId] = 6 },
+            CancellationToken.None);
 
         var setting = Assert.Single(await repository.GetByUserIdAsync(database.UserId, CancellationToken.None));
         Assert.Equal("Novel", setting.ContentType.Name);
@@ -97,7 +91,7 @@ public class ApplicationDbContextTests
         using var database = new SqliteTestDatabase();
         await using var context = database.CreateContext();
         var otherOwnerId = Guid.Parse("22222222-2222-2222-2222-222222222222");
-        context.Users.Add(new Identity.User { Id = otherOwnerId, UserName = "other", NormalizedUserName = "OTHER" });
+        context.Users.Add(new User { Id = otherOwnerId, UserName = "other", NormalizedUserName = "OTHER" });
         context.Tags.Add(TestData.Tag(database.UserId, "favorite"));
         context.Tags.Add(TestData.Tag(otherOwnerId, "favorite"));
 

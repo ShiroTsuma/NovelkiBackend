@@ -33,9 +33,12 @@ public sealed class StorageCleanupQueueProcessor(
                         .SingleOrDefaultAsync(f => f.StoragePath == item.StoragePath, cancellationToken);
                     await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
                     if (file != null && context.Database.IsNpgsql())
+                    {
                         await context.Database.ExecuteSqlInterpolatedAsync(
                             $"SELECT pg_advisory_xact_lock({BitConverter.ToInt64(file.OwnerId.ToByteArray())})",
                             cancellationToken);
+                    }
+
                     file = await context.BookFiles.AsNoTracking()
                         .SingleOrDefaultAsync(f => f.StoragePath == item.StoragePath, cancellationToken);
                     if (file == null || file.DeletedAtUtc != null)
@@ -83,6 +86,8 @@ public sealed class StorageCleanupQueueProcessor(
         return delay <= MaximumBackoff ? delay : MaximumBackoff;
     }
 
-    private static string Truncate(string value, int maxLength) =>
-        value.Length <= maxLength ? value : value[..maxLength];
+    private static string Truncate(string value, int maxLength)
+    {
+        return value.Length <= maxLength ? value : value[..maxLength];
+    }
 }

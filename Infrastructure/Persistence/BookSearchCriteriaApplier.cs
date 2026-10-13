@@ -1,16 +1,14 @@
 namespace Infrastructure.Persistence;
 
-using Domain.Entities;
-using Infrastructure.BookSearch;
+using BookSearch;
 using NpgsqlTypes;
-using System.Linq.Expressions;
 
 public sealed class BookSearchCriteriaApplier
 {
     private readonly DateSearchExpressionFactory _dateSearch;
+    private readonly bool _isPostgres;
     private readonly NumberSearchExpressionFactory _numberSearch;
     private readonly TextSearchExpressionFactory _textSearch;
-    private readonly bool _isPostgres;
 
     public BookSearchCriteriaApplier(ApplicationDbContext context)
     {
