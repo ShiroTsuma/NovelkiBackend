@@ -9,7 +9,8 @@ serii. Repozytorium zawiera API w ASP.NET Core, frontend w React oraz gotowy sta
 - wyszukiwanie PostgreSQL z filtrami pól, wykluczeniami, fuzzy matchingiem, wildcardami i sugestiami;
 - import i eksport CSV oraz pełne archiwum ZIP razem z okładkami;
 - automatyczne pobieranie i przetwarzanie okładek, zapis lokalny albo w magazynie zgodnym z S3;
-- parser metadanych stron NovelUpdates, Royal Road, Scribble Hub i WebNovel;
+- parser HTML metadanych stron NovelUpdates, Royal Road, Scribble Hub, WebNovel, Anime-Planet, Baka-Updates/MangaUpdates,
+  RanobeDB, Wuxiaworld, AniList, J-Novel Club, Seven Seas, Yen Press, Syosetu i Kakuyomu;
 - publiczne snapshoty książek, katalog odkrywania i kopiowanie pozycji do własnej biblioteki;
 - statystyki biblioteki, wykresy aktywności i kontrola kompletności metadanych;
 - panel administracyjny do zarządzania kontami, autorami, tagami i słownikami systemowymi;

@@ -103,7 +103,7 @@ export function BookHtmlParseDialog({
           <div className="min-w-0 flex-1">
             <div className="ui-eyebrow">Metadata resolver</div>
             <h2 className="book-html-dialog__title" id={titleId}>Parse page HTML</h2>
-            <p className="book-html-dialog__intro">Paste the full source of a supported book page. Nothing is saved until you review and apply it.</p>
+            <p className="book-html-dialog__intro">Paste the full HTML of a supported book page. For sites such as AniList, copy the loaded page HTML from your browser’s developer tools. Nothing is saved until you review and apply it.</p>
           </div>
           <button aria-label="Close HTML parser" className={`${buttonVariants.ghost} ui-icon-button`} type="button" onClick={closeAndReset}>
             <X className="h-4 w-4" />

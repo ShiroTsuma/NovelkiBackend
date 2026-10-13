@@ -78,6 +78,16 @@ public static class DependencyInjection
         builder.Services.AddScoped<IBookHtmlResolver, RoyalRoadHtmlResolver>();
         builder.Services.AddScoped<IBookHtmlResolver, ScribbleHubHtmlResolver>();
         builder.Services.AddScoped<IBookHtmlResolver, WebNovelHtmlResolver>();
+        builder.Services.AddScoped<IBookHtmlResolver, AnimePlanetHtmlResolver>();
+        builder.Services.AddScoped<IBookHtmlResolver, MangaUpdatesHtmlResolver>();
+        builder.Services.AddScoped<IBookHtmlResolver, RanobeDbHtmlResolver>();
+        builder.Services.AddScoped<IBookHtmlResolver, WuxiaWorldHtmlResolver>();
+        builder.Services.AddScoped<IBookHtmlResolver, AniListHtmlResolver>();
+        builder.Services.AddScoped<IBookHtmlResolver, JNovelClubHtmlResolver>();
+        builder.Services.AddScoped<IBookHtmlResolver, SevenSeasHtmlResolver>();
+        builder.Services.AddScoped<IBookHtmlResolver, YenPressHtmlResolver>();
+        builder.Services.AddScoped<IBookHtmlResolver, SyosetuHtmlResolver>();
+        builder.Services.AddScoped<IBookHtmlResolver, KakuyomuHtmlResolver>();
         builder.Services.AddOptions<BookImportSecurityOptions>()
             .Bind(builder.Configuration.GetSection(BookImportSecurityOptions.SectionName))
             .Validate(options => options.MaxFullBackupRequestBytes > 0 &&
