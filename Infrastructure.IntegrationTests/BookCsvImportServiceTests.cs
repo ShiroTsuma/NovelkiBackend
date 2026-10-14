@@ -221,6 +221,49 @@ public class BookCsvImportServiceTests
     }
 
     [Fact]
+    public async Task UpdateRowAsync_ShouldKeepGenresSentBackWithRowEdit()
+    {
+        using var database = new SqliteTestDatabase(Guid.NewGuid());
+        await using var context = database.CreateContext();
+        context.Genres.Add(new Genre { Name = "Fantasy", NormalizedName = MappingExtensions.NormalizeName("Fantasy") });
+        await context.SaveChangesAsync();
+        var service = CreateService(context, database.UserId);
+
+        using var stream = CreateCsv("""
+                                     primaryTitle,contentType,status,genres
+                                     Bad Book,Wrong,Reading,Fantasy
+                                     """);
+
+        var session = await service.CreateSessionAsync(stream, "books.csv", CancellationToken.None);
+        var row = Assert.Single(session.Rows);
+        Assert.Equal("Fantasy", row.Genres);
+
+        var updatedSession = await service.UpdateRowAsync(
+            session.SessionId,
+            row.RowId,
+            new UpdateBookImportRowRequest(
+                row.PrimaryTitle,
+                row.AuthorName,
+                "Novel",
+                row.Status,
+                row.Genres,
+                row.Tags,
+                row.TotalChapters,
+                row.CurrentChapterNumber,
+                row.CurrentChapterLabel,
+                row.Rating,
+                row.Priority,
+                row.Description,
+                row.Notes,
+                row.RawImportedLine),
+            CancellationToken.None);
+
+        var updatedRow = Assert.Single(updatedSession.Rows);
+        Assert.True(updatedRow.IsValid);
+        Assert.Equal("Fantasy", updatedRow.Genres);
+    }
+
+    [Fact]
     public async Task FinalizeAsync_ShouldCreateBooksTagsAuthorsAndQueueCovers()
     {
         using var database = new SqliteTestDatabase(Guid.NewGuid());

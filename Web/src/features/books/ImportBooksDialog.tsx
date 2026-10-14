@@ -583,6 +583,7 @@ function ExpandedImportRowEditor({
     authorName: row.authorName ?? '',
     contentType: row.contentType ?? '',
     status: row.status ?? '',
+    genres: row.genres ?? '',
     tags: row.tags ?? '',
     totalChapters: row.totalChapters ?? '',
     currentChapterNumber: row.currentChapterNumber ?? '',
@@ -600,6 +601,7 @@ function ExpandedImportRowEditor({
       authorName: row.authorName ?? '',
       contentType: row.contentType ?? '',
       status: row.status ?? '',
+      genres: row.genres ?? '',
       tags: row.tags ?? '',
       totalChapters: row.totalChapters ?? '',
       currentChapterNumber: row.currentChapterNumber ?? '',
@@ -669,6 +671,7 @@ function ExpandedImportRowEditor({
       <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-4">
         <LabeledInput error={fieldError('primaryTitle')} label="Title" value={draft.primaryTitle ?? ''} onChange={(value) => update('primaryTitle', value)} />
         <LabeledInput error={fieldError('authorName')} label="Author" value={draft.authorName ?? ''} onChange={(value) => update('authorName', value)} />
+        <LabeledInput error={fieldError('genres')} label="Genres" value={draft.genres ?? ''} onChange={(value) => update('genres', value)} />
         <LabeledInput error={fieldError('tags')} label="Tags" value={draft.tags ?? ''} onChange={(value) => update('tags', value)} />
         <LabeledInput error={fieldError('contentType')} label="Type" suggestions={availableContentTypes} value={draft.contentType ?? ''} onChange={(value) => update('contentType', value)} />
         <LabeledInput error={fieldError('status')} label="Status" suggestions={availableStatuses} value={draft.status ?? ''} onChange={(value) => update('status', value)} />
