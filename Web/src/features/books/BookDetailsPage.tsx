@@ -1,25 +1,29 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Edit, ExternalLink, Star, Trash2 } from 'lucide-react'
+import { ArrowLeft, ArrowUpRight, Pencil, Star } from 'lucide-react'
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { api } from '@/api/client'
 import type { BookDto, BookLinkDto } from '@/api/types'
 import { HttpError } from '@/api/http'
-import { buttonVariants } from '@/components/app/designTokens'
-import { DialogPanel, Surface } from '@/components/app/DesignSystem'
-import { useBodyScrollLock } from '@/components/app/useBodyScrollLock'
-import { buttonClass, secondaryButtonClass } from '@/components/app/designTokens'
+import { Button } from '@/components/ui/Button'
+import { buttonStyles } from '@/components/ui/buttonStyles'
+import { Dialog } from '@/components/ui/Dialog'
+import { cn } from '@/lib/utils'
 import { BookCoverArtwork, CoverLightbox } from './BookCoverSection'
-import { useResolvedCoverImage } from './useResolvedCoverImage'
-import { isLowRating } from './bookRating'
-import { BookStatusPill } from './BookStatusPill'
-import { getDisplayCoverFailure, getDisplayCoverStatus } from './coverFailure'
-import { getBookListReturnTo } from './bookListNavigation'
-import { DescribedMetadataPills } from './MetadataBadges'
-import { getProgressHistoryWithDeltas } from './bookProgressHistory'
-import { ProgressDialog } from './ProgressDialog'
 import { BookFilesPanel } from './BookFilesPanel'
+import { getBookListReturnTo } from './bookListNavigation'
+import { getProgressHistoryWithDeltas } from './bookProgressHistory'
+import { isLowRating } from './bookRating'
+import { getStatusTone, statusToneClasses } from './bookStatus'
+import { getDisplayCoverFailure, getDisplayCoverStatus } from './coverFailure'
+import { DescribedMetadataPills } from './MetadataBadges'
+import { ProgressDialog } from './ProgressDialog'
+import { StatusBadge } from './StatusBadge'
+import { useResolvedCoverImage } from './useResolvedCoverImage'
+
+const collapsedTagCount = 14
+const numberFormat = new Intl.NumberFormat('en-US')
 
 export function BookDetailsPage() {
   const { id } = useParams<{ id: string }>()
@@ -31,6 +35,7 @@ export function BookDetailsPage() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [descriptionExpanded, setDescriptionExpanded] = useState(false)
   const [descriptionOverflowing, setDescriptionOverflowing] = useState(false)
+  const [allTagsVisible, setAllTagsVisible] = useState(false)
   const descriptionRef = useRef<HTMLParagraphElement | null>(null)
 
   function requireBookId() {
@@ -100,19 +105,11 @@ export function BookDetailsPage() {
   }, [book?.description, descriptionExpanded])
 
   if (bookQuery.isLoading) {
-    return (
-      <Surface className="p-6 text-slate-500" tone="muted">
-        Loading...
-      </Surface>
-    )
+    return <PageMessage>Loading…</PageMessage>
   }
 
   if (!book) {
-    return (
-      <Surface className="p-6 text-slate-500" tone="muted">
-        Book not found.
-      </Surface>
-    )
+    return <PageMessage>Book not found.</PageMessage>
   }
 
   const shouldOfferRefresh =
@@ -120,265 +117,258 @@ export function BookDetailsPage() {
   const refreshLabel = book.cover?.imageUrl ? 'Search again' : 'Search cover'
   const displayCoverStatus = getDisplayCoverStatus(book.cover?.status, book.cover?.failureReason)
   const displayCoverFailure = getDisplayCoverFailure(book.cover?.failureReason)
-  const coverSourceLabel = book.cover?.source ? `Source: ${book.cover.source}` : undefined
+  const coverSourceLabel = book.cover?.source ? coverSourceText(book.cover.source) : undefined
   const coverHint = !book.cover?.imageUrl
     ? [`Status: ${displayCoverStatus}`, displayCoverFailure].filter(Boolean).join('\n')
     : undefined
   const progressHistory = getProgressHistoryWithDeltas(book.progressHistory)
+  const hiddenTagCount = Math.max(0, book.tags.length - collapsedTagCount)
 
   const descriptionStyle: CSSProperties | undefined = !descriptionExpanded
     ? {
         display: '-webkit-box',
         WebkitBoxOrient: 'vertical',
-        WebkitLineClamp: 4,
+        WebkitLineClamp: 6,
         overflow: 'hidden',
       }
     : undefined
 
   return (
     <>
-      <div className="mx-auto grid w-full max-w-7xl gap-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <Link className={secondaryButtonClass} to={bookListReturnTo}>
-            <ArrowLeft className="h-4 w-4" />
-            List
-          </Link>
-          <div className="flex flex-wrap gap-2">
-            <ProgressDialog book={book} />
-            <Link
-              className={buttonClass}
-              state={{ bookListReturnTo }}
-              to={`/books/${book.id}/edit`}
-            >
-              <Edit className="h-4 w-4" />
-              Edit
-            </Link>
-            <button
-              className={buttonVariants.destructive}
-              disabled={deleteMutation.isPending}
-              type="button"
-              onClick={() => setDeleteConfirmOpen(true)}
-            >
-              <Trash2 className="h-4 w-4" />
-              Delete
-            </button>
+      <div className="mx-auto flex w-full max-w-[1360px] flex-col gap-7 pb-14">
+        <Link
+          className="inline-flex w-fit items-center gap-1.5 text-ink-2 hover:text-ink"
+          to={bookListReturnTo}
+        >
+          <ArrowLeft aria-hidden="true" className="size-4" />
+          Library
+        </Link>
+
+        <section className="flex flex-wrap items-start gap-8">
+          <div className="w-[200px] flex-none sm:w-[220px]">
+            <BookCoverArtwork
+              className="w-full shadow-cover"
+              cover={book.cover}
+              emptyActionLabel={
+                !book.cover?.imageUrl && shouldOfferRefresh ? refreshLabel : undefined
+              }
+              emptyLabel="No cover in library yet."
+              hint={coverHint}
+              hoverFooter={coverSourceLabel}
+              interactive
+              title={book.primaryTitle}
+              onClick={() => {
+                if (book.cover?.imageUrl) {
+                  setPreviewOpen(true)
+                  return
+                }
+
+                if (shouldOfferRefresh) {
+                  refreshCoverMutation.mutate()
+                }
+              }}
+            />
           </div>
-        </div>
 
-        <Surface className="p-5">
-          <div className="flex flex-col gap-6">
-            <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-              <div className="flex-none lg:w-[320px]">
-                <BookCoverArtwork
-                  className="w-full lg:w-[320px]"
-                  cover={book.cover}
-                  emptyActionLabel={
-                    !book.cover?.imageUrl && shouldOfferRefresh ? refreshLabel : undefined
-                  }
-                  emptyLabel="No cover in library yet."
-                  hint={coverHint}
-                  hoverFooter={coverSourceLabel}
-                  interactive
-                  title={book.primaryTitle}
-                  onClick={() => {
-                    if (book.cover?.imageUrl) {
-                      setPreviewOpen(true)
-                      return
-                    }
+          <div className="flex min-w-0 flex-[999_1_480px] flex-col gap-3.5">
+            <div className="flex flex-wrap items-center gap-2 text-ink-2">
+              <StatusBadge status={book.status} />
+              <span>{book.contentType}</span>
+              <span aria-hidden="true">·</span>
+              <span>
+                by <span className="font-medium text-ink">{book.author ?? 'Unknown author'}</span>
+              </span>
+            </div>
+            <h1 className="m-0 max-w-[900px] font-display text-[clamp(1.9rem,3.2vw,2.4rem)] leading-tight font-bold tracking-tight break-words">
+              {book.primaryTitle}
+            </h1>
+            {book.alternativeTitles.length ? (
+              <p className="m-0 text-ink-3">{book.alternativeTitles.join(' · ')}</p>
+            ) : null}
 
-                    if (shouldOfferRefresh) {
-                      refreshCoverMutation.mutate()
-                    }
-                  }}
-                />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex min-w-0 flex-col gap-5">
-                  <div className="flex min-w-0 flex-col gap-3">
-                    <div className="flex flex-col gap-2">
-                      <div className="text-xs font-semibold uppercase tracking-[0.26em] text-slate-400">
-                        {book.contentType}
-                      </div>
-                      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
-                        <h1 className="min-w-0 break-words text-3xl font-semibold tracking-tight text-slate-950 md:text-4xl">
-                          {book.primaryTitle}
-                        </h1>
-                        <BookStatusPill status={book.status} />
-                      </div>
-                      {book.alternativeTitles.length ? (
-                        <p className="text-sm text-slate-400">
-                          {book.alternativeTitles.join(' | ')}
-                        </p>
-                      ) : null}
-                      <p className="text-[11px] uppercase tracking-[0.24em] text-slate-400">
-                        AUTHOR:{' '}
-                        <span className="text-lg font-semibold normal-case tracking-normal text-slate-950">
-                          {book.author ?? 'unknown'}
-                        </span>
-                      </p>
-                    </div>
-                    <Surface as="div" className="grid gap-4 p-4" tone="muted">
-                      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-                        <div className="min-w-0 flex-1">
-                          <div className="mb-2 flex items-center justify-between gap-3">
-                            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                              Progress
-                            </div>
-                            <div className="text-sm font-medium text-slate-700">
-                              {formatProgressInline(book)}
-                            </div>
-                          </div>
-                          <ProgressBar book={book} />
-                        </div>
-                        <div className="flex items-center gap-3 xl:pl-4">
-                          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                            Rating
-                          </div>
-                          <RatingSummary rating={book.rating} />
-                        </div>
-                      </div>
-                      <div className="grid gap-4 border-t border-slate-200 pt-4 md:grid-cols-2">
-                        <div className="grid content-start gap-2 self-start">
-                          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                            Genres
-                          </div>
-                          <DescribedMetadataPills
-                            descriptions={book.genreDescriptions}
-                            empty={<p className="text-sm text-slate-500">No genres.</p>}
-                            maxVisible={book.genres.length}
-                            values={book.genres}
-                            variant="detail"
-                          />
-                        </div>
-                        <div className="grid content-start gap-2 self-start">
-                          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                            Tags
-                          </div>
-                          <DescribedMetadataPills
-                            descriptions={book.tagDescriptions}
-                            empty={<p className="text-sm text-slate-500">No tags.</p>}
-                            maxVisible={book.tags.length}
-                            values={book.tags}
-                            variant="detail"
-                          />
-                        </div>
-                      </div>
-                    </Surface>
-                    <div className="grid gap-2">
-                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Description
-                      </div>
-                      {book.description ? (
-                        <div className="grid gap-2">
-                          <p
-                            className="max-w-4xl whitespace-pre-line text-sm leading-6 text-slate-600"
-                            ref={descriptionRef}
-                            style={descriptionStyle}
-                          >
-                            {book.description}
-                          </p>
-                          {descriptionOverflowing ? (
-                            <button
-                              className="ui-inline-link w-fit text-sm"
-                              type="button"
-                              onClick={() => setDescriptionExpanded(!descriptionExpanded)}
-                            >
-                              {descriptionExpanded ? 'Show less' : 'Show more'}
-                            </button>
-                          ) : null}
-                        </div>
-                      ) : (
-                        <div className="min-h-6" />
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div className="mt-1.5 flex flex-wrap gap-3">
+              <ProgressCard book={book} lastLogged={progressHistory[0]?.changedAt} />
+              <StatCard label="Rating">
+                <RatingValue rating={book.rating} />
+              </StatCard>
+              <StatCard label="Priority">
+                {book.priority != null ? (
+                  <span className="tabular-nums">{book.priority}</span>
+                ) : (
+                  <span className="text-ink-disabled">—</span>
+                )}
+                <span className="block text-[13px] font-normal text-ink-3">
+                  {book.priority != null ? '1 is next up' : 'not set'}
+                </span>
+              </StatCard>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <ProgressDialog book={book} />
+              <Link
+                className={buttonStyles({ variant: 'secondary' })}
+                state={{ bookListReturnTo }}
+                to={`/books/${book.id}/edit`}
+              >
+                <Pencil aria-hidden="true" className="size-4" />
+                Edit
+              </Link>
             </div>
           </div>
-        </Surface>
+        </section>
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <BookFilesPanel
-            bookId={book.id}
-            searchBook={{
-              id: book.id,
-              title: book.primaryTitle,
-              alternativeTitles: book.alternativeTitles,
-              chaptersRead: book.currentChapterNumber ?? null,
-              chapterLabel: book.currentChapterLabel ?? null,
-            }}
-          />
-          <Panel title="Links">
-            <div className="grid gap-2">
+        <div className="flex flex-wrap items-start gap-8">
+          <div className="flex min-w-0 flex-[999_1_560px] flex-col gap-7">
+            <Section title="About">
+              {book.description ? (
+                <>
+                  <p
+                    className="m-0 max-w-[760px] text-[15px] leading-relaxed whitespace-pre-line text-ink"
+                    ref={descriptionRef}
+                    style={descriptionStyle}
+                  >
+                    {book.description}
+                  </p>
+                  {descriptionOverflowing || descriptionExpanded ? (
+                    <TextButton onClick={() => setDescriptionExpanded(!descriptionExpanded)}>
+                      {descriptionExpanded ? 'Show less' : 'Show more'}
+                    </TextButton>
+                  ) : null}
+                </>
+              ) : (
+                <p className="m-0 text-ink-3">No description yet.</p>
+              )}
+            </Section>
+
+            <Section title="Genres & tags">
+              <div className="grid content-start gap-2 self-start">
+                <h3 className="m-0 text-xs font-semibold tracking-wider text-ink-3 uppercase">
+                  Genres
+                </h3>
+                <DescribedMetadataPills
+                  descriptions={book.genreDescriptions}
+                  empty={<p className="m-0 text-ink-3">No genres.</p>}
+                  maxVisible={book.genres.length}
+                  values={book.genres}
+                  variant="detail"
+                />
+              </div>
+              <div className="grid content-start gap-2 self-start">
+                <h3 className="m-0 text-xs font-semibold tracking-wider text-ink-3 uppercase">
+                  Tags
+                </h3>
+                <DescribedMetadataPills
+                  descriptions={book.tagDescriptions}
+                  empty={<p className="m-0 text-ink-3">No tags.</p>}
+                  maxVisible={allTagsVisible ? book.tags.length : collapsedTagCount}
+                  values={book.tags}
+                  variant="detail"
+                />
+                {hiddenTagCount > 0 ? (
+                  <TextButton onClick={() => setAllTagsVisible(!allTagsVisible)}>
+                    {allTagsVisible ? 'Show fewer tags' : `Show all ${book.tags.length} tags`}
+                  </TextButton>
+                ) : null}
+              </div>
+            </Section>
+
+            <Section title="Reading history">
+              {progressHistory.length ? (
+                <ol className="m-0 flex list-none flex-col gap-4 border-l border-line py-0 pr-0 pl-5">
+                  {progressHistory.map((entry) => (
+                    <li className="relative" key={entry.id}>
+                      <span
+                        aria-hidden="true"
+                        className={cn(
+                          'absolute top-1.5 -left-[26px] size-[11px] rounded-full border-2 border-ground',
+                          statusToneClasses[getStatusTone(book.status)].dot,
+                        )}
+                      />
+                      <div className="flex flex-wrap items-baseline gap-2 tabular-nums">
+                        <strong>{historyTitle(entry)}</strong>
+                        {entry.delta != null && entry.delta !== 0 ? (
+                          <span
+                            className={cn(
+                              'rounded-full px-2 py-0.5 text-xs font-semibold',
+                              entry.delta > 0
+                                ? 'bg-status-finished-soft text-status-finished-ink'
+                                : 'bg-danger-soft text-danger-ink',
+                            )}
+                          >
+                            {entry.delta > 0 ? `+${entry.delta}` : entry.delta}
+                          </span>
+                        ) : null}
+                        <span className="text-[13px] text-ink-3">
+                          {entry.chapterNumber != null
+                            ? `${numberFormat.format(entry.chapterNumber)} read · `
+                            : ''}
+                          {formatDate(entry.changedAt)}
+                        </span>
+                      </div>
+                      {entry.comment ? (
+                        <p className="m-0 mt-0.5 whitespace-pre-line text-ink-2">{entry.comment}</p>
+                      ) : null}
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="m-0 text-ink-3">No progress logged yet.</p>
+              )}
+            </Section>
+          </div>
+
+          <aside className="flex max-w-full flex-[1_1_360px] flex-col gap-4 lg:max-w-[460px]">
+            <BookFilesPanel
+              bookId={book.id}
+              searchBook={{
+                id: book.id,
+                title: book.primaryTitle,
+                alternativeTitles: book.alternativeTitles,
+                chaptersRead: book.currentChapterNumber ?? null,
+                chapterLabel: book.currentChapterLabel ?? null,
+              }}
+            />
+            <SidePanel title="Links">
               {book.links.length ? (
                 book.links.map((link) => (
                   <a
-                    className="flex items-center justify-between rounded-md border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50"
+                    className="flex items-center justify-between gap-2 rounded-control border border-line bg-sunk px-3 py-2.5 font-medium text-ink hover:border-line-strong"
                     href={link.url}
                     key={link.id}
                     rel="noreferrer"
                     target="_blank"
                   >
-                    <span>{getBookLinkLabel(link)}</span>
-                    <ExternalLink className="h-4 w-4 text-slate-400" />
+                    <span className="truncate">{getBookLinkLabel(link)}</span>
+                    <ArrowUpRight aria-hidden="true" className="size-4 shrink-0 text-ink-2" />
                   </a>
                 ))
               ) : (
-                <p className="text-sm text-slate-500">No links.</p>
+                <p className="m-0 text-ink-3">No links.</p>
               )}
-            </div>
-          </Panel>
-          <Panel title="Notes">
-            <div className="grid gap-3 text-sm text-slate-700">
+            </SidePanel>
+            <SidePanel title="Notes">
               {book.notes ? (
-                <p className="whitespace-pre-line">{book.notes}</p>
+                <p className="m-0 whitespace-pre-line text-ink-2">{book.notes}</p>
               ) : (
-                <p className="text-slate-500">No notes.</p>
+                <p className="m-0 text-ink-3">No notes yet.</p>
               )}
-            </div>
-          </Panel>
-        </section>
-        <Panel title="Changelog">
-          <div className="grid gap-3">
-            {progressHistory.length ? (
-              progressHistory.map((entry) => (
-                <Surface as="div" className="px-4 py-3" key={entry.id} tone="muted">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <div className="text-sm font-semibold text-slate-950">
-                        {(entry.chapterLabel ?? '') ||
-                          (entry.chapterNumber ?? 0) ||
-                          'Updated progress'}
-                      </div>
-                      {entry.delta != null ? (
-                        <span
-                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${entry.delta > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}
-                        >
-                          {entry.delta > 0 ? `+${entry.delta}` : entry.delta}
-                        </span>
-                      ) : null}
-                    </div>
-                    <div className="text-xs text-slate-500">{formatDate(entry.changedAt)}</div>
-                  </div>
-                  <div className="mt-1 text-sm text-slate-600">
-                    {entry.chapterNumber != null || entry.chapterLabel ? (
-                      <p>
-                        Progress: {(entry.chapterLabel ?? '') || entry.chapterNumber}
-                        {entry.chapterNumber != null && entry.chapterLabel
-                          ? ` (${entry.chapterNumber})`
-                          : ''}
-                      </p>
-                    ) : null}
-                    {entry.comment ? <p className="whitespace-pre-line">{entry.comment}</p> : null}
-                  </div>
-                </Surface>
-              ))
-            ) : (
-              <p className="text-sm text-slate-500">No changelog yet.</p>
-            )}
-          </div>
-        </Panel>
+            </SidePanel>
+            <section className="flex flex-col items-start gap-2 rounded-panel border border-danger-line p-4">
+              <h2 className="m-0 text-base font-semibold text-danger-ink">Delete book</h2>
+              <p className="m-0 text-[13px] text-ink-3">
+                Removes the book, its reading history, EPUB files and cover.
+              </p>
+              <Button
+                variant="danger"
+                size="sm"
+                disabled={deleteMutation.isPending}
+                onClick={() => setDeleteConfirmOpen(true)}
+              >
+                Delete…
+              </Button>
+            </section>
+          </aside>
+        </div>
       </div>
 
       <CoverLightbox
@@ -389,84 +379,191 @@ export function BookDetailsPage() {
         title={book.primaryTitle}
         onClose={() => setPreviewOpen(false)}
       />
-      <DeleteBookDialog
+      <Dialog
         open={deleteConfirmOpen}
-        pending={deleteMutation.isPending}
-        title={book.primaryTitle}
-        onCancel={() => setDeleteConfirmOpen(false)}
-        onConfirm={() => deleteMutation.mutate()}
-      />
+        onClose={() => setDeleteConfirmOpen(false)}
+        dismissible={!deleteMutation.isPending}
+        title="Delete book"
+        widthClassName="max-w-md"
+        footer={
+          <>
+            <span className="flex-1" />
+            <Button
+              variant="outline"
+              disabled={deleteMutation.isPending}
+              onClick={() => setDeleteConfirmOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              disabled={deleteMutation.isPending}
+              onClick={() => deleteMutation.mutate()}
+            >
+              {deleteMutation.isPending ? 'Deleting…' : 'Delete'}
+            </Button>
+          </>
+        }
+      >
+        <p className="m-0 px-6 py-4 leading-relaxed text-ink-2">
+          Delete <strong className="font-semibold text-ink">{book.primaryTitle}</strong>? Its
+          reading history, EPUB files and cover go too. This cannot be undone.
+        </p>
+      </Dialog>
     </>
   )
 }
 
-function ProgressBar({ book }: { book: BookDto }) {
+function PageMessage({ children }: { children: ReactNode }) {
+  return (
+    <div className="mx-auto w-full max-w-[1360px] rounded-panel border border-line bg-surface p-6 text-ink-2">
+      {children}
+    </div>
+  )
+}
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="flex flex-col gap-2.5">
+      <h2 className="m-0 text-base font-semibold">{title}</h2>
+      {children}
+    </section>
+  )
+}
+
+function SidePanel({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="flex flex-col gap-2.5 rounded-panel border border-line bg-surface p-4">
+      <h2 className="m-0 text-base font-semibold">{title}</h2>
+      {children}
+    </section>
+  )
+}
+
+function TextButton({ children, onClick }: { children: ReactNode; onClick: () => void }) {
+  return (
+    <button
+      className="w-fit border-0 bg-transparent p-0 font-medium text-ink underline decoration-line-focus underline-offset-4 hover:decoration-ink"
+      type="button"
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  )
+}
+
+function StatCard({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="min-w-[140px] flex-[1_1_140px] rounded-field border border-line bg-surface p-4">
+      <div className="text-xs font-semibold tracking-wider text-ink-3 uppercase">{label}</div>
+      <div className="mt-1 text-[26px] leading-tight font-semibold">{children}</div>
+    </div>
+  )
+}
+
+function ProgressCard({ book, lastLogged }: { book: BookDto; lastLogged?: string | undefined }) {
+  const tone = getStatusTone(book.status)
   const current = typeof book.currentChapterNumber === 'number' ? book.currentChapterNumber : null
   const total = typeof book.totalChapters === 'number' ? book.totalChapters : null
-  const percent =
-    current != null && total != null && total > 0
-      ? Math.max(0, Math.min(100, (current / total) * 100))
+  const finished = tone === 'finished'
+  const percent = finished
+    ? 100
+    : current != null && total != null && total > 0
+      ? Math.min(100, (current / total) * 100)
       : null
+  const label = book.currentChapterLabel ?? (current != null ? String(current) : null)
+  const details = [
+    current != null ? `${numberFormat.format(current)} read` : null,
+    total != null ? `of ${numberFormat.format(total)}` : 'total unknown',
+    percent != null && !finished ? `${Math.round(percent)}%` : null,
+    lastLogged ? `last logged ${formatDate(lastLogged, false)}` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ')
 
   return (
-    <div className="grid gap-2">
-      <div className="ui-progress-track">
-        <div
-          className="ui-progress-fill transition-[width]"
-          style={{ width: percent == null ? '0%' : `${percent}%` }}
-        />
+    <div className="min-w-[300px] flex-[2_1_320px] rounded-field border border-line bg-surface p-4">
+      <div className="text-xs font-semibold tracking-wider text-ink-3 uppercase">Progress</div>
+      <div className="mt-1 flex flex-wrap items-baseline gap-x-2.5 tabular-nums">
+        <span
+          className={cn(
+            'text-[26px] leading-tight font-semibold',
+            finished && 'text-status-finished-ink',
+          )}
+        >
+          {finished ? 'Finished' : label ? `Ch. ${label}` : 'Not started'}
+        </span>
+        <span className="text-ink-3">{details}</span>
       </div>
-      <div className="text-xs text-slate-500">
-        {percent == null ? 'No percentage available yet.' : `${Math.round(percent)}% complete`}
-      </div>
-    </div>
-  )
-}
-
-function RatingSummary({ rating }: { rating?: number | null | undefined }) {
-  const normalizedRating = typeof rating === 'number' ? Math.max(0, Math.min(10, rating)) : null
-  const filledStars = normalizedRating == null ? 0 : Math.round(normalizedRating)
-  const lowRating = isLowRating(normalizedRating)
-
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      <div className="flex items-center gap-1">
-        {Array.from({ length: 10 }, (_, index) => (
-          <Star
-            className={`h-4 w-4 ${
-              index < filledStars
-                ? lowRating
-                  ? 'fill-rose-500 text-rose-500'
-                  : 'fill-amber-400 text-amber-400'
-                : 'fill-slate-200 text-slate-300'
-            }`}
-            key={index}
+      <div
+        role="progressbar"
+        aria-label="Reading progress"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={percent == null ? undefined : Math.round(percent)}
+        aria-valuetext={percent == null ? 'Total chapters unknown' : `${Math.round(percent)}%`}
+        className={cn(
+          'mt-2.5 h-1.5 overflow-hidden rounded-full',
+          percent == null
+            ? 'bg-[repeating-linear-gradient(90deg,var(--color-line)_0_6px,transparent_6px_10px)]'
+            : 'bg-line',
+        )}
+      >
+        {percent != null ? (
+          <div
+            className={cn('h-full rounded-full', statusToneClasses[tone].bar)}
+            style={{ width: `${percent}%` }}
           />
-        ))}
-      </div>
-      <div className={`text-sm font-medium ${lowRating ? 'text-rose-400' : 'text-slate-700'}`}>
-        {normalizedRating == null ? '?/10' : `${normalizedRating}/10`}
+        ) : null}
       </div>
     </div>
   )
 }
 
-function formatProgressInline(book: {
-  status?: string | null
-  currentChapterNumber?: number | null
-  currentChapterLabel?: string | null
-  totalChapters?: number | null
-}) {
-  const isCompleted = book.status?.trim().toLowerCase() === 'completed'
-  const current =
-    isCompleted && book.currentChapterNumber != null
-      ? book.currentChapterNumber
-      : (book.currentChapterLabel ?? '') || book.currentChapterNumber
-  if (!current && !book.totalChapters) {
-    return '-'
+function RatingValue({ rating }: { rating?: number | null | undefined }) {
+  if (typeof rating !== 'number') {
+    return (
+      <>
+        <span className="text-ink-disabled">—</span>
+        <span className="block text-[13px] font-normal text-ink-3">not rated</span>
+      </>
+    )
   }
+  const value = Math.max(0, Math.min(10, rating))
+  const low = isLowRating(value)
+  return (
+    <>
+      <span
+        className={cn('inline-flex items-center gap-1.5 tabular-nums', low && 'text-danger-ink')}
+      >
+        <Star
+          aria-hidden="true"
+          className={cn('size-5', low ? 'fill-danger text-danger' : 'fill-star text-star')}
+        />
+        {value}
+        <span className="text-base font-normal text-ink-3">/10</span>
+      </span>
+      <span className="sr-only">Rated {value} out of 10</span>
+    </>
+  )
+}
 
-  return `${current ?? '?'}${book.totalChapters ? ` / ${book.totalChapters}` : ''}`
+function historyTitle(entry: { chapterLabel?: string | null; chapterNumber?: number | null }) {
+  const label = entry.chapterLabel?.trim()
+  if (label) return `Ch. ${label}`
+  if (entry.chapterNumber != null) return `Ch. ${entry.chapterNumber}`
+  return 'Note'
+}
+
+function coverSourceText(source: string) {
+  switch (source) {
+    case 'ManualUpload':
+      return 'Uploaded manually'
+    case 'ManualUrl':
+      return 'Added from a link'
+    default:
+      return `Found via ${source}`
+  }
 }
 
 function getBookLinkLabel(link: BookLinkDto) {
@@ -487,82 +584,13 @@ function getBookLinkLabel(link: BookLinkDto) {
   }
 }
 
-function Panel({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <Surface className="p-5">
-      <h2 className="mb-3 text-base font-semibold text-slate-950">{title}</h2>
-      {children}
-    </Surface>
-  )
-}
-
-function DeleteBookDialog({
-  open,
-  pending,
-  title,
-  onCancel,
-  onConfirm,
-}: {
-  open: boolean
-  pending: boolean
-  title: string
-  onCancel: () => void
-  onConfirm: () => void
-}) {
-  useBodyScrollLock(open)
-
-  if (!open) {
-    return null
-  }
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4"
-      role="presentation"
-      onClick={pending ? undefined : onCancel}
-    >
-      <DialogPanel
-        aria-modal="true"
-        className="grid max-w-md gap-5 p-6"
-        role="dialog"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="grid gap-2">
-          <h2 className="text-lg font-semibold text-slate-950">Delete book</h2>
-          <p className="text-sm leading-6 text-slate-600">
-            Are you sure you want to delete{' '}
-            <span className="font-semibold text-slate-950">{title}</span>? This cannot be undone.
-          </p>
-        </div>
-        <div className="flex justify-end gap-2">
-          <button
-            className={secondaryButtonClass}
-            disabled={pending}
-            type="button"
-            onClick={onCancel}
-          >
-            Cancel
-          </button>
-          <button
-            className={buttonVariants.destructive}
-            disabled={pending}
-            type="button"
-            onClick={onConfirm}
-          >
-            {pending ? 'Deleting...' : 'Delete'}
-          </button>
-        </div>
-      </DialogPanel>
-    </div>
-  )
-}
-
-function formatDate(value?: string | null) {
+function formatDate(value?: string | null, withTime = true) {
   if (!value) {
-    return '-'
+    return '—'
   }
 
-  return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(
-    new Date(value),
-  )
+  return new Intl.DateTimeFormat(
+    'en-US',
+    withTime ? { dateStyle: 'medium', timeStyle: 'short' } : { dateStyle: 'medium' },
+  ).format(new Date(value))
 }

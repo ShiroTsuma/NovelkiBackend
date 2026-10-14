@@ -33,7 +33,7 @@ describe('ProgressDialog', () => {
     expect(
       screen.getByText('Chapter number must be a non-negative number without exponent notation.'),
     ).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Save progress' })).toBeDisabled()
     expect(api.updateProgress).not.toHaveBeenCalled()
   })
 
@@ -49,7 +49,7 @@ describe('ProgressDialog', () => {
     expect(
       screen.getByText('Current chapter cannot be greater than total chapters.'),
     ).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Save progress' })).toBeDisabled()
   })
 
   it('limits label and comment length in the browser', async () => {
@@ -77,7 +77,7 @@ describe('ProgressDialog', () => {
 
     await user.click(screen.getByRole('button', { name: /progress/i }))
     await user.type(screen.getByPlaceholderText('Comment'), 'same chapter note')
-    await user.click(screen.getByRole('button', { name: 'Save' }))
+    await user.click(screen.getByRole('button', { name: 'Save progress' }))
 
     await waitFor(() => expect(api.updateProgress).toHaveBeenCalled())
     expect(vi.mocked(api.updateProgress).mock.calls[0]).toEqual([

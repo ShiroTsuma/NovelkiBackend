@@ -1,5 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, Download, Pencil, RotateCcw, Trash2 } from 'lucide-react'
+import {
+  ArrowDown,
+  ArrowUp,
+  Download,
+  Pencil,
+  RotateCcw,
+  Search,
+  Trash2,
+  Upload,
+} from 'lucide-react'
 import { useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -11,7 +20,7 @@ import {
   type FileJob,
 } from '@/api/bookFiles'
 import { buttonVariants, controlClass } from '@/components/app/designTokens'
-import { Surface } from '@/components/app/DesignSystem'
+import { Button } from '@/components/ui/Button'
 import { EpubSearchDialog, type EpubSearchBook } from '@/features/epubSearch/EpubSearchDialog'
 import { FileModal } from './files/FileDialogs'
 import { fileError } from './files/fileJobs'
@@ -44,49 +53,169 @@ export function BookFilesPanel({
 }) {
   const queryClient = useQueryClient()
   const query = useBookFiles(bookId)
-  const [open, setOpen] = useState(false)
+  const [manageOpen, setManageOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
+  const [downloadOpen, setDownloadOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
-  const files =
-    query.data && 'files' in query.data ? query.data.files.filter((f) => !f.deletedAtUtc) : []
+  const [downloading, setDownloading] = useState<string>()
+  const [error, setError] = useState('')
+  const list = query.data && 'files' in query.data ? query.data : undefined
+  const files = list ? list.files.filter((f) => !f.deletedAtUtc) : []
+  const totalBytes = files.reduce((sum, f) => sum + f.sizeBytes, 0)
+  const storagePercent =
+    list && list.maxStorageBytes > 0
+      ? Math.min(100, (list.usedStorageBytes / list.maxStorageBytes) * 100)
+      : 0
+  const headingId = `epub-heading-${bookId}`
+
+  function refreshFiles() {
+    void queryClient.invalidateQueries({ queryKey: ['book-files'] })
+    void queryClient.invalidateQueries({ queryKey: ['epub-jobs'] })
+  }
+
+  async function downloadOne(file: BookFile) {
+    setDownloading(file.id)
+    setError('')
+    try {
+      const [ticket] = await bookFilesApi.downloads([file.id], undefined)
+      if (!ticket) {
+        throw new Error('The download could not be prepared.')
+      }
+      startFileDownload(ticket)
+    } catch (e) {
+      setError(fileError(e))
+    } finally {
+      setDownloading(undefined)
+    }
+  }
+
+  let summary = 'No EPUBs'
+  if (query.isPending) summary = 'Loading…'
+  else if (query.isError) summary = 'Unavailable'
+  else if (files.length > 0)
+    summary = `${files.length} ${files.length === 1 ? 'file' : 'files'} · ${formatFileSize(totalBytes)}`
+
   return (
     <>
-      <Surface className="epub-summary p-5" aria-label="Book EPUBs">
-        <div>
-          <h2 className="text-base font-semibold">EPUB</h2>
-          <p className="file-hint">
-            {query.isPending
-              ? 'Loading…'
-              : query.isError
-                ? 'Unavailable'
-                : files.length
-                  ? `${files.length} ${files.length === 1 ? 'file' : 'files'} · ${formatFileSize(files.reduce((sum, f) => sum + f.sizeBytes, 0))}`
-                  : 'No EPUBs'}
+      <section
+        aria-labelledby={headingId}
+        className="overflow-hidden rounded-panel border border-line bg-surface"
+      >
+        <div className="flex items-center gap-2.5 px-4 pt-4 pb-3">
+          <h2 id={headingId} className="m-0 flex-1 text-base font-semibold">
+            EPUB files
+          </h2>
+          <span className="text-[13px] text-ink-3 tabular-nums">{summary}</span>
+        </div>
+
+        {files.length > 0 ? (
+          <ul className="m-0 list-none border-t border-line p-0">
+            {files.map((file) => (
+              <li
+                key={file.id}
+                className="flex items-center gap-3 border-b border-line-soft px-4 py-3 last:border-b-0"
+              >
+                <span
+                  aria-hidden="true"
+                  className="flex h-10 w-8 shrink-0 items-center justify-center rounded border border-line-strong bg-raised text-[10px] font-bold tracking-wide text-ink-2"
+                >
+                  EPUB
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-semibold">{file.title}</div>
+                  <div className="flex flex-wrap gap-x-1.5 text-[13px] text-ink-3 tabular-nums">
+                    <FileContents file={file} />
+                    <span>{formatFileSize(file.sizeBytes)}</span>
+                    {file.isShared ? <span>· Shared</span> : null}
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="iconSm"
+                  aria-label={`Download ${file.title}`}
+                  disabled={downloading === file.id}
+                  onClick={() => void downloadOne(file)}
+                >
+                  <Download aria-hidden="true" className="size-4" />
+                </Button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        {query.isSuccess && files.length === 0 ? (
+          <p className="m-0 border-t border-line px-4 py-4 text-ink-3">
+            No EPUB files yet. Find one online or upload your own.
           </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
+        ) : null}
+
+        {error ? (
+          <p role="alert" className="m-0 px-4 pt-3 text-[13px] text-danger-ink">
+            {error}
+          </p>
+        ) : null}
+
+        <div className="flex flex-wrap items-center gap-2 border-t border-line px-4 py-3">
           {searchBook ? (
-            <button
-              className={buttonVariants.secondary}
-              type="button"
-              onClick={() => setSearchOpen(true)}
-            >
+            <Button variant="primary" size="sm" onClick={() => setSearchOpen(true)}>
+              <Search aria-hidden="true" className="size-4" />
               Find EPUB
-            </button>
+            </Button>
           ) : null}
-          <button className={buttonVariants.secondary} type="button" onClick={() => setOpen(true)}>
-            View
-          </button>
+          <Button
+            variant="secondary"
+            size="sm"
+            title="Upload EPUB or ZIP files"
+            onClick={() => setImportOpen(true)}
+          >
+            <Upload aria-hidden="true" className="size-4" />
+            Upload
+          </Button>
+          <span className="flex-1" />
+          {files.length > 1 ? (
+            <Button variant="ghost" size="sm" onClick={() => setDownloadOpen(true)}>
+              Download…
+            </Button>
+          ) : null}
+          <Button variant="ghost" size="sm" onClick={() => setManageOpen(true)}>
+            Manage
+          </Button>
         </div>
-      </Surface>
-      {open && <BookFilesDialog bookId={bookId} onClose={() => setOpen(false)} />}
+
+        {list ? (
+          <div className="px-4 pb-3.5">
+            <div className="flex justify-between text-xs text-ink-3 tabular-nums">
+              <span>Storage</span>
+              <span>
+                {formatFileSize(list.usedStorageBytes)} of {formatFileSize(list.maxStorageBytes)} ·
+                incl. trash
+              </span>
+            </div>
+            <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-line">
+              <div className="h-full bg-ink-3" style={{ width: `${storagePercent}%` }} />
+            </div>
+          </div>
+        ) : null}
+      </section>
+
+      {manageOpen ? (
+        <BookFilesDialog bookId={bookId} initialManage onClose={() => setManageOpen(false)} />
+      ) : null}
+      {importOpen ? (
+        <FileImportDialog
+          bookId={bookId}
+          onClose={() => setImportOpen(false)}
+          onImported={refreshFiles}
+        />
+      ) : null}
+      {downloadOpen ? (
+        <FileDownloadDialog files={files} onClose={() => setDownloadOpen(false)} />
+      ) : null}
       {searchBook && searchOpen ? (
         <EpubSearchDialog
           open
           book={{ ...searchBook, existingFileCount: files.length }}
           onClose={() => setSearchOpen(false)}
-          onDownloadFinished={() => {
-            void queryClient.invalidateQueries({ queryKey: ['book-files', bookId] })
-          }}
+          onDownloadFinished={refreshFiles}
         />
       ) : null}
     </>
@@ -96,15 +225,18 @@ export function BookFilesPanel({
 export function BookFilesDialog({
   bookId,
   snapshotId,
+  initialManage = false,
   onClose,
 }: {
   bookId?: string
   snapshotId?: string
+  /** Open straight into management (rename, reorder, share, trash). */
+  initialManage?: boolean
   onClose: () => void
 }) {
   const client = useQueryClient()
   const query = useBookFiles(bookId, snapshotId)
-  const [manage, setManage] = useState(false)
+  const [manage, setManage] = useState(initialManage)
   const [trashOpen, setTrashOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [resume, setResume] = useState<FileJob>()

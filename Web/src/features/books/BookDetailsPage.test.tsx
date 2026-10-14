@@ -74,7 +74,7 @@ describe('BookDetailsPage', () => {
       },
     )
 
-    expect(await screen.findByRole('link', { name: /list/i })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: /library/i })).toHaveAttribute(
       'href',
       '/books?take=50&query=Fantasy',
     )
@@ -164,8 +164,11 @@ describe('BookDetailsPage', () => {
       { route: '/books/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' },
     )
 
-    expect(await screen.findByText('+6')).toHaveClass('bg-emerald-100', 'text-emerald-700')
-    expect(screen.getByText('-4')).toHaveClass('bg-rose-100', 'text-rose-700')
+    expect(await screen.findByText('+6')).toHaveClass(
+      'bg-status-finished-soft',
+      'text-status-finished-ink',
+    )
+    expect(screen.getByText('-4')).toHaveClass('bg-danger-soft', 'text-danger-ink')
   })
 
   it('uses the shared dialog surface and readable title hierarchy', async () => {
@@ -180,13 +183,15 @@ describe('BookDetailsPage', () => {
     )
 
     await screen.findByText('Lord of Mysteries')
-    await user.click(screen.getByRole('button', { name: /^delete$/i }))
+    await user.click(screen.getByRole('button', { name: 'Delete…' }))
 
-    const dialog = screen.getByRole('dialog')
+    const dialog = screen.getByRole('dialog', { name: 'Delete book' })
 
-    expect(screen.getByRole('heading', { name: /delete book/i })).toHaveClass('text-slate-950')
-    expect(within(dialog).getByText('Lord of Mysteries')).toHaveClass('text-slate-950')
-    expect(dialog).toHaveClass('ui-dialog-panel')
+    expect(dialog).toHaveAttribute('aria-modal', 'true')
+    expect(within(dialog).getByText('Lord of Mysteries')).toHaveClass('font-semibold', 'text-ink')
+    expect(within(dialog).getByRole('button', { name: 'Delete' })).toBeEnabled()
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByRole('dialog', { name: 'Delete book' })).not.toBeInTheDocument()
   })
 
   it('renders the book status as a high-contrast labeled indicator', async () => {
@@ -200,9 +205,9 @@ describe('BookDetailsPage', () => {
     )
 
     const status = await screen.findByLabelText('Book status: Reading')
-    expect(status).toHaveClass('book-details-status', 'book-details-status--reading')
-    expect(status).toHaveTextContent('StatusReading')
-    expect(status.querySelector('.book-details-status__dot')).toBeInTheDocument()
+    expect(status).toHaveAttribute('data-tone', 'reading')
+    expect(status).toHaveTextContent('Reading')
+    expect(status).toHaveClass('bg-status-reading-soft', 'text-status-reading-ink')
   })
 
   it('renders ratings up to and including five in red', async () => {
@@ -215,9 +220,9 @@ describe('BookDetailsPage', () => {
       { route: '/books/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' },
     )
 
-    const rating = await screen.findByText('5/10')
-    expect(rating).toHaveClass('text-rose-400')
-    expect(rating.parentElement?.querySelectorAll('.fill-rose-500')).toHaveLength(5)
+    const label = await screen.findByText('Rated 5 out of 10')
+    expect(label.previousElementSibling).toHaveClass('text-danger-ink')
+    expect(label.previousElementSibling?.querySelector('.fill-danger')).toBeInTheDocument()
   })
 
   it('keeps the status beside a long default title', async () => {
@@ -237,9 +242,8 @@ describe('BookDetailsPage', () => {
     const heading = await screen.findByRole('heading', { level: 1 })
     const status = screen.getByLabelText('Book status: Reading')
 
-    expect(heading).toHaveClass('min-w-0', 'break-words')
-    expect(heading.parentElement).toHaveClass('grid', 'grid-cols-[minmax(0,1fr)_auto]')
-    expect(status).toHaveClass('self-start')
+    expect(heading).toHaveClass('break-words')
+    expect(status.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('replaces a technical cover download error with a helpful generic message', async () => {

@@ -99,7 +99,6 @@ describe('EPUB file UX', () => {
   it('downloads one EPUB directly from its browsing row', async () => {
     const user = userEvent.setup()
     renderWithProviders(<BookFilesPanel bookId="book-1" />)
-    await user.click(await screen.findByRole('button', { name: 'View' }))
     await user.click(await screen.findByRole('button', { name: 'Download Volume 1' }))
     expect(bookFilesApi.downloads).toHaveBeenCalledWith(['file-0'], undefined)
     await waitFor(() => expect(startFileDownload).toHaveBeenCalledTimes(1))
@@ -146,14 +145,12 @@ describe('EPUB file UX', () => {
     await waitFor(() => expect(bookFilesApi.cancel).toHaveBeenCalledWith('job-1'))
     expect(close).toHaveBeenCalled()
   })
-  it('keeps the book page compact and hides file management until requested', async () => {
+  it('lists files on the book page and keeps management behind Manage', async () => {
     const user = userEvent.setup()
     renderWithProviders(<BookFilesPanel bookId="book-1" />)
     expect(await screen.findByText('2 files · 2.0 KiB')).toBeInTheDocument()
-    expect(screen.queryByText('Volume 1')).not.toBeInTheDocument()
-    expect(screen.queryByText(/storage/i)).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'View' }))
     expect(screen.getByText('Volume 1')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Download Volume 1' })).toBeInTheDocument()
     expect(screen.queryByLabelText('Share Volume 1')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Rename Volume 1' })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Manage' }))
@@ -178,8 +175,7 @@ describe('EPUB file UX', () => {
   it('downloads only chosen EPUBs separately, issuing fresh tickets per click', async () => {
     const user = userEvent.setup()
     renderWithProviders(<BookFilesPanel bookId="book-1" />)
-    await user.click(await screen.findByRole('button', { name: 'View' }))
-    await user.click(screen.getByRole('button', { name: 'Download' }))
+    await user.click(await screen.findByRole('button', { name: 'Download…' }))
     await user.click(screen.getByLabelText('Select Volume 2'))
     await user.click(screen.getByLabelText('Separate EPUBs'))
     await user.click(screen.getByRole('button', { name: 'Continue' }))
@@ -211,8 +207,7 @@ describe('EPUB file UX', () => {
   it('shares an explicit set and reorders the full file list', async () => {
     const user = userEvent.setup()
     renderWithProviders(<BookFilesPanel bookId="book-1" />)
-    await user.click(await screen.findByRole('button', { name: 'View' }))
-    await user.click(screen.getByRole('button', { name: 'Manage' }))
+    await user.click(await screen.findByRole('button', { name: 'Manage' }))
     await user.click(await screen.findByLabelText('Share Volume 1'))
     await waitFor(() => expect(bookFilesApi.share).toHaveBeenCalledWith('book-1', ['file-0']))
     await user.click(screen.getByRole('button', { name: 'Move Volume 1 down' }))
@@ -224,8 +219,7 @@ describe('EPUB file UX', () => {
   it('requires confirmation for trash and explains private restoration', async () => {
     const user = userEvent.setup()
     renderWithProviders(<BookFilesPanel bookId="book-1" />)
-    await user.click(await screen.findByRole('button', { name: 'View' }))
-    await user.click(screen.getByRole('button', { name: 'Manage' }))
+    await user.click(await screen.findByRole('button', { name: 'Manage' }))
     await user.click(await screen.findByRole('button', { name: 'Remove Volume 1' }))
     expect(bookFilesApi.remove).not.toHaveBeenCalled()
     await user.click(screen.getByRole('button', { name: 'Move to trash' }))
