@@ -37,10 +37,10 @@ describe('book search syntax', () => {
     const actions = getLocalBookSearchSuggestions(context)
 
     expect(actions.map((item) => item.kind).slice(0, 2)).toEqual(['include', 'remove'])
-    expect(applyBookSearchSuggestion(query, context, actions[0]).value).toBe(
+    expect(applyBookSearchSuggestion(query, context, actions[0]!).value).toBe(
       'title:Lord tag:dropped rating:>=8',
     )
-    expect(applyBookSearchSuggestion(query, context, actions[1]).value).toBe(
+    expect(applyBookSearchSuggestion(query, context, actions[1]!).value).toBe(
       'title:Lord rating:>=8',
     )
   })

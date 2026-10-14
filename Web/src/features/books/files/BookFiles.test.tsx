@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { bookFilesApi, startFileDownload, type BookFile, type FileJob } from '@/api/bookFiles'
+import type * as BookFilesModule from '@/api/bookFiles'
 import { api } from '@/api/client'
 import { renderWithProviders } from '@/test/render'
 import { BookFilesDialog, BookFilesPanel } from '../BookFilesPanel'
@@ -11,7 +12,7 @@ import { FileDownloadDialog } from './FileDownloadDialog'
 import { FileContents } from './FileContents'
 
 vi.mock('@/api/bookFiles', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@/api/bookFiles')>()),
+  ...(await importOriginal<typeof BookFilesModule>()),
   startFileDownload: vi.fn(),
   bookFilesApi: Object.fromEntries(
     [
@@ -87,8 +88,8 @@ beforeEach(() => {
   vi.mocked(bookFilesApi.cancel).mockResolvedValue(undefined)
   vi.mocked(bookFilesApi.downloads).mockResolvedValue([
     {
-      fileId: files[0].id,
-      title: files[0].title,
+      fileId: files[0]!.id,
+      title: files[0]!.title,
       url: '/api/v1/book/files/download/ticket?token=secret',
     },
   ])
@@ -132,7 +133,11 @@ describe('EPUB file UX', () => {
   it('cancels a known export even while its status request is pending', async () => {
     const user = userEvent.setup()
     vi.mocked(bookFilesApi.export).mockResolvedValue({ ...ready, status: 'Queued' })
-    vi.mocked(bookFilesApi.job).mockReturnValue(new Promise(() => {}))
+    vi.mocked(bookFilesApi.job).mockReturnValue(
+      new Promise(() => {
+        // Never settles: keeps the status request pending for this test.
+      }),
+    )
     const close = vi.fn()
     renderWithProviders(<FileDownloadDialog files={files} onClose={close} />)
     await user.click(screen.getByRole('button', { name: 'Create ZIP' }))

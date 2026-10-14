@@ -99,9 +99,10 @@ async function fetchCoverBlob(absoluteUrl: string) {
   const token = getStoredSession()?.accessToken
 
   try {
-    const response = await fetch(absoluteUrl, {
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-    })
+    const response = await fetch(
+      absoluteUrl,
+      token ? { headers: { Authorization: `Bearer ${token}` } } : {},
+    )
     if (!response.ok) {
       return null
     }

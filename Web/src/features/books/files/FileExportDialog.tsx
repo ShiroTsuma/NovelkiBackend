@@ -1,10 +1,17 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { bookFilesApi, formatFileSize, startFileDownload } from '@/api/bookFiles'
-import { buttonVariants } from '@/components/app/DesignSystem'
-import { FileJobProgress, FileModal, fileError, isJobWorking, useFileJob } from './FileDialogs'
+import { buttonVariants } from '@/components/app/designTokens'
+import { FileJobProgress, FileModal } from './FileDialogs'
+import { fileError, isJobWorking, useFileJob } from './fileJobs'
 
-export function FileExportDialog({ query, onClose }: { query?: string; onClose: () => void }) {
+export function FileExportDialog({
+  query,
+  onClose,
+}: {
+  query?: string | undefined
+  onClose: () => void
+}) {
   const client = useQueryClient()
   const [scope, setScope] = useState<'filtered' | 'all'>('filtered')
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -69,10 +76,11 @@ export function FileExportDialog({ query, onClose }: { query?: string; onClose: 
     }
   }
   async function download() {
+    if (!jobId) return
     setBusy(true)
     setError('')
     try {
-      startFileDownload(await bookFilesApi.jobDownload(jobId!))
+      startFileDownload(await bookFilesApi.jobDownload(jobId))
       setStarted(true)
     } catch (e) {
       setError(fileError(e))
@@ -167,7 +175,7 @@ export function FileExportDialog({ query, onClose }: { query?: string; onClose: 
                     setStarted(false)
                     void client.invalidateQueries({ queryKey: ['epub-jobs'] })
                   })
-                  .catch((e) => setError(fileError(e)))
+                  .catch((e: unknown) => setError(fileError(e)))
                   .finally(() => setBusy(false))
               }}
             >
@@ -279,7 +287,7 @@ export function FileExportDialog({ query, onClose }: { query?: string; onClose: 
                 </p>
               )}
               <div className="file-export-books">
-                {candidates.data?.slice(0, visibleBooks).map((book) => {
+                {candidates.data.slice(0, visibleBooks).map((book) => {
                   const ids = book.files.map((f) => f.id)
                   const count = ids.filter((id) => selected.has(id)).length
                   const countVisible = visibleFiles[book.bookId] ?? 50
@@ -309,9 +317,8 @@ export function FileExportDialog({ query, onClose }: { query?: string; onClose: 
                           onClick={() =>
                             setExpanded((current) => {
                               const next = new Set(current)
-                              next.has(book.bookId)
-                                ? next.delete(book.bookId)
-                                : next.add(book.bookId)
+                              if (next.has(book.bookId)) next.delete(book.bookId)
+                              else next.add(book.bookId)
                               return next
                             })
                           }
@@ -356,7 +363,7 @@ export function FileExportDialog({ query, onClose }: { query?: string; onClose: 
                   )
                 })}
               </div>
-              {(candidates.data?.length ?? 0) > visibleBooks && (
+              {candidates.data.length > visibleBooks && (
                 <button
                   className={buttonVariants.secondary}
                   onClick={() => setVisibleBooks((v) => v + 20)}

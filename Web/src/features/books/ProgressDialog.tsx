@@ -5,8 +5,9 @@ import { toast } from 'sonner'
 import { api } from '@/api/client'
 import type { BookDto } from '@/api/types'
 import { HttpError } from '@/api/http'
-import { buttonClass, inputClass, secondaryButtonClass } from '@/components/app/FormField'
-import { DialogPanel, useBodyScrollLock } from '@/components/app/DesignSystem'
+import { buttonClass, inputClass, secondaryButtonClass } from '@/components/app/designTokens'
+import { DialogPanel } from '@/components/app/DesignSystem'
+import { useBodyScrollLock } from '@/components/app/useBodyScrollLock'
 
 const chapterNumberPattern = /^\d+(?:\.\d+)?$/
 const chapterLabelMaxLength = 100
@@ -21,7 +22,7 @@ export function ProgressDialog({ book }: { book: BookDto }) {
   const [comment, setComment] = useState('')
   useBodyScrollLock(open)
   const queryClient = useQueryClient()
-  const totalChapters = typeof book.totalChapters === 'number' ? Number(book.totalChapters) : null
+  const totalChapters = typeof book.totalChapters === 'number' ? book.totalChapters : null
   const chapterNumberText = currentChapterNumber.trim()
   const chapterNumberInvalid =
     chapterNumberText.length > 0 && !chapterNumberPattern.test(chapterNumberText)
@@ -65,12 +66,16 @@ export function ProgressDialog({ book }: { book: BookDto }) {
 
   return (
     <div
-      aria-modal="true"
       className="fixed inset-0 z-50 grid place-items-center bg-slate-950/70 p-4"
-      role="dialog"
+      role="presentation"
       onClick={() => setOpen(false)}
     >
-      <DialogPanel className="max-w-md p-5" onClick={(event) => event.stopPropagation()}>
+      <DialogPanel
+        aria-modal="true"
+        className="max-w-md p-5"
+        role="dialog"
+        onClick={(event) => event.stopPropagation()}
+      >
         <div className="ui-eyebrow">Reading record</div>
         <h2 className="text-lg font-semibold text-slate-950">Update progress</h2>
         <div className="mt-4 grid gap-3">

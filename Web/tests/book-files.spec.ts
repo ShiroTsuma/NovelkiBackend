@@ -6,7 +6,7 @@ import {
   expectInViewport,
 } from './helpers/layout.js'
 
-const bookId = layoutBooks[0].id
+const bookId = layoutBooks[0]!.id
 const files = [
   'Volume 1',
   'Volume 2',
@@ -57,7 +57,7 @@ test.beforeEach(async ({ page }) => {
       })
     if (path === '/api/v1/book/files/export/candidates')
       return route.fulfill({
-        json: [{ bookId, bookTitle: layoutBooks[0].primaryTitle, contentType: 'Novel', files }],
+        json: [{ bookId, bookTitle: layoutBooks[0]!.primaryTitle, contentType: 'Novel', files }],
       })
     if (
       path === '/api/v1/book/files/export/sessions' ||
@@ -117,7 +117,7 @@ test('book file selection, separate download and ZIP stay usable on desktop and 
   await browser.getByRole('button', { name: 'Download', exact: true }).click()
   let dialog = page.getByRole('dialog', { name: 'Download EPUBs', exact: true })
   await dialog.getByLabel('Select Volume 2', { exact: true }).uncheck()
-  await dialog.getByLabel(`Select ${files[2].title}`, { exact: true }).uncheck()
+  await dialog.getByLabel(`Select ${files[2]!.title}`, { exact: true }).uncheck()
   await expectMinTouchTarget(
     dialog.locator('label').filter({ has: page.getByLabel('Select Volume 1', { exact: true }) }),
     44,
@@ -135,12 +135,13 @@ test('book file selection, separate download and ZIP stay usable on desktop and 
   await browser.getByRole('button', { name: 'Download', exact: true }).click()
   dialog = page.getByRole('dialog', { name: 'Download EPUBs', exact: true })
   await dialog.getByLabel('Select Volume 2', { exact: true }).uncheck()
-  await dialog.getByLabel(`Select ${files[2].title}`, { exact: true }).uncheck()
+  await dialog.getByLabel(`Select ${files[2]!.title}`, { exact: true }).uncheck()
   const create = page.waitForRequest((request) =>
     request.url().endsWith('/book/files/export/sessions'),
   )
   await dialog.getByRole('button', { name: 'Create ZIP' }).click()
-  expect((await create).postDataJSON().fileIds).toEqual(['file-0'])
+  const createBody = (await create).postDataJSON() as { fileIds: string[] }
+  expect(createBody.fileIds).toEqual(['file-0'])
   await expect(dialog.getByRole('button', { name: 'Download ZIP', exact: true })).toBeVisible()
   await expectNoHorizontalOverflow(page)
   await page.screenshot({ path: info.outputPath('epub-zip-dialog.png') })
@@ -153,7 +154,7 @@ test('EPUB upload previews selected titles and order before committing', async (
     entries: files.slice(0, 2).map((file, i) => ({
       ...file,
       id: `entry-${i}`,
-      bookTitle: layoutBooks[0].primaryTitle,
+      bookTitle: layoutBooks[0]!.primaryTitle,
       contentType: 'Novel',
       error: null,
       isDuplicate: false,

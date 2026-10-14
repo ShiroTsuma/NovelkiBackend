@@ -1,13 +1,6 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { TokenResponse } from '@/api/types'
+import { AuthContext } from './useAuth'
 import { api } from '@/api/client'
 import {
   clearStoredSession,
@@ -15,18 +8,6 @@ import {
   setStoredSession,
   subscribeUnauthorized,
 } from '@/api/http'
-
-type AuthContextValue = {
-  token: string | null
-  isRestoring: boolean
-  isAuthenticated: boolean
-  roles: string[]
-  isAdmin: boolean
-  setSession: (session: TokenResponse) => void
-  logout: () => Promise<void>
-}
-
-const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null)
@@ -96,12 +77,4 @@ function readRoles(token: string | null) {
 function toBase64(value: string) {
   const normalized = value.replace(/-/g, '+').replace(/_/g, '/')
   return normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=')
-}
-
-export function useAuth() {
-  const value = useContext(AuthContext)
-  if (!value) {
-    throw new Error('useAuth must be used inside AuthProvider.')
-  }
-  return value
 }

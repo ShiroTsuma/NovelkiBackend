@@ -1,7 +1,9 @@
-import type { BookAnalyticsRelationCountDto } from '@/api/types'
 import { useState } from 'react'
-import { buttonVariants } from '@/components/app/DesignSystem'
-import { DrilldownLink, fieldQuery, formatCount, formatPercent } from './chartUtils'
+import type { BookAnalyticsRelationCountDto } from '@/api/types'
+import { buttonVariants } from '@/components/app/designTokens'
+import { fieldQuery, formatCount, formatPercent } from './chartUtils'
+import { DrilldownLink } from './DrilldownLink'
+import { toLimitedRelationRows } from './topRelationsData'
 
 type TopRelationsChartProps = {
   field: 'genre' | 'tag'
@@ -79,39 +81,4 @@ export function TopRelationsChart({ field, items, title }: TopRelationsChartProp
       ) : null}
     </div>
   )
-}
-
-export function relationRows(items: BookAnalyticsRelationCountDto[]) {
-  return toAllRelationRows(items).map((item) => [
-    item.name,
-    formatCount(item.bookCount),
-    formatPercent(item.shareOfBooks),
-  ])
-}
-
-function toAllRelationRows(items: BookAnalyticsRelationCountDto[]) {
-  return [...items]
-    .sort((left, right) => right.bookCount - left.bookCount || left.name.localeCompare(right.name))
-    .map((item) => ({ ...item, isOther: false }))
-}
-
-function toLimitedRelationRows(items: BookAnalyticsRelationCountDto[], limit: number) {
-  const sorted = [...items].sort(
-    (left, right) => right.bookCount - left.bookCount || left.name.localeCompare(right.name),
-  )
-  const top = sorted.slice(0, limit).map((item) => ({ ...item, isOther: false }))
-  const other = sorted.slice(limit)
-  if (!other.length) {
-    return top
-  }
-
-  return [
-    ...top,
-    {
-      name: 'Other',
-      bookCount: other.reduce((sum, item) => sum + item.bookCount, 0),
-      shareOfBooks: other.reduce((sum, item) => sum + item.shareOfBooks, 0),
-      isOther: true,
-    },
-  ]
 }

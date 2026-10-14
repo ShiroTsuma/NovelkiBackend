@@ -22,7 +22,7 @@ import type {
   BookSummaryTypeCountDto,
 } from '@/api/types'
 import { extractAnalyticsDateFilters } from '@/features/analytics/dateQueryFilters'
-import { buttonClass, inputClass, secondaryButtonClass } from '@/components/app/FormField'
+import { buttonClass, inputClass, secondaryButtonClass } from '@/components/app/designTokens'
 import { PageHeader, Surface } from '@/components/app/DesignSystem'
 import { BookDataTable } from './BookDataTable'
 import { BookCoverArtwork } from './BookCoverSection'
@@ -32,45 +32,44 @@ import { BookSearchInput } from './BookSearchInput'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
 import { formatProgress } from './bookProgress'
 import { saveBookListScrollPosition, takeBookListScrollPosition } from './bookListNavigation'
+import { ColumnSettingsPopup, TotalChaptersColumnLabel } from './bookListColumns'
 import {
-  ColumnSettingsPopup,
   getVisibleColumns,
-  totalChaptersColumnLabel,
   useColumnPreferences,
   useViewMode,
   type BookViewMode,
   type ColumnDefinition,
-} from './bookListColumns'
+} from './columnPreferences'
+import { BookListFooter, ScrollShortcutButtons } from './BookListShared'
 import {
   bookListPageSizeOptions,
-  BookListFooter,
   getNextSortDirection,
-  ScrollShortcutButtons,
   useBookListPagination,
   useBookListScrollShortcuts,
   useBookListUrlState,
-} from './BookListShared'
+} from './bookListState'
+import {
+  cardsPerRowOptions,
+  getCardDetailRowClass,
+  getCardPageSizeOptions,
+  getCardRowMinHeightClasses,
+  getCardTextSizeClasses,
+  getClosestPageSize,
+  getDesktopCardsPerRowClass,
+  useCardsPerRow,
+  useResponsiveCardsPerRow,
+} from './bookCardLayout'
+import {
+  formatAverageRating,
+  formatBookCount,
+  formatChapterCount,
+  formatDate,
+} from './bookFormatters'
 import { ImportBooksDialog } from './ImportBooksDialog'
 import { FileImportDialog } from './files/FileImportDialog'
 import { FileExportDialog } from './files/FileExportDialog'
 import { DescribedMetadataPills, MetadataSummary } from './MetadataBadges'
 
-export { formatProgress } from './bookProgress'
-export {
-  ColumnHeader,
-  ColumnSettingsPopup,
-  defaultColumnPreferences,
-  getColumnPopupPosition,
-  getVisibleColumns,
-  totalChaptersColumnLabel,
-  useColumnPreferences,
-  useViewMode,
-  type BookViewMode,
-  type ColumnDefinition,
-  type ColumnPreference,
-} from './bookListColumns'
-
-const cardsPerRowOptions = [2, 3, 4, 5, 6, 7, 8] as const
 const bookColumnsStorageKey = 'novelki.books.columns.v1'
 const bookCardFieldsStorageKey = 'novelki.books.card-fields.v1'
 const bookLayoutStorageKey = 'novelki.books.layout.v1'
@@ -122,7 +121,7 @@ const bookColumns: ColumnDefinition<BookListItemDto>[] = [
   },
   {
     id: 'totalChapters',
-    label: totalChaptersColumnLabel(),
+    label: <TotalChaptersColumnLabel />,
     defaultVisible: false,
     sortBy: 'chapters',
     widthClass: 'w-28',
@@ -336,7 +335,7 @@ export function BooksPage() {
         take: pageSize,
         query: requestQuery,
         sortBy: nextSortBy,
-        sortDirection: currentSortDirection ?? undefined,
+        ...(currentSortDirection != null ? { sortDirection: currentSortDirection } : {}),
         advanceCycle: true,
       }),
     onSuccess: (result, variables) => {
@@ -436,7 +435,7 @@ export function BooksPage() {
 
   function handleImportComplete(result: BookImportFinalizeResult) {
     setLastImportResult(result)
-    booksQuery.refetch()
+    void booksQuery.refetch()
     toast.success(`Imported ${result.importedCount} books. Skipped ${result.skippedCount}.`)
   }
 
@@ -980,45 +979,6 @@ function SummaryTypeDetails({ items }: { items: BookSummaryTypeCountDto[] }) {
   )
 }
 
-export function useCardsPerRow(storageKey: string) {
-  const [cardsPerRow, setCardsPerRowState] = useState<number>(() => readCardsPerRow(storageKey))
-
-  function setCardsPerRow(next: number) {
-    const normalized = normalizeCardsPerRow(next)
-    setCardsPerRowState(normalized)
-    window.localStorage.setItem(storageKey, String(normalized))
-  }
-
-  return [cardsPerRow, setCardsPerRow] as const
-}
-
-export function getResponsiveCardsPerRow(cardsPerRow: number, viewportWidth: number) {
-  if (viewportWidth < 640) {
-    return 1
-  }
-
-  if (viewportWidth < 1024) {
-    return 2
-  }
-
-  return normalizeCardsPerRow(cardsPerRow)
-}
-
-function useResponsiveCardsPerRow(cardsPerRow: number) {
-  const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth)
-
-  useEffect(() => {
-    function updateViewportWidth() {
-      setViewportWidth(window.innerWidth)
-    }
-
-    window.addEventListener('resize', updateViewportWidth)
-    return () => window.removeEventListener('resize', updateViewportWidth)
-  }, [])
-
-  return getResponsiveCardsPerRow(cardsPerRow, viewportWidth)
-}
-
 function BookCardGrid({
   books,
   cardsPerRow,
@@ -1173,132 +1133,8 @@ function hasCardField(fields: ColumnDefinition<BookListItemDto>[], id: string) {
   return fields.some((field) => field.id === id)
 }
 
-export function getCardTextSizeClasses(cardsPerRow: number) {
-  const normalized = normalizeCardsPerRow(cardsPerRow)
-
-  if (normalized <= 4) {
-    return {
-      title: 'text-lg',
-      meta: 'text-base',
-    }
-  }
-
-  if (normalized <= 6) {
-    return {
-      title: 'text-base',
-      meta: 'text-sm',
-    }
-  }
-
-  return {
-    title: 'text-sm',
-    meta: 'text-xs',
-  }
-}
-
-export function getCardRowMinHeightClasses(cardsPerRow: number) {
-  const normalized = normalizeCardsPerRow(cardsPerRow)
-
-  if (normalized <= 4) {
-    return {
-      author: 'min-h-6',
-      progress: 'min-h-7',
-    }
-  }
-
-  if (normalized <= 6) {
-    return {
-      author: 'min-h-5',
-      progress: 'min-h-6',
-    }
-  }
-
-  return {
-    author: 'min-h-4',
-    progress: 'min-h-5',
-  }
-}
-
-export function getCardDetailRowClass({
-  cardsPerRow,
-  showAlternativeTitles,
-  showAuthor,
-  showProgress,
-  showTitle,
-  showType,
-}: {
-  cardsPerRow: number
-  showAlternativeTitles: boolean
-  showAuthor: boolean
-  showProgress: boolean
-  showTitle: boolean
-  showType: boolean
-}) {
-  const rows: string[] = []
-
-  if (showTitle) {
-    rows.push(`minmax(0,${getCardTitleRowHeight(cardsPerRow)})`)
-  }
-
-  if (showAlternativeTitles) {
-    rows.push('minmax(0,2.5rem)')
-  }
-
-  if (showAuthor) {
-    rows.push(`minmax(0,${getCardAuthorRowHeight(cardsPerRow)})`)
-  }
-
-  if (showProgress || showType) {
-    rows.push(`minmax(0,${getCardProgressRowHeight(cardsPerRow)})`)
-  }
-
-  return rows.length ? `grid-rows-[${rows.join('_')}]` : ''
-}
-
-function getCardTitleRowHeight(cardsPerRow: number) {
-  const normalized = normalizeCardsPerRow(cardsPerRow)
-
-  if (normalized <= 4) {
-    return '3.5rem'
-  }
-
-  if (normalized <= 6) {
-    return '3rem'
-  }
-
-  return '2.5rem'
-}
-
-function getCardAuthorRowHeight(cardsPerRow: number) {
-  const normalized = normalizeCardsPerRow(cardsPerRow)
-
-  if (normalized <= 4) {
-    return '1.5rem'
-  }
-
-  if (normalized <= 6) {
-    return '1.25rem'
-  }
-
-  return '1rem'
-}
-
-function getCardProgressRowHeight(cardsPerRow: number) {
-  const normalized = normalizeCardsPerRow(cardsPerRow)
-
-  if (normalized <= 4) {
-    return '1.75rem'
-  }
-
-  if (normalized <= 6) {
-    return '1.5rem'
-  }
-
-  return '1.25rem'
-}
-
 function TitleCell({ book }: { book: BookListItemDto }) {
-  const alternativeCount = book.alternativeTitlesCount ?? book.alternativeTitles.length
+  const alternativeCount = book.alternativeTitlesCount
 
   return (
     <MetadataSummary
@@ -1384,16 +1220,11 @@ function BookEditLink({
 function AuthorCell({ book }: { book: BookListItemDto }) {
   return (
     <MetadataSummary
-      alternatives={book.authorOtherNames ?? []}
+      alternatives={book.authorOtherNames}
       countNoun="alternative name"
       primary={book.author ?? '-'}
     />
   )
-}
-
-export function readCardsPerRow(storageKey: string) {
-  const stored = Number(window.localStorage.getItem(storageKey) ?? 4)
-  return normalizeCardsPerRow(stored)
 }
 
 function isCyclicSort(sortBy: string) {
@@ -1407,74 +1238,6 @@ function getCyclicSortDirectionFromResult(books: BookListItemDto[], sortBy: stri
   }
 
   return sortBy === 'status' ? firstBook.status : sortBy === 'type' ? firstBook.contentType : null
-}
-
-function normalizeCardsPerRow(value: number) {
-  return cardsPerRowOptions.includes(value as (typeof cardsPerRowOptions)[number]) ? value : 4
-}
-
-export function getCardPageSizeOptions(cardsPerRow: number) {
-  const normalizedCardsPerRow = cardsPerRow === 1 ? 1 : normalizeCardsPerRow(cardsPerRow)
-  const maximumPageSize = Math.max(...bookListPageSizeOptions)
-  return [
-    ...new Set(
-      bookListPageSizeOptions.map((pageSize) => {
-        const roundedUp = Math.ceil(pageSize / normalizedCardsPerRow) * normalizedCardsPerRow
-        return roundedUp <= maximumPageSize
-          ? roundedUp
-          : Math.floor(maximumPageSize / normalizedCardsPerRow) * normalizedCardsPerRow
-      }),
-    ),
-  ]
-}
-
-export function getClosestPageSize(pageSize: number, options: readonly number[]) {
-  return options.reduce(
-    (closest, option) =>
-      Math.abs(option - pageSize) < Math.abs(closest - pageSize) ? option : closest,
-    options[0] ?? bookListPageSizeOptions[0],
-  )
-}
-
-function getDesktopCardsPerRowClass(cardsPerRow: number) {
-  const normalized = normalizeCardsPerRow(cardsPerRow)
-  const classMap: Record<number, string> = {
-    2: 'lg:grid-cols-2',
-    3: 'lg:grid-cols-3',
-    4: 'lg:grid-cols-4',
-    5: 'lg:grid-cols-5',
-    6: 'lg:grid-cols-6',
-    7: 'lg:grid-cols-7',
-    8: 'lg:grid-cols-8',
-  }
-
-  return classMap[normalized]
-}
-
-export function formatAverageRating(value?: number | null) {
-  return value == null ? '-' : value.toFixed(1)
-}
-
-export function formatBookCount(value?: number | null) {
-  return value == null ? '-' : new Intl.NumberFormat('en-US').format(value)
-}
-
-export function formatChapterCount(value?: number | null) {
-  if (value == null) {
-    return '-'
-  }
-
-  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 }).format(value)
-}
-
-export function formatDate(value?: string | null) {
-  if (!value) {
-    return '-'
-  }
-
-  return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(
-    new Date(value),
-  )
 }
 
 function formatList(values: string[]) {
@@ -1496,8 +1259,8 @@ function formatListTooltip(values: string[], totalCount = values.length) {
     .join('\n')
 }
 
-function TruncatedCellText({ value }: { value?: string | null }) {
-  const text = value || '-'
+function TruncatedCellText({ value }: { value?: string | null | undefined }) {
+  const text = (value ?? '') || '-'
   return (
     <span className="block truncate" title={value ?? undefined}>
       {text}

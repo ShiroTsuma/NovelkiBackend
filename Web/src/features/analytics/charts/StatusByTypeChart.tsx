@@ -4,25 +4,22 @@ import { Surface } from '@/components/app/DesignSystem'
 import {
   analyticsTooltipProps,
   chartColors,
-  DrilldownLink,
   fieldQuery,
   formatCount,
   formatPercent,
   getActiveChartLabel,
   normalizedPercent,
-  percent,
   useBooksDrilldown,
 } from './chartUtils'
+import { DrilldownLink } from './DrilldownLink'
+import {
+  distributeStackedPercents,
+  statusByTypeTooltipRows,
+  type StatusByTypeTooltipEntry,
+} from './statusByTypeData'
 
 type StatusByTypeChartProps = {
   data: BookAnalyticsDto | undefined
-}
-
-type StatusByTypeTooltipEntry = {
-  name?: unknown
-  value?: unknown
-  color?: string
-  payload?: Record<string, unknown>
 }
 
 type StatusByTypeTooltipProps = {
@@ -46,13 +43,12 @@ export function StatusByTypeChart({ data }: StatusByTypeChartProps) {
       statuses.map((status) => countsByStatus[status] ?? 0),
       item.totalBooks,
     )
-    for (const status of statuses) {
-      const statusIndex = statuses.indexOf(status)
+    statuses.forEach((status, statusIndex) => {
       const count = countsByStatus[status] ?? 0
-      row[status] = displayPercents[statusIndex]
+      row[status] = displayPercents[statusIndex] ?? 0
       row[`${status}Percent`] = normalizedPercent(count, item.totalBooks)
       row[`${status}Count`] = count
-    }
+    })
 
     return row
   })
@@ -189,89 +185,4 @@ function getChartPayload(entry: unknown): Record<string, unknown> {
   }
 
   return {}
-}
-
-export function distributeStackedPercents(
-  counts: number[],
-  total: number,
-  minimumPositivePercent = 3,
-) {
-  if (total <= 0) {
-    return counts.map(() => 0)
-  }
-
-  const rawPercents = counts.map((count) => normalizedPercent(count, total))
-  const positiveIndexes = rawPercents
-    .map((value, index) => ({ value, index }))
-    .filter((item) => item.value > 0)
-  if (!positiveIndexes.length) {
-    return rawPercents
-  }
-
-  const minimum =
-    positiveIndexes.length * minimumPositivePercent >= 100
-      ? 100 / positiveIndexes.length
-      : minimumPositivePercent
-  const small = positiveIndexes.filter((item) => item.value < minimum)
-  const large = positiveIndexes.filter((item) => item.value >= minimum)
-  const fixedSmallTotal = small.length * minimum
-  const largeRawTotal = large.reduce((sum, item) => sum + item.value, 0)
-  const remainingForLarge = Math.max(0, 100 - fixedSmallTotal)
-  const result = rawPercents.map((value) => (value > 0 ? value : 0))
-
-  for (const item of small) {
-    result[item.index] = minimum
-  }
-
-  if (large.length && largeRawTotal > 0) {
-    for (const item of large) {
-      result[item.index] = (item.value / largeRawTotal) * remainingForLarge
-    }
-  } else if (small.length) {
-    const equal = 100 / small.length
-    for (const item of small) {
-      result[item.index] = equal
-    }
-  }
-
-  return result
-}
-
-export function statusByTypeTooltipRows(payload: readonly StatusByTypeTooltipEntry[] | undefined) {
-  return (payload ?? [])
-    .map((entry) => {
-      const status = String(entry.name ?? '')
-      const count = finiteNumber(entry.payload?.[`${status}Count`])
-      const percentValue = entry.payload?.[`${status}Percent`] ?? entry.value
-
-      return {
-        color: entry.color ?? '#9aa5b4',
-        count,
-        percent: finiteNumber(percentValue),
-        status,
-      }
-    })
-    .filter((row) => row.status && row.count > 0)
-    .sort(
-      (first, second) =>
-        second.percent - first.percent ||
-        second.count - first.count ||
-        first.status.localeCompare(second.status),
-    )
-}
-
-export function statusByTypeRows(data?: BookAnalyticsDto) {
-  return (data?.composition.statusByType ?? []).flatMap((item) =>
-    item.statuses.map((status) => [
-      item.type,
-      status.status,
-      formatCount(status.bookCount),
-      formatPercent(percent(status.bookCount, item.totalBooks)),
-    ]),
-  )
-}
-
-function finiteNumber(value: unknown) {
-  const number = Number(value)
-  return Number.isFinite(number) ? number : 0
 }

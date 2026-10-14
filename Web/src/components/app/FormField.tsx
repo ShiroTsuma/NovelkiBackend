@@ -1,9 +1,8 @@
 import type { ReactNode } from 'react'
-import { buttonVariants, controlClass } from './DesignSystem'
 
 type FormFieldProps = {
   label: string
-  error?: string
+  error?: string | undefined
   children: ReactNode
 }
 
@@ -22,9 +21,3 @@ export function FormField({ label, error, children }: FormFieldProps) {
     </div>
   )
 }
-
-export const inputClass = controlClass
-
-export const buttonClass = buttonVariants.primary
-
-export const secondaryButtonClass = buttonVariants.secondary

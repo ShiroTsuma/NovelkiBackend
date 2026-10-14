@@ -6,34 +6,34 @@ import { useSearchParams } from 'react-router-dom'
 import { api } from '@/api/client'
 import { getStoredSession } from '@/api/http'
 import type { BookAnalyticsDto } from '@/api/types'
-import {
-  Badge,
-  buttonVariants,
-  controlClass,
-  PageHeader,
-  Surface,
-} from '@/components/app/DesignSystem'
-import { formatAverageRating, formatChapterCount } from '@/features/books/BooksPage'
+import { buttonVariants, controlClass } from '@/components/app/designTokens'
+import { Badge, PageHeader, Surface } from '@/components/app/DesignSystem'
+import { formatAverageRating, formatChapterCount } from '@/features/books/bookFormatters'
 import { BookSearchInput } from '@/features/books/BookSearchInput'
 import { AnalyticsChartCard } from './AnalyticsChartCard'
-import { ChapterVolumeChart, chapterVolumeRows } from './charts/ChapterVolumeChart'
+import { ChapterVolumeChart } from './charts/ChapterVolumeChart'
+import { chapterVolumeRows } from './charts/chapterVolumeData'
 import { formatCount } from './charts/chartUtils'
-import { CoverAvailabilityChart, coverAvailabilityRows } from './charts/CoverAvailabilityChart'
-import {
-  EstimatedReadingTimeChart,
-  estimatedReadingTimeRows,
-} from './charts/EstimatedReadingTimeChart'
-import { LibraryGrowthChart, libraryGrowthRows } from './charts/LibraryGrowthChart'
-import { LinkSourcesChart, linkSourceRows } from './charts/LinkSourcesChart'
-import {
-  MetadataCompletenessChart,
-  metadataCompletenessRows,
-} from './charts/MetadataCompletenessChart'
-import { PriorityByStatusChart, priorityRows } from './charts/PriorityByStatusChart'
-import { RatingDistributionChart, ratingRows } from './charts/RatingDistributionChart'
-import { ReadingActivityChart, readingActivityRows } from './charts/ReadingActivityChart'
-import { StatusByTypeChart, statusByTypeRows } from './charts/StatusByTypeChart'
-import { relationRows, TopRelationsChart } from './charts/TopRelationsChart'
+import { CoverAvailabilityChart } from './charts/CoverAvailabilityChart'
+import { coverAvailabilityRows } from './charts/coverAvailabilityData'
+import { EstimatedReadingTimeChart } from './charts/EstimatedReadingTimeChart'
+import { estimatedReadingTimeRows } from './charts/estimatedReadingTimeData'
+import { LibraryGrowthChart } from './charts/LibraryGrowthChart'
+import { libraryGrowthRows } from './charts/libraryGrowthData'
+import { LinkSourcesChart } from './charts/LinkSourcesChart'
+import { linkSourceRows } from './charts/linkSourcesData'
+import { MetadataCompletenessChart } from './charts/MetadataCompletenessChart'
+import { metadataCompletenessRows } from './charts/metadataCompletenessData'
+import { PriorityByStatusChart } from './charts/PriorityByStatusChart'
+import { priorityRows } from './charts/priorityByStatusData'
+import { RatingDistributionChart } from './charts/RatingDistributionChart'
+import { ratingRows } from './charts/ratingDistributionData'
+import { ReadingActivityChart } from './charts/ReadingActivityChart'
+import { readingActivityRows } from './charts/readingActivityData'
+import { StatusByTypeChart } from './charts/StatusByTypeChart'
+import { statusByTypeRows } from './charts/statusByTypeData'
+import { TopRelationsChart } from './charts/TopRelationsChart'
+import { relationRows } from './charts/topRelationsData'
 import { extractAnalyticsDateFilters } from './dateQueryFilters'
 
 type AnalyticsBucket = 'day' | 'week' | 'month'
@@ -52,11 +52,14 @@ export function AnalyticsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const urlFilters = useMemo(() => getAnalyticsFilters(searchParams), [searchParams])
   const [draftFilters, setDraftFilters] = useState(urlFilters)
+  const [draftSourceFilters, setDraftSourceFilters] = useState(urlFilters)
   const queryClient = useQueryClient()
 
-  useEffect(() => {
+  // Reset the draft whenever the URL filters change (adjusting state during render instead of in an effect).
+  if (draftSourceFilters !== urlFilters) {
+    setDraftSourceFilters(urlFilters)
     setDraftFilters(urlFilters)
-  }, [urlFilters])
+  }
 
   const analyticsQuery = useQuery({
     queryKey: [
@@ -88,6 +91,10 @@ export function AnalyticsPage() {
     ]),
   )
   const isInitialLoading = analyticsQuery.isLoading && !data
+
+  function retryAnalytics() {
+    void analyticsQuery.refetch()
+  }
   const emptyMessage = getAnalyticsEmptyMessage(data, urlFilters.query)
 
   function applyFilters() {
@@ -159,7 +166,7 @@ export function AnalyticsPage() {
           <button
             className={`${buttonVariants.destructive} mt-3`}
             type="button"
-            onClick={() => analyticsQuery.refetch()}
+            onClick={retryAnalytics}
           >
             Retry
           </button>
@@ -212,7 +219,7 @@ export function AnalyticsPage() {
             isLoading={isInitialLoading}
             rows={statusByTypeRows(data)}
             title="Status by type"
-            onRetry={() => analyticsQuery.refetch()}
+            onRetry={retryAnalytics}
           >
             <StatusByTypeChart data={data} />
           </AnalyticsChartCard>
@@ -225,7 +232,7 @@ export function AnalyticsPage() {
             isLoading={isInitialLoading}
             rows={relationRows(data?.composition.genres ?? [])}
             title="Top genres"
-            onRetry={() => analyticsQuery.refetch()}
+            onRetry={retryAnalytics}
           >
             <TopRelationsChart
               field="genre"
@@ -243,7 +250,7 @@ export function AnalyticsPage() {
             isLoading={isInitialLoading}
             rows={relationRows(data?.composition.tags ?? [])}
             title="Top tags"
-            onRetry={() => analyticsQuery.refetch()}
+            onRetry={retryAnalytics}
           >
             <TopRelationsChart field="tag" items={data?.composition.tags ?? []} title="Tags" />
           </AnalyticsChartCard>
@@ -257,7 +264,7 @@ export function AnalyticsPage() {
             isLoading={isInitialLoading}
             rows={priorityRows(data)}
             title="Priority by status"
-            onRetry={() => analyticsQuery.refetch()}
+            onRetry={retryAnalytics}
           >
             <PriorityByStatusChart data={data} />
           </AnalyticsChartCard>
@@ -270,7 +277,7 @@ export function AnalyticsPage() {
             isLoading={isInitialLoading}
             rows={linkSourceRows(data)}
             title="Link sources"
-            onRetry={() => analyticsQuery.refetch()}
+            onRetry={retryAnalytics}
           >
             <LinkSourcesChart data={data} />
           </AnalyticsChartCard>
@@ -280,13 +287,16 @@ export function AnalyticsPage() {
             emptyMessage="0 cover records reported for this scope."
             isEmpty={
               !isInitialLoading &&
-              !(data?.quality.coverStatuses.length || data?.quality.coverSources.length)
+              !(
+                (data?.quality.coverStatuses.length ?? 0) > 0 ||
+                (data?.quality.coverSources.length ?? 0) > 0
+              )
             }
             isError={analyticsQuery.isError && !!data}
             isLoading={isInitialLoading}
             rows={coverAvailabilityRows(data)}
             title="Cover availability"
-            onRetry={() => analyticsQuery.refetch()}
+            onRetry={retryAnalytics}
           >
             <CoverAvailabilityChart data={data} />
           </AnalyticsChartCard>
@@ -302,7 +312,7 @@ export function AnalyticsPage() {
             isLoading={isInitialLoading}
             rows={ratingRows(data)}
             title="Rating distribution"
-            onRetry={() => analyticsQuery.refetch()}
+            onRetry={retryAnalytics}
           >
             <RatingDistributionChart data={data} />
           </AnalyticsChartCard>
@@ -315,7 +325,7 @@ export function AnalyticsPage() {
             isLoading={isInitialLoading}
             rows={chapterVolumeRows(data)}
             title="Chapter volume by type"
-            onRetry={() => analyticsQuery.refetch()}
+            onRetry={retryAnalytics}
           >
             <ChapterVolumeChart data={data} />
           </AnalyticsChartCard>
@@ -328,7 +338,7 @@ export function AnalyticsPage() {
             isLoading={isInitialLoading}
             rows={estimatedReadingTimeRows(data, readingTimeSettings)}
             title="Estimated reading time"
-            onRetry={() => analyticsQuery.refetch()}
+            onRetry={retryAnalytics}
           >
             <EstimatedReadingTimeChart
               data={data}
@@ -359,7 +369,7 @@ export function AnalyticsPage() {
             isLoading={isInitialLoading}
             rows={readingActivityRows(data)}
             title="Reading activity"
-            onRetry={() => analyticsQuery.refetch()}
+            onRetry={retryAnalytics}
           >
             <ReadingActivityChart data={data} />
           </AnalyticsChartCard>
@@ -372,7 +382,7 @@ export function AnalyticsPage() {
             isLoading={isInitialLoading}
             rows={libraryGrowthRows(data)}
             title="Library growth"
-            onRetry={() => analyticsQuery.refetch()}
+            onRetry={retryAnalytics}
           >
             <LibraryGrowthChart data={data} />
           </AnalyticsChartCard>
@@ -386,7 +396,7 @@ export function AnalyticsPage() {
             isLoading={isInitialLoading}
             rows={metadataCompletenessRows(data)}
             title="Metadata completeness"
-            onRetry={() => analyticsQuery.refetch()}
+            onRetry={retryAnalytics}
           >
             <MetadataCompletenessChart data={data} />
           </AnalyticsChartCard>
@@ -407,16 +417,20 @@ function DateRangeChooser({
   const rootRef = useRef<HTMLDivElement>(null)
   const accountStartDate = getAccountStartDate()
   const today = getToday()
-  const fromDate = parseDateInput(filters.from)
-  const toInclusiveDate = getInclusiveToDate(filters.to)
-  const selectedRange: DateRange = { from: fromDate, to: toInclusiveDate }
+  const selectedRange = useMemo<DateRange>(
+    () => ({ from: parseDateInput(filters.from), to: getInclusiveToDate(filters.to) }),
+    [filters.from, filters.to],
+  )
   const [calendarRange, setCalendarRange] = useState<DateRange | undefined>(selectedRange)
+  const [calendarSourceRange, setCalendarSourceRange] = useState(selectedRange)
   const [rangeSelectionAnchor, setRangeSelectionAnchor] = useState<Date | null>(null)
   const display = getDateRangeDisplay(filters, accountStartDate)
 
-  useEffect(() => {
+  // Re-sync the calendar when the applied range changes (adjusting state during render instead of in an effect).
+  if (calendarSourceRange !== selectedRange) {
+    setCalendarSourceRange(selectedRange)
     setCalendarRange(selectedRange)
-  }, [filters.from, filters.to])
+  }
 
   useEffect(() => {
     if (!isOpen) {
@@ -447,7 +461,7 @@ function DateRangeChooser({
       document.removeEventListener('pointerdown', closeOnOutsidePointerDown)
       document.removeEventListener('keydown', closeOnEscape)
     }
-  }, [isOpen, filters.from, filters.to])
+  }, [isOpen, selectedRange])
 
   function applyPreset(preset: (typeof analyticsRangePresets)[number]) {
     const today = getToday()
@@ -656,9 +670,7 @@ function getPresetFromDate(
   today: Date,
   accountStartDate: Date,
 ) {
-  return preset.label === 'Beginning'
-    ? accountStartDate
-    : (preset.getFrom(today) ?? accountStartDate)
+  return preset.label === 'Beginning' ? accountStartDate : preset.getFrom(today)
 }
 
 function isPresetDisabled(

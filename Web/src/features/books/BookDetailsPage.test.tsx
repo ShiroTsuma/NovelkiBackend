@@ -5,7 +5,8 @@ import { Route, Routes } from 'react-router-dom'
 import { api } from '@/api/client'
 import { books } from '@/test/fixtures'
 import { renderWithProviders } from '@/test/render'
-import { BookDetailsPage, getProgressHistoryWithDeltas } from './BookDetailsPage'
+import { BookDetailsPage } from './BookDetailsPage'
+import { getProgressHistoryWithDeltas } from './bookProgressHistory'
 
 vi.mock('@/api/client', () => ({
   api: {
@@ -39,7 +40,7 @@ vi.mock('./ProgressDialog', () => ({
 describe('BookDetailsPage', () => {
   it('preserves parsed line breaks in the description', async () => {
     vi.mocked(api.getBook).mockResolvedValue({
-      ...books[0],
+      ...books[0]!,
       description: 'First paragraph.\nSecond paragraph.',
     })
 
@@ -59,7 +60,7 @@ describe('BookDetailsPage', () => {
   })
 
   it('returns to the exact filtered book list url stored by the list page', async () => {
-    vi.mocked(api.getBook).mockResolvedValue(books[0])
+    vi.mocked(api.getBook).mockResolvedValue(books[0]!)
 
     renderWithProviders(
       <Routes>
@@ -133,7 +134,7 @@ describe('BookDetailsPage', () => {
 
   it('renders positive and negative deltas in the changelog header', async () => {
     vi.mocked(api.getBook).mockResolvedValue({
-      ...books[0],
+      ...books[0]!,
       progressHistory: [
         {
           id: 'latest',
@@ -168,7 +169,7 @@ describe('BookDetailsPage', () => {
   })
 
   it('uses the shared dialog surface and readable title hierarchy', async () => {
-    vi.mocked(api.getBook).mockResolvedValue(books[0])
+    vi.mocked(api.getBook).mockResolvedValue(books[0]!)
     const user = userEvent.setup()
 
     renderWithProviders(
@@ -182,15 +183,14 @@ describe('BookDetailsPage', () => {
     await user.click(screen.getByRole('button', { name: /^delete$/i }))
 
     const dialog = screen.getByRole('dialog')
-    const panel = dialog.firstElementChild
 
     expect(screen.getByRole('heading', { name: /delete book/i })).toHaveClass('text-slate-950')
     expect(within(dialog).getByText('Lord of Mysteries')).toHaveClass('text-slate-950')
-    expect(panel).toHaveClass('ui-dialog-panel')
+    expect(dialog).toHaveClass('ui-dialog-panel')
   })
 
   it('renders the book status as a high-contrast labeled indicator', async () => {
-    vi.mocked(api.getBook).mockResolvedValue(books[0])
+    vi.mocked(api.getBook).mockResolvedValue(books[0]!)
 
     renderWithProviders(
       <Routes>
@@ -206,7 +206,7 @@ describe('BookDetailsPage', () => {
   })
 
   it('renders ratings up to and including five in red', async () => {
-    vi.mocked(api.getBook).mockResolvedValue({ ...books[0], rating: 5 })
+    vi.mocked(api.getBook).mockResolvedValue({ ...books[0]!, rating: 5 })
 
     renderWithProviders(
       <Routes>
@@ -222,7 +222,7 @@ describe('BookDetailsPage', () => {
 
   it('keeps the status beside a long default title', async () => {
     vi.mocked(api.getBook).mockResolvedValue({
-      ...books[0],
+      ...books[0]!,
       primaryTitle:
         'A Very Long Default Book Title That Needs Several Lines Without Moving The Status Below It',
     })
@@ -244,7 +244,7 @@ describe('BookDetailsPage', () => {
 
   it('replaces a technical cover download error with a helpful generic message', async () => {
     vi.mocked(api.getBook).mockResolvedValue({
-      ...books[0],
+      ...books[0]!,
       cover: {
         id: 'cover-1',
         status: 'Failed',
@@ -266,7 +266,7 @@ describe('BookDetailsPage', () => {
   })
 
   it('shows tag descriptions through the shared metadata component', async () => {
-    vi.mocked(api.getBook).mockResolvedValue(books[0])
+    vi.mocked(api.getBook).mockResolvedValue(books[0]!)
     const user = userEvent.setup()
 
     renderWithProviders(
@@ -283,7 +283,7 @@ describe('BookDetailsPage', () => {
 
   it('keeps genres aligned to the top when the tags column is taller', async () => {
     vi.mocked(api.getBook).mockResolvedValue({
-      ...books[0],
+      ...books[0]!,
       tags: ['one', 'two', 'three', 'four', 'five', 'six'],
     })
 

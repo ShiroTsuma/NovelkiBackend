@@ -1,5 +1,4 @@
-import type { ReactNode } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { addDays, addMonths, addWeeks, format, parseISO } from 'date-fns'
 
 export const chartColors = [
@@ -83,39 +82,15 @@ export function quoteQueryValue(value: string) {
   return /^[A-Za-z0-9_-]+$/.test(value) ? value : `"${value.replaceAll('"', '\\"')}"`
 }
 
-export function DrilldownLink({
-  children,
-  className = '',
-  query,
-}: {
-  children: ReactNode
-  className?: string
-  query: string
-}) {
-  const [searchParams] = useSearchParams()
-  const mergedQuery = mergeAnalyticsQuery(searchParams, query)
-
-  return (
-    <Link
-      className={`ui-drilldown-link ${className}`}
-      title={`Open books filtered by ${mergedQuery}`}
-      to={booksHref(mergedQuery)}
-    >
-      {children}
-      <span aria-hidden="true" className="text-xs">
-        ↗
-      </span>
-    </Link>
-  )
-}
-
 export function useBooksDrilldown() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  return (query: string) => navigate(booksHref(mergeAnalyticsQuery(searchParams, query)))
+  return (query: string) => {
+    void navigate(booksHref(mergeAnalyticsQuery(searchParams, query)))
+  }
 }
 
-function mergeAnalyticsQuery(searchParams: URLSearchParams, drilldownQuery: string) {
+export function mergeAnalyticsQuery(searchParams: URLSearchParams, drilldownQuery: string) {
   const from = searchParams.get('from')?.trim()
   const to = searchParams.get('to')?.trim()
   return [

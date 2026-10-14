@@ -4,27 +4,27 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '@/api/client'
 import type { AdminBookListItemDto } from '@/api/types'
 import { PageHeader, Surface } from '@/components/app/DesignSystem'
-import { secondaryButtonClass } from '@/components/app/FormField'
+import { secondaryButtonClass } from '@/components/app/designTokens'
 import { AdminMetadataManager } from './AdminMetadataManager'
 import { AdminAccountsManager } from './AdminAccountsManager'
 import { BookDataTable } from '@/features/books/BookDataTable'
 import { DescribedMetadataPills } from '@/features/books/MetadataBadges'
+import { ColumnSettingsPopup, TotalChaptersColumnLabel } from '@/features/books/bookListColumns'
 import {
-  ColumnSettingsPopup,
   getVisibleColumns,
-  totalChaptersColumnLabel,
   useColumnPreferences,
   type ColumnDefinition,
-} from '@/features/books/bookListColumns'
-import { BookAdvancedSearch, formatDate, formatProgress } from '@/features/books/BooksPage'
+} from '@/features/books/columnPreferences'
+import { formatDate } from '@/features/books/bookFormatters'
+import { formatProgress } from '@/features/books/bookProgress'
+import { BookAdvancedSearch } from '@/features/books/BooksPage'
+import { BookListFooter, ScrollShortcutButtons } from '@/features/books/BookListShared'
 import {
-  BookListFooter,
   getNextSortDirection,
-  ScrollShortcutButtons,
   useBookListPagination,
   useBookListScrollShortcuts,
   useBookListUrlState,
-} from '@/features/books/BookListShared'
+} from '@/features/books/bookListState'
 
 const adminColumnsStorageKey = 'novelki.adminBooks.columns.v1'
 
@@ -112,7 +112,7 @@ const adminBookColumns: ColumnDefinition<AdminBookListItemDto>[] = [
   },
   {
     id: 'totalChapters',
-    label: totalChaptersColumnLabel(),
+    label: <TotalChaptersColumnLabel />,
     defaultVisible: false,
     sortBy: 'chapters',
     widthClass: 'w-28',
@@ -307,8 +307,8 @@ export function AdminPage() {
   )
 }
 
-function TruncatedCellText({ value }: { value?: string | null }) {
-  const text = value || '-'
+function TruncatedCellText({ value }: { value?: string | null | undefined }) {
+  const text = value?.length ? value : '-'
   return (
     <span className="block truncate" title={value ?? undefined}>
       {text}

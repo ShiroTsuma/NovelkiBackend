@@ -7,7 +7,7 @@ import { createTestQueryClient } from '@/test/render'
 import { nsfwPreferenceStorageKey } from '@/lib/nsfwPreference'
 import { AppShell } from './AppShell'
 
-vi.mock('@/features/auth/AuthProvider', () => ({
+vi.mock('@/features/auth/useAuth', () => ({
   useAuth: () => ({
     isAdmin: false,
     logout: vi.fn(),

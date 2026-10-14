@@ -28,7 +28,7 @@ export function expectReadableTextContrast(element: Element, minimumRatio = 4.5)
 
   expect(
     ratio,
-    `Expected "${element.textContent?.trim()}" contrast ${ratio.toFixed(2)} to be at least ${minimumRatio}. foreground=${foreground}, background=${background}`,
+    `Expected "${element.textContent.trim()}" contrast ${ratio.toFixed(2)} to be at least ${minimumRatio}. foreground=${foreground}, background=${background}`,
   ).toBeGreaterThanOrEqual(minimumRatio)
 }
 
@@ -74,12 +74,12 @@ function contrastRatio(foreground: string, background: string) {
 }
 
 function relativeLuminance([red, green, blue]: [number, number, number]) {
-  const [r, g, b] = [red, green, blue].map((value) => {
+  const linear = (value: number) => {
     const normalized = value / 255
     return normalized <= 0.03928 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4
-  })
+  }
 
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+  return 0.2126 * linear(red) + 0.7152 * linear(green) + 0.0722 * linear(blue)
 }
 
 function hexToRgb(value: string): [number, number, number] {

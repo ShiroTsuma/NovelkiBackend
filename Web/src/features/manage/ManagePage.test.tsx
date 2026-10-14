@@ -4,7 +4,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { api } from '@/api/client'
 import { renderWithProviders } from '@/test/render'
 import { bookListItems, paginated } from '@/test/fixtures'
+import type { ManagedBookListItemDto, PaginatedResult } from '@/api/types'
 import { ManagePage } from './ManagePage'
+
+function fixtureAt<T>(items: readonly T[], index: number): T {
+  const item = items[index]
+  if (item === undefined) {
+    throw new Error(`Missing test fixture at index ${String(index)}`)
+  }
+  return item
+}
+
+const firstListItem = fixtureAt(bookListItems, 0)
+const secondListItem = fixtureAt(bookListItems, 1)
 
 vi.mock('@/api/client', () => ({
   api: {
@@ -49,8 +61,8 @@ const author = {
 
 const publishedBook = {
   id: 'snapshot-1',
-  sourceBookId: bookListItems[0].id,
-  primaryTitle: bookListItems[0].primaryTitle,
+  sourceBookId: firstListItem.id,
+  primaryTitle: firstListItem.primaryTitle,
   description: 'A snapshot',
   alternativeTitles: ['LOTM'],
   author: 'Cuttlefish',
@@ -63,27 +75,28 @@ const publishedBook = {
   isOwner: true,
 }
 
-const managedBooks = [
-  {
-    ...bookListItems[0],
-    cover: {
-      status: 'Found' as const,
-      imageUrl: '/api/book/cover/first',
-      thumbnailImageUrl: '/api/book/cover/first/thumbnail',
-    },
+const firstManagedBook = {
+  ...firstListItem,
+  cover: {
+    status: 'Found' as const,
+    imageUrl: '/api/book/cover/first',
+    thumbnailImageUrl: '/api/book/cover/first/thumbnail',
   },
-  {
-    ...bookListItems[1],
-    description: 'A complete listing candidate',
-    cover: {
-      status: 'Uploaded' as const,
-      imageUrl: '/api/book/cover',
-      thumbnailImageUrl: '/api/book/cover/thumbnail',
-    },
-  },
-]
+}
 
-const managedBookRows = managedBooks.map((book, index) => ({
+const secondManagedBook = {
+  ...secondListItem,
+  description: 'A complete listing candidate',
+  cover: {
+    status: 'Uploaded' as const,
+    imageUrl: '/api/book/cover',
+    thumbnailImageUrl: '/api/book/cover/thumbnail',
+  },
+}
+
+const managedBooks = [firstManagedBook, secondManagedBook]
+
+const managedBookRows: ManagedBookListItemDto[] = managedBooks.map((book, index) => ({
   book,
   listing:
     index === 0
@@ -248,18 +261,16 @@ describe('ManagePage', () => {
     await user.click(screen.getByRole('tab', { name: 'Books' }))
     await user.click(
       await screen.findByRole('button', {
-        name: `Refresh listing ${bookListItems[0].primaryTitle}`,
+        name: `Refresh listing ${firstListItem.primaryTitle}`,
       }),
     )
     await waitFor(() => expect(api.refreshPublishedBook).toHaveBeenCalledWith(publishedBook.id))
 
-    await user.click(
-      screen.getByRole('button', { name: `Unlist ${bookListItems[0].primaryTitle}` }),
-    )
+    await user.click(screen.getByRole('button', { name: `Unlist ${firstListItem.primaryTitle}` }))
     await waitFor(() => expect(api.unlistPublishedBook).toHaveBeenCalledWith(publishedBook.id))
 
-    await user.click(screen.getByRole('button', { name: `List ${bookListItems[1].primaryTitle}` }))
-    await waitFor(() => expect(api.publishBook).toHaveBeenCalledWith(bookListItems[1].id))
+    await user.click(screen.getByRole('button', { name: `List ${secondListItem.primaryTitle}` }))
+    await waitFor(() => expect(api.publishBook).toHaveBeenCalledWith(secondListItem.id))
   })
 
   it('passes exclusion queries from the books section without quoting them', async () => {
@@ -280,7 +291,7 @@ describe('ManagePage', () => {
 
   it('renders the server order and blocks incomplete listings', async () => {
     const incomplete = {
-      ...bookListItems[1],
+      ...secondListItem,
       id: 'incomplete-book',
       primaryTitle: 'Aardvark incomplete',
       description: null,
@@ -292,7 +303,11 @@ describe('ManagePage', () => {
       cover: null,
     }
     vi.mocked(api.getManagedBooks).mockResolvedValue(
-      paginated([managedBookRows[0], { book: incomplete, listing: null }, managedBookRows[1]]),
+      paginated([
+        fixtureAt(managedBookRows, 0),
+        { book: incomplete, listing: null },
+        fixtureAt(managedBookRows, 1),
+      ]),
     )
     renderWithProviders(<ManagePage />)
 
@@ -307,10 +322,10 @@ describe('ManagePage', () => {
   })
 
   it('preserves the listed-first alphabetical order returned by the backend', async () => {
-    const privateA = { ...managedBooks[0], id: 'private-a', primaryTitle: 'A private' }
-    const privateB = { ...managedBooks[0], id: 'private-b', primaryTitle: 'B private' }
-    const listedC = { ...managedBooks[0], id: 'listed-c', primaryTitle: 'C listed' }
-    const listedZ = { ...managedBooks[0], id: 'listed-z', primaryTitle: 'Z listed' }
+    const privateA = { ...firstManagedBook, id: 'private-a', primaryTitle: 'A private' }
+    const privateB = { ...firstManagedBook, id: 'private-b', primaryTitle: 'B private' }
+    const listedC = { ...firstManagedBook, id: 'listed-c', primaryTitle: 'C listed' }
+    const listedZ = { ...firstManagedBook, id: 'listed-z', primaryTitle: 'Z listed' }
     vi.mocked(api.getManagedBooks).mockResolvedValue(
       paginated([
         {
@@ -347,7 +362,7 @@ describe('ManagePage', () => {
 
   it('allows listing when a legacy cover has a stored image despite a stale NotFound status', async () => {
     const legacyCoverBook = {
-      ...managedBooks[1],
+      ...secondManagedBook,
       id: 'legacy-cover-book',
       primaryTitle: 'Legacy cover book',
       cover: {
@@ -372,16 +387,16 @@ describe('ManagePage', () => {
 
   it('loads the next already-sorted manage page when the list reaches the bottom', async () => {
     const laterBook = {
-      ...managedBooks[1],
+      ...secondManagedBook,
       id: publishedBook.sourceBookId,
       primaryTitle: 'A later listed book',
     }
     const firstLibraryPage = Array.from({ length: 50 }, (_, index) => ({
-      ...managedBooks[index % managedBooks.length],
+      ...fixtureAt(managedBooks, index % managedBooks.length),
       id: `book-${index}`,
       primaryTitle: `Book ${index.toString().padStart(2, '0')}`,
     }))
-    const nextPageResult = {
+    const nextPageResult: PaginatedResult<ManagedBookListItemDto> = {
       skip: 50,
       take: 50,
       total: 51,
@@ -400,14 +415,14 @@ describe('ManagePage', () => {
     const nextPage = new Promise<typeof nextPageResult>((resolve) => {
       resolveNextPage = resolve
     })
-    vi.mocked(api.getManagedBooks).mockImplementation(async ({ skip = 0 }) =>
+    vi.mocked(api.getManagedBooks).mockImplementation(({ skip = 0 }) =>
       skip === 0
-        ? {
+        ? Promise.resolve({
             skip: 0,
             take: 50,
             total: 51,
             data: firstLibraryPage.map((book) => ({ book, listing: null })),
-          }
+          })
         : nextPage,
     )
     renderWithProviders(<ManagePage />)
@@ -436,11 +451,13 @@ describe('ManagePage', () => {
   })
 
   it('does not render a book twice when adjacent pages overlap', async () => {
-    const repeated = managedBookRows[0]
-    vi.mocked(api.getManagedBooks).mockImplementation(async ({ skip = 0 }) =>
-      skip === 0
-        ? { skip: 0, take: 1, total: 2, data: [repeated] }
-        : { skip: 1, take: 1, total: 2, data: [repeated] },
+    const repeated = fixtureAt(managedBookRows, 0)
+    vi.mocked(api.getManagedBooks).mockImplementation(({ skip = 0 }) =>
+      Promise.resolve(
+        skip === 0
+          ? { skip: 0, take: 1, total: 2, data: [repeated] }
+          : { skip: 1, take: 1, total: 2, data: [repeated] },
+      ),
     )
     renderWithProviders(<ManagePage />)
 

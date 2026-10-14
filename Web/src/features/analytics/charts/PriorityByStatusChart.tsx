@@ -1,12 +1,6 @@
 import type { BookAnalyticsDto } from '@/api/types'
-import {
-  DrilldownLink,
-  fieldQuery,
-  formatCount,
-  formatPercent,
-  noneQuery,
-  percent,
-} from './chartUtils'
+import { fieldQuery, formatCount, formatPercent, noneQuery, percent } from './chartUtils'
+import { DrilldownLink } from './DrilldownLink'
 
 type PriorityByStatusChartProps = {
   data: BookAnalyticsDto | undefined
@@ -80,17 +74,6 @@ export function PriorityByStatusChart({ data }: PriorityByStatusChartProps) {
         </tbody>
       </table>
     </div>
-  )
-}
-
-export function priorityRows(data?: BookAnalyticsDto) {
-  return (data?.planning.prioritiesByStatus ?? []).flatMap((row) =>
-    row.priorities.map((priority) => [
-      row.status,
-      priority.priority,
-      formatCount(priority.bookCount),
-      formatPercent(percent(priority.bookCount, row.totalBooks)),
-    ]),
   )
 }
 

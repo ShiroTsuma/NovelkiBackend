@@ -6,7 +6,8 @@ import { toast } from 'sonner'
 import { api } from '@/api/client'
 import { HttpError } from '@/api/http'
 import type { BookCoverDto, PublicBookMetadataDto, PublicBookSnapshotDto } from '@/api/types'
-import { Badge, buttonVariants, PageHeader, Surface } from '@/components/app/DesignSystem'
+import { buttonVariants } from '@/components/app/designTokens'
+import { Badge, PageHeader, Surface } from '@/components/app/DesignSystem'
 import { BookCoverArtwork } from '@/features/books/BookCoverSection'
 import { BookSearchInput } from '@/features/books/BookSearchInput'
 import { DescribedMetadataPills, MetadataSummary } from '@/features/books/MetadataBadges'
@@ -23,7 +24,11 @@ export function DiscoverPage() {
   const books = useQuery({
     queryKey: ['public-books', debouncedSearch],
     queryFn: () =>
-      api.searchPublicBooks({ search: debouncedSearch || undefined, skip: 0, take: 40 }),
+      api.searchPublicBooks({
+        ...(debouncedSearch ? { search: debouncedSearch } : {}),
+        skip: 0,
+        take: 40,
+      }),
     placeholderData: keepPreviousData,
   })
 
@@ -33,7 +38,7 @@ export function DiscoverPage() {
       const result = await api.copyPublicBook(snapshot.id)
       await queryClient.invalidateQueries({ queryKey: ['books'] })
       toast.success(`“${snapshot.primaryTitle}” was added to your library.`)
-      navigate(`/books/${result.bookId}`)
+      void navigate(`/books/${result.bookId}`)
     } catch (error) {
       toast.error(getErrorMessage(error))
     } finally {
@@ -92,7 +97,7 @@ export function DiscoverPage() {
               copying={copyingId === snapshot.id}
               key={snapshot.id}
               snapshot={snapshot}
-              onCopy={() => copyBook(snapshot)}
+              onCopy={() => void copyBook(snapshot)}
             />
           ))}
         </div>
@@ -158,7 +163,9 @@ function PublicBookCard({
           </div>
 
           <p className="discover-card__description">
-            {snapshot.description || 'No description was included in this snapshot.'}
+            {snapshot.description?.length
+              ? snapshot.description
+              : 'No description was included in this snapshot.'}
           </p>
 
           {snapshot.totalChapters != null ? (

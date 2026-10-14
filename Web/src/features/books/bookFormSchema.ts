@@ -70,8 +70,8 @@ export function toBookMutationRequest(values: BookFormValues): BookMutationReque
     primaryTitle: values.primaryTitle.trim(),
     contentTypeId: values.contentTypeId,
     statusId: values.statusId,
-    authorName: values.authorName?.trim() || null,
-    authorId: values.authorId || null,
+    authorName: trimToNull(values.authorName),
+    authorId: emptyToNull(values.authorId),
     alternativeTitles: splitLines(values.alternativeTitlesText).map((title) => ({
       title,
       language: null,
@@ -81,11 +81,11 @@ export function toBookMutationRequest(values: BookFormValues): BookMutationReque
     tags: splitComma(values.tagsText),
     totalChapters: toOptionalNumber(values.totalChapters),
     currentChapterNumber: Number(values.currentChapterNumber.trim()),
-    currentChapterLabel: values.currentChapterLabel?.trim() || null,
+    currentChapterLabel: trimToNull(values.currentChapterLabel),
     rating: toOptionalNumber(values.rating),
     priority: toOptionalNumber(values.priority),
-    description: values.description?.trim() || null,
-    notes: values.notes?.trim() || null,
+    description: trimToNull(values.description),
+    notes: trimToNull(values.notes),
     rawImportedLine: null,
     links: splitLines(values.linksText).map((url) => ({
       url,
@@ -131,6 +131,14 @@ function splitComma(value: string) {
     .split(',')
     .map((item) => item.trim())
     .filter(Boolean)
+}
+
+function emptyToNull(value: string | undefined) {
+  return value === undefined || value === '' ? null : value
+}
+
+function trimToNull(value: string | undefined) {
+  return emptyToNull(value?.trim())
 }
 
 function toOptionalNumber(value: string) {

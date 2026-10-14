@@ -6,9 +6,10 @@ import {
   type BookFile,
   type FileJob,
 } from '@/api/bookFiles'
-import { buttonVariants } from '@/components/app/DesignSystem'
+import { buttonVariants } from '@/components/app/designTokens'
 import { FileContents } from './FileContents'
-import { FileJobProgress, FileModal, fileError, isJobWorking, useFileJob } from './FileDialogs'
+import { FileJobProgress, FileModal } from './FileDialogs'
+import { fileError, isJobWorking, useFileJob } from './fileJobs'
 
 export function FileDownloadDialog({
   files,
@@ -16,7 +17,7 @@ export function FileDownloadDialog({
   onClose,
 }: {
   files: BookFile[]
-  snapshotId?: string
+  snapshotId?: string | undefined
   onClose: () => void
 }) {
   const [selected, setSelected] = useState(() => new Set(files.map((f) => f.id)))
@@ -31,28 +32,30 @@ export function FileDownloadDialog({
   const creating = useRef<Promise<FileJob> | null>(null)
   const closing = useRef(false)
   const latestJob = useRef({ id: jobId, data: job.data })
-  latestJob.current = { id: jobId, data: job.data }
+  useEffect(() => {
+    latestJob.current = { id: jobId, data: job.data }
+  })
   useEffect(() => {
     closing.current = false
     return () => {
       closing.current = true
       if (creating.current)
-        void creating.current.then((result) => bookFilesApi.cancel(result.id)).catch(() => {})
+        void creating.current
+          .then((result) => bookFilesApi.cancel(result.id))
+          .catch(ignoreCleanupFailure)
       else if (
         latestJob.current.id &&
         (!latestJob.current.data || isJobWorking(latestJob.current.data))
       )
-        void bookFilesApi.cancel(latestJob.current.id).catch(() => {})
+        void bookFilesApi.cancel(latestJob.current.id).catch(ignoreCleanupFailure)
     }
   }, [])
+  const [selectionFiles, setSelectionFiles] = useState(files)
+  if (selectionFiles !== files) {
+    setSelectionFiles(files)
+    setSelected((current) => new Set([...current].filter((id) => files.some((f) => f.id === id))))
+  }
   const chosen = files.filter((f) => selected.has(f.id))
-  useEffect(
-    () =>
-      setSelected(
-        (current) => new Set([...current].filter((id) => files.some((f) => f.id === id))),
-      ),
-    [files],
-  )
   async function prepare() {
     if (mode === 'separate') {
       setSeparate(true)
@@ -80,7 +83,10 @@ export function FileDownloadDialog({
     try {
       const ticket = fileId
         ? (await bookFilesApi.downloads([fileId], snapshotId))[0]
-        : await bookFilesApi.jobDownload(jobId!)
+        : jobId
+          ? await bookFilesApi.jobDownload(jobId)
+          : undefined
+      if (!ticket) throw new Error('The download could not be prepared. Please try again.')
       startFileDownload(ticket)
       setStarted((current) => new Set(current).add(fileId ?? 'zip'))
     } catch (e) {
@@ -220,7 +226,8 @@ export function FileDownloadDialog({
                     const checked = e.target.checked
                     setSelected((current) => {
                       const next = new Set(current)
-                      checked ? next.add(file.id) : next.delete(file.id)
+                      if (checked) next.add(file.id)
+                      else next.delete(file.id)
                       return next
                     })
                   }}
@@ -270,4 +277,8 @@ export function FileDownloadDialog({
       )}
     </FileModal>
   )
+}
+
+function ignoreCleanupFailure() {
+  // Best-effort cleanup after the dialog unmounted; there is no UI left to report to.
 }

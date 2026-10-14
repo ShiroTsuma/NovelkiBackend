@@ -59,9 +59,9 @@ describe('BookFormPage', () => {
     renderWithProviders(<BookFormPage mode="create" />, { route: '/books/new' })
 
     const form = await screen.findByRole('button', { name: 'Save' })
-    const currentChapterInput = screen.getByLabelText('Current chapter') as HTMLInputElement
-    const totalChaptersInput = screen.getByLabelText('Total chapters') as HTMLInputElement
-    const priorityInput = screen.getByLabelText('Priority 1-5') as HTMLInputElement
+    const currentChapterInput = screen.getByLabelText<HTMLInputElement>('Current chapter')
+    const totalChaptersInput = screen.getByLabelText<HTMLInputElement>('Total chapters')
+    const priorityInput = screen.getByLabelText<HTMLInputElement>('Priority 1-5')
 
     expect(form.closest('form')).toHaveAttribute('novalidate')
     expect(currentChapterInput.type).toBe('text')
@@ -98,8 +98,8 @@ describe('BookFormPage', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }))
 
     await waitFor(() => expect(api.createBook).toHaveBeenCalled())
-    expect(vi.mocked(api.createBook).mock.calls[0][0].totalChapters).toBeNull()
-    expect(vi.mocked(api.createBook).mock.calls[0][0].currentChapterNumber).toBe(0)
+    expect(vi.mocked(api.createBook).mock.calls[0]![0].totalChapters).toBeNull()
+    expect(vi.mocked(api.createBook).mock.calls[0]![0].currentChapterNumber).toBe(0)
   })
 
   it('parses pasted HTML, previews every resolved field, and applies it to the create draft', async () => {
@@ -107,10 +107,10 @@ describe('BookFormPage', () => {
       source: 'NovelUpdates',
       primaryTitle: 'Parsed Novel',
       authorName: 'Primary Author',
-      contentType: { id: dictionaries[0].id, name: dictionaries[0].name },
+      contentType: { id: dictionaries[0]!.id, name: dictionaries[0]!.name },
       alternativeTitles: ['Alternate Name'],
       genres: [
-        { id: genres[0].id, name: genres[0].name },
+        { id: genres[0]!.id, name: genres[0]!.name },
         { id: null, name: 'Unmapped Genre' },
       ],
       tags: ['Chinese', 'Slow Romance'],
@@ -149,12 +149,12 @@ describe('BookFormPage', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }))
 
     await waitFor(() => expect(api.createBook).toHaveBeenCalled())
-    const request = vi.mocked(api.createBook).mock.calls[0][0]
+    const request = vi.mocked(api.createBook).mock.calls[0]![0]
     expect(request).toMatchObject({
       primaryTitle: 'Parsed Novel',
       authorName: 'Primary Author',
-      contentTypeId: dictionaries[0].id,
-      genreIds: [genres[0].id],
+      contentTypeId: dictionaries[0]!.id,
+      genreIds: [genres[0]!.id],
       tags: ['Chinese', 'Slow Romance'],
       description: 'Parsed description.',
     })
@@ -183,7 +183,7 @@ describe('BookFormPage', () => {
 
     await waitFor(() => expect(api.createBook).toHaveBeenCalled())
     expect(stagePendingCoverUpload).toHaveBeenCalledWith(file)
-    expect(vi.mocked(api.createBook).mock.calls[0][0].initialCoverUploadToken).toBe(
+    expect(vi.mocked(api.createBook).mock.calls[0]![0].initialCoverUploadToken).toBe(
       '11111111-1111-1111-1111-111111111111',
     )
     expect(bindPendingCoverUpload).toHaveBeenCalledWith(
@@ -263,7 +263,7 @@ describe('BookFormPage', () => {
       skip: 0,
       take: 10,
       total: 1,
-      data: [{ ...books[0], primaryTitle: "History's Greatest Husband" }],
+      data: [{ ...books[0]!, primaryTitle: "History's Greatest Husband" }],
     })
     const user = userEvent.setup()
     renderWithProviders(<BookFormPage mode="create" />, { route: '/books/new' })
@@ -340,8 +340,8 @@ describe('BookFormPage', () => {
     await screen.findByText('Add book')
 
     const [typeSelect, statusSelect] = screen.getAllByRole('combobox')
-    const typeOptions = typeSelect.querySelectorAll('option')
-    const statusOptions = statusSelect.querySelectorAll('option')
+    const typeOptions = typeSelect!.querySelectorAll('option')
+    const statusOptions = statusSelect!.querySelectorAll('option')
 
     expect(Array.from(typeOptions).map((option) => option.textContent)).toEqual(['Novel', 'Manga'])
     expect(Array.from(statusOptions).map((option) => option.textContent)).toEqual([
@@ -392,7 +392,7 @@ describe('BookFormPage', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }))
 
     await waitFor(() => expect(api.createBook).toHaveBeenCalled())
-    expect(vi.mocked(api.createBook).mock.calls[0][0]).toMatchObject({
+    expect(vi.mocked(api.createBook).mock.calls[0]![0]).toMatchObject({
       authorId: 'author-1',
       authorName: 'Er Gen',
     })
@@ -400,7 +400,7 @@ describe('BookFormPage', () => {
 
   it('hides a technical cover download error on the edit page', async () => {
     vi.mocked(api.getBook).mockResolvedValue({
-      ...books[0],
+      ...books[0]!,
       cover: {
         id: 'cover-1',
         status: 'Failed',

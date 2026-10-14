@@ -10,13 +10,13 @@ import { testSession } from '@/test/fixtures'
 import { renderWithProviders } from '@/test/render'
 import { AnalyticsChartCard } from './AnalyticsChartCard'
 import { AnalyticsPage } from './AnalyticsPage'
-import { libraryGrowthChartPoints } from './charts/LibraryGrowthChart'
-import { readingActivityChartPoints } from './charts/ReadingActivityChart'
+import { libraryGrowthChartPoints } from './charts/libraryGrowthData'
+import { readingActivityChartPoints } from './charts/readingActivityData'
 import {
   distributeStackedPercents,
   statusByTypeRows,
   statusByTypeTooltipRows,
-} from './charts/StatusByTypeChart'
+} from './charts/statusByTypeData'
 
 vi.mock('@/api/client', () => ({
   api: {
@@ -166,7 +166,7 @@ describe('AnalyticsPage', () => {
     expect(screen.getByRole('button', { name: 'Beginning' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Last 2 years' })).toBeInTheDocument()
     expect(
-      lastMonth.compareDocumentPosition(screen.getAllByRole('grid')[0]) &
+      lastMonth.compareDocumentPosition(firstOf(screen.getAllByRole('grid'))) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Last 3 months' })).toHaveClass('ui-filter-chip')
@@ -429,7 +429,7 @@ describe('AnalyticsPage', () => {
   })
 
   it('preserves previous data during refetch', async () => {
-    let resolveSecondRequest: (value: BookAnalyticsDto) => void = () => {}
+    let resolveSecondRequest: (value: BookAnalyticsDto) => void = () => undefined
     vi.mocked(api.getBookAnalytics)
       .mockResolvedValueOnce(createAnalytics({ totalBooks: 10 }))
       .mockImplementationOnce(
@@ -1085,14 +1085,14 @@ describe('AnalyticsPage', () => {
     expect(readingActivitySection).not.toBeNull()
     expect(libraryGrowthSection).not.toBeNull()
 
-    const readingText = readingActivitySection!.textContent ?? ''
+    const readingText = readingActivitySection!.textContent
     expect(readingText).toContain('Jul 13, 2026')
     expect(readingText).toContain('July 10\u201311, 2026')
     expect(readingText.indexOf('Jul 13, 2026')).toBeLessThan(
       readingText.indexOf('July 10\u201311, 2026'),
     )
 
-    const growthText = libraryGrowthSection!.textContent ?? ''
+    const growthText = libraryGrowthSection!.textContent
     expect(growthText).toContain('Jul 13, 2026')
     expect(growthText).toContain('July 10\u201311, 2026')
     expect(growthText.indexOf('Jul 13, 2026')).toBeLessThan(
@@ -1217,9 +1217,17 @@ describe('AnalyticsPage', () => {
 
     renderWithProviders(<AnalyticsPage />, { route: '/analytics?from=2026-01-01&to=2026-02-01' })
 
-    expectReadableTextContrast((await screen.findAllByText('Novel'))[0])
+    expectReadableTextContrast(firstOf(await screen.findAllByText('Novel')))
   })
 })
+
+function firstOf<T>(items: readonly T[]): T {
+  const item = items[0]
+  if (item === undefined) {
+    throw new Error('Expected at least one matching element')
+  }
+  return item
+}
 
 type AnalyticsOverrides = Partial<BookAnalyticsDto['overview']> & {
   scope?: Partial<BookAnalyticsDto['scope']>

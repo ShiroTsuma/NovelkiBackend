@@ -5,8 +5,8 @@ import { toast } from 'sonner'
 import { api } from '@/api/client'
 import { HttpError } from '@/api/http'
 import { Surface } from '@/components/app/DesignSystem'
-import { buttonClass, inputClass } from '@/components/app/FormField'
-import { useAuth } from './AuthProvider'
+import { buttonClass, inputClass } from '@/components/app/designTokens'
+import { useAuth } from './useAuth'
 
 export function LoginPage() {
   const { setSession } = useAuth()
@@ -15,21 +15,21 @@ export function LoginPage() {
     mutationFn: api.login,
     onSuccess: (response) => {
       setSession(response)
-      navigate('/books', { replace: true })
+      void navigate('/books', { replace: true })
     },
     onError: (error) => {
       toast.error(error instanceof HttpError ? error.apiError.detail : 'Failed to log in.')
     },
   })
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
     const formData = new FormData(event.currentTarget)
-    const identifier = String(formData.get('identifier') ?? '').trim()
+    const identifier = readFormString(formData, 'identifier').trim()
     mutation.mutate({
       email: identifier.includes('@') ? identifier : null,
       username: identifier.includes('@') ? null : identifier,
-      password: String(formData.get('password') ?? ''),
+      password: readFormString(formData, 'password'),
     })
   }
 
@@ -55,6 +55,11 @@ export function LoginPage() {
       </p>
     </AuthFrame>
   )
+}
+
+function readFormString(formData: FormData, name: string) {
+  const value = formData.get(name)
+  return typeof value === 'string' ? value : ''
 }
 
 type AuthFrameProps = {

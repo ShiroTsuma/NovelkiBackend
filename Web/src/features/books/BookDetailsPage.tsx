@@ -4,21 +4,20 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { api } from '@/api/client'
-import type { BookDto, BookLinkDto, BookProgressHistoryDto } from '@/api/types'
+import type { BookDto, BookLinkDto } from '@/api/types'
 import { HttpError } from '@/api/http'
-import {
-  buttonVariants,
-  DialogPanel,
-  Surface,
-  useBodyScrollLock,
-} from '@/components/app/DesignSystem'
-import { buttonClass, secondaryButtonClass } from '@/components/app/FormField'
-import { BookCoverArtwork, CoverLightbox, useResolvedCoverImage } from './BookCoverSection'
+import { buttonVariants } from '@/components/app/designTokens'
+import { DialogPanel, Surface } from '@/components/app/DesignSystem'
+import { useBodyScrollLock } from '@/components/app/useBodyScrollLock'
+import { buttonClass, secondaryButtonClass } from '@/components/app/designTokens'
+import { BookCoverArtwork, CoverLightbox } from './BookCoverSection'
+import { useResolvedCoverImage } from './useResolvedCoverImage'
 import { isLowRating } from './bookRating'
 import { BookStatusPill } from './BookStatusPill'
 import { getDisplayCoverFailure, getDisplayCoverStatus } from './coverFailure'
 import { getBookListReturnTo } from './bookListNavigation'
 import { DescribedMetadataPills } from './MetadataBadges'
+import { getProgressHistoryWithDeltas } from './bookProgressHistory'
 import { ProgressDialog } from './ProgressDialog'
 import { BookFilesPanel } from './BookFilesPanel'
 
@@ -33,26 +32,34 @@ export function BookDetailsPage() {
   const [descriptionExpanded, setDescriptionExpanded] = useState(false)
   const [descriptionOverflowing, setDescriptionOverflowing] = useState(false)
   const descriptionRef = useRef<HTMLParagraphElement | null>(null)
+
+  function requireBookId() {
+    if (!id) {
+      throw new Error('The book id is missing from the route.')
+    }
+    return id
+  }
+
   const bookQuery = useQuery({
     queryKey: ['book', id],
-    queryFn: () => api.getBook(id!),
+    queryFn: () => api.getBook(requireBookId()),
     enabled: Boolean(id),
     refetchInterval: (query) => (query.state.data?.cover?.status === 'Pending' ? 2_000 : false),
   })
   const previewImageUrl = useResolvedCoverImage(bookQuery.data?.cover)
   const deleteMutation = useMutation({
-    mutationFn: () => api.deleteBook(id!),
+    mutationFn: () => api.deleteBook(requireBookId()),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['books'] })
       toast.success('Book deleted.')
-      navigate(bookListReturnTo, { replace: true })
+      void navigate(bookListReturnTo, { replace: true })
     },
     onError: (error) => {
       toast.error(error instanceof HttpError ? error.apiError.detail : 'Failed to delete the book.')
     },
   })
   const refreshCoverMutation = useMutation({
-    mutationFn: () => api.refreshBookCover(id!),
+    mutationFn: () => api.refreshBookCover(requireBookId()),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['book', id] }),
@@ -331,7 +338,9 @@ export function BookDetailsPage() {
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex flex-wrap items-center gap-2">
                       <div className="text-sm font-semibold text-slate-950">
-                        {entry.chapterLabel || entry.chapterNumber || 'Updated progress'}
+                        {(entry.chapterLabel ?? '') ||
+                          (entry.chapterNumber ?? 0) ||
+                          'Updated progress'}
                       </div>
                       {entry.delta != null ? (
                         <span
@@ -346,7 +355,7 @@ export function BookDetailsPage() {
                   <div className="mt-1 text-sm text-slate-600">
                     {entry.chapterNumber != null || entry.chapterLabel ? (
                       <p>
-                        Progress: {entry.chapterLabel || entry.chapterNumber}
+                        Progress: {(entry.chapterLabel ?? '') || entry.chapterNumber}
                         {entry.chapterNumber != null && entry.chapterLabel
                           ? ` (${entry.chapterNumber})`
                           : ''}
@@ -382,31 +391,9 @@ export function BookDetailsPage() {
   )
 }
 
-export function getProgressHistoryWithDeltas(entries: BookProgressHistoryDto[]) {
-  const sorted = [...entries].sort(
-    (left, right) => new Date(right.changedAt).getTime() - new Date(left.changedAt).getTime(),
-  )
-
-  return sorted.map((entry, index) => {
-    const previousEntry = sorted[index + 1]
-    const currentChapterNumber = entry.chapterNumber
-    const previousChapterNumber = previousEntry?.chapterNumber
-    const delta =
-      currentChapterNumber != null && previousChapterNumber != null
-        ? currentChapterNumber - previousChapterNumber
-        : null
-
-    return {
-      ...entry,
-      delta: delta && delta !== 0 ? delta : null,
-    }
-  })
-}
-
 function ProgressBar({ book }: { book: BookDto }) {
-  const current =
-    typeof book.currentChapterNumber === 'number' ? Number(book.currentChapterNumber) : null
-  const total = typeof book.totalChapters === 'number' ? Number(book.totalChapters) : null
+  const current = typeof book.currentChapterNumber === 'number' ? book.currentChapterNumber : null
+  const total = typeof book.totalChapters === 'number' ? book.totalChapters : null
   const percent =
     current != null && total != null && total > 0
       ? Math.max(0, Math.min(100, (current / total) * 100))
@@ -427,7 +414,7 @@ function ProgressBar({ book }: { book: BookDto }) {
   )
 }
 
-function RatingSummary({ rating }: { rating?: number | null }) {
+function RatingSummary({ rating }: { rating?: number | null | undefined }) {
   const normalizedRating = typeof rating === 'number' ? Math.max(0, Math.min(10, rating)) : null
   const filledStars = normalizedRating == null ? 0 : Math.round(normalizedRating)
   const lowRating = isLowRating(normalizedRating)
@@ -465,7 +452,7 @@ function formatProgressInline(book: {
   const current =
     isCompleted && book.currentChapterNumber != null
       ? book.currentChapterNumber
-      : book.currentChapterLabel || book.currentChapterNumber
+      : (book.currentChapterLabel ?? '') || book.currentChapterNumber
   if (!current && !book.totalChapters) {
     return '-'
   }
@@ -521,12 +508,16 @@ function DeleteBookDialog({
 
   return (
     <div
-      aria-modal="true"
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4"
-      role="dialog"
+      role="presentation"
       onClick={pending ? undefined : onCancel}
     >
-      <DialogPanel className="grid max-w-md gap-5 p-6" onClick={(event) => event.stopPropagation()}>
+      <DialogPanel
+        aria-modal="true"
+        className="grid max-w-md gap-5 p-6"
+        role="dialog"
+        onClick={(event) => event.stopPropagation()}
+      >
         <div className="grid gap-2">
           <h2 className="text-lg font-semibold text-slate-950">Delete book</h2>
           <p className="text-sm leading-6 text-slate-600">

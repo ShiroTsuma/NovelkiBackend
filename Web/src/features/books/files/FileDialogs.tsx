@@ -1,34 +1,11 @@
 import './files.css'
-import { useQuery } from '@tanstack/react-query'
 import { X } from 'lucide-react'
-import { useEffect, useId, useRef, type ReactNode } from 'react'
-import { bookFilesApi, type FileJob } from '@/api/bookFiles'
-import { HttpError } from '@/api/http'
-import { buttonVariants, DialogPanel, useBodyScrollLock } from '@/components/app/DesignSystem'
-
-export function fileError(error: unknown) {
-  return error instanceof HttpError
-    ? error.apiError.detail
-    : error instanceof Error
-      ? error.message
-      : 'The EPUB operation failed. Please try again.'
-}
-export const isJobWorking = (job?: FileJob | null) =>
-  Boolean(
-    job && ['Uploading', 'Queued', 'Processing', 'CommitQueued', 'Committing'].includes(job.status),
-  )
-
-export function useFileJob(id: string | undefined, initial?: FileJob | null) {
-  return useQuery({
-    queryKey: ['epub-job', id],
-    queryFn: () => bookFilesApi.job(id!),
-    enabled: Boolean(id),
-    initialData: initial ?? undefined,
-    refetchInterval: (query) => (isJobWorking(query.state.data) ? 1000 : false),
-    refetchOnWindowFocus: true,
-    retry: false,
-  })
-}
+import { useEffect, useEffectEvent, useId, useRef, type ReactNode } from 'react'
+import type { FileJob } from '@/api/bookFiles'
+import { buttonVariants } from '@/components/app/designTokens'
+import { DialogPanel } from '@/components/app/DesignSystem'
+import { useBodyScrollLock } from '@/components/app/useBodyScrollLock'
+import { isJobWorking } from './fileJobs'
 
 export function FileModal({
   title,
@@ -43,18 +20,18 @@ export function FileModal({
 }) {
   const titleId = useId()
   const panel = useRef<HTMLElement>(null)
-  const close = useRef(onClose)
-  close.current = onClose
+  const close = useEffectEvent(onClose)
   useBodyScrollLock(true)
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null
-    const node = panel.current!
+    const node = panel.current
+    if (!node) return
     node.focus()
     const keydown = (event: KeyboardEvent) => {
       if (Array.from(document.querySelectorAll('[role="dialog"]')).at(-1) !== node) return
       if (event.key === 'Escape') {
         event.preventDefault()
-        close.current()
+        close()
         return
       }
       if (event.key !== 'Tab') return
@@ -73,7 +50,7 @@ export function FileModal({
         (document.activeElement === first || document.activeElement === node)
       ) {
         event.preventDefault()
-        last!.focus()
+        last?.focus()
       } else if (
         !event.shiftKey &&
         (document.activeElement === last || document.activeElement === node)

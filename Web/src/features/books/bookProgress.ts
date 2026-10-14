@@ -10,7 +10,7 @@ export function formatProgress(book: BookProgressLike) {
   const current =
     isCompleted && book.currentChapterNumber != null
       ? book.currentChapterNumber
-      : book.currentChapterLabel || book.currentChapterNumber
+      : (book.currentChapterLabel ?? '') || book.currentChapterNumber
   if (!current && !book.totalChapters) {
     return '-'
   }

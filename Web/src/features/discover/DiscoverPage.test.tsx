@@ -50,8 +50,10 @@ describe('DiscoverPage', () => {
     renderWithProviders(<DiscoverPage />)
 
     expect(await screen.findByText('Lord of Mysteries')).toBeInTheDocument()
-    expect(screen.getByText('1432')).toBeInTheDocument()
-    expect(screen.getByText('Mystery')).toHaveAttribute('tabindex', '0')
+    // The page formats chapter counts with the runtime locale (e.g. "1,432" in en, "1432" in pl).
+    expect(screen.getByText((1432).toLocaleString())).toBeInTheDocument()
+    // Described metadata pills must be keyboard-focusable so their tooltip is reachable.
+    expect(screen.getByText('Mystery').closest('button, [tabindex="0"]')).toBeInTheDocument()
     await user.hover(screen.getByLabelText('2 alternative titles'))
     expect(screen.getByRole('tooltip')).toHaveTextContent('Alternative titles: LOTM Guimi Zhi Zhu')
 

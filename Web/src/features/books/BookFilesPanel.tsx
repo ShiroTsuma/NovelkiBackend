@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowDown, ArrowUp, Download, Pencil, RotateCcw, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   bookFilesApi,
@@ -10,8 +10,10 @@ import {
   type BookFileList,
   type FileJob,
 } from '@/api/bookFiles'
-import { buttonVariants, controlClass, Surface } from '@/components/app/DesignSystem'
-import { FileModal, fileError } from './files/FileDialogs'
+import { buttonVariants, controlClass } from '@/components/app/designTokens'
+import { Surface } from '@/components/app/DesignSystem'
+import { FileModal } from './files/FileDialogs'
+import { fileError } from './files/fileJobs'
 import { FileDownloadDialog } from './files/FileDownloadDialog'
 import { FileImportDialog } from './files/FileImportDialog'
 import { FileContents } from './files/FileContents'
@@ -19,7 +21,15 @@ import { FileContents } from './files/FileContents'
 function useBookFiles(bookId?: string, snapshotId?: string) {
   return useQuery<BookFileList | BookFile[]>({
     queryKey: ['book-files', bookId ?? snapshotId],
-    queryFn: () => (bookId ? bookFilesApi.list(bookId) : bookFilesApi.publicList(snapshotId!)),
+    queryFn: () => {
+      if (bookId) {
+        return bookFilesApi.list(bookId)
+      }
+      if (snapshotId) {
+        return bookFilesApi.publicList(snapshotId)
+      }
+      return Promise.reject(new Error('A book or snapshot is required to list EPUBs.'))
+    },
   })
 }
 
@@ -113,10 +123,25 @@ export function BookFilesDialog({
     },
     onError: (e) => setError(fileError(e)),
   })
+  const focusOnMount = useCallback((element: HTMLInputElement | null) => {
+    element?.focus()
+  }, [])
+  function mutateBook(operation: (id: string) => Promise<unknown>) {
+    if (!bookId) {
+      return
+    }
+    mutation.mutate(() => operation(bookId))
+  }
   function move(index: number, offset: number) {
     const ids = active.map((f) => f.id)
-    ;[ids[index], ids[index + offset]] = [ids[index + offset], ids[index]]
-    mutation.mutate(() => bookFilesApi.reorder(bookId!, ids))
+    const current = ids[index]
+    const target = ids[index + offset]
+    if (current === undefined || target === undefined) {
+      return
+    }
+    ids[index] = target
+    ids[index + offset] = current
+    mutateBook((id) => bookFilesApi.reorder(id, ids))
   }
   function add() {
     setResume(resumable)
@@ -126,7 +151,11 @@ export function BookFilesDialog({
     setDownloading(file.id)
     setError('')
     try {
-      startFileDownload((await bookFilesApi.downloads([file.id], snapshotId))[0])
+      const [ticket] = await bookFilesApi.downloads([file.id], snapshotId)
+      if (!ticket) {
+        throw new Error('The download could not be prepared.')
+      }
+      startFileDownload(ticket)
     } catch (e) {
       setError(fileError(e))
     } finally {
@@ -229,7 +258,7 @@ export function BookFilesDialog({
                         className="file-rename"
                         onSubmit={(e) => {
                           e.preventDefault()
-                          mutation.mutate(() => bookFilesApi.rename(bookId!, file.id, title))
+                          mutateBook((id) => bookFilesApi.rename(id, file.id, title))
                         }}
                       >
                         <input
@@ -237,7 +266,7 @@ export function BookFilesDialog({
                           aria-label="File title"
                           maxLength={250}
                           value={title}
-                          autoFocus
+                          ref={focusOnMount}
                           onChange={(e) => setTitle(e.target.value)}
                         />
                         <button
@@ -282,9 +311,7 @@ export function BookFilesDialog({
                         <button
                           className={buttonVariants.secondary}
                           disabled={mutation.isPending}
-                          onClick={() =>
-                            mutation.mutate(() => bookFilesApi.restore(bookId!, file.id))
-                          }
+                          onClick={() => mutateBook((id) => bookFilesApi.restore(id, file.id))}
                         >
                           <RotateCcw size={16} />
                           Restore
@@ -307,7 +334,7 @@ export function BookFilesDialog({
                                     : active
                                         .filter((f) => f.isShared && f.id !== file.id)
                                         .map((f) => f.id)
-                                  mutation.mutate(() => bookFilesApi.share(bookId!, ids))
+                                  mutateBook((id) => bookFilesApi.share(id, ids))
                                 }}
                               />
                               Shared
@@ -377,8 +404,8 @@ export function BookFilesDialog({
       </FileModal>
       {importOpen && (
         <FileImportDialog
-          bookId={bookId}
-          initialJob={resume}
+          {...(bookId !== undefined ? { bookId } : {})}
+          {...(resume !== undefined ? { initialJob: resume } : {})}
           onClose={() => setImportOpen(false)}
           onImported={imported}
         />
@@ -386,7 +413,7 @@ export function BookFilesDialog({
       {downloadOpen && (
         <FileDownloadDialog
           files={active}
-          snapshotId={snapshotId}
+          {...(snapshotId !== undefined ? { snapshotId } : {})}
           onClose={() => setDownloadOpen(false)}
         />
       )}
@@ -406,7 +433,7 @@ export function BookFilesDialog({
               <button
                 className={buttonVariants.destructive}
                 disabled={mutation.isPending}
-                onClick={() => mutation.mutate(() => bookFilesApi.remove(bookId!, deleting.id))}
+                onClick={() => mutateBook((id) => bookFilesApi.remove(id, deleting.id))}
               >
                 Move to trash
               </button>

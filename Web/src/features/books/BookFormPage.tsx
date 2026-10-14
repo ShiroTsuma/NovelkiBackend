@@ -2,27 +2,20 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, FileCode2, Link2, Save, Star, Upload, X } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { api } from '@/api/client'
 import { HttpError } from '@/api/http'
 import type { AuthorDto, BookCoverDto, BookHtmlParseResult, BookMutationRequest } from '@/api/types'
-import {
-  buttonVariants,
-  DialogPanel,
-  PageHeader,
-  Surface,
-  useBodyScrollLock,
-} from '@/components/app/DesignSystem'
-import {
-  FormField,
-  buttonClass,
-  inputClass,
-  secondaryButtonClass,
-} from '@/components/app/FormField'
+import { buttonVariants } from '@/components/app/designTokens'
+import { DialogPanel, PageHeader, Surface } from '@/components/app/DesignSystem'
+import { useBodyScrollLock } from '@/components/app/useBodyScrollLock'
+import { buttonClass, inputClass, secondaryButtonClass } from '@/components/app/designTokens'
+import { FormField } from '@/components/app/FormField'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
-import { BookCoverArtwork, CoverLightbox, useResolvedCoverImage } from './BookCoverSection'
+import { BookCoverArtwork, CoverLightbox } from './BookCoverSection'
+import { useResolvedCoverImage } from './useResolvedCoverImage'
 import {
   bookFormSchema,
   defaultBookFormValues,
@@ -57,7 +50,7 @@ type SaveResult = {
 type SelectedAuthorDisplay = {
   id: string
   primaryName: string
-  matchedAlias?: string
+  matchedAlias?: string | undefined
 }
 
 type CoverInfoItem = {
@@ -94,7 +87,12 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
   const bookQueryKey = [admin ? 'adminBook' : 'book', id] as const
   const bookQuery = useQuery({
     queryKey: bookQueryKey,
-    queryFn: () => (admin ? api.getAdminBook(id!) : api.getBook(id!)),
+    queryFn: () => {
+      if (!id) {
+        throw new Error('The book id is missing from the route.')
+      }
+      return admin ? api.getAdminBook(id) : api.getBook(id)
+    },
     enabled: mode === 'edit' && Boolean(id),
   })
   const typesQuery = useQuery({ queryKey: ['types'], queryFn: api.getTypes, staleTime: 300_000 })
@@ -110,22 +108,23 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
     defaultValues: defaultBookFormValues(),
   })
 
-  const authorName = form.watch('authorName') ?? ''
+  const authorName = useWatch({ control: form.control, name: 'authorName' }) ?? ''
   const trimmedAuthorName = authorName.trim()
   const debouncedAuthorSearch = useDebouncedValue(trimmedAuthorName, suggestionSearchDelayMs)
   const authorInputValue = selectedAuthorDisplay
     ? formatAuthorDisplay(selectedAuthorDisplay.primaryName, selectedAuthorDisplay.matchedAlias)
     : authorName
-  const primaryTitle = form.watch('primaryTitle') ?? ''
-  const currentChapterNumber = form.watch('currentChapterNumber') ?? ''
-  const totalChapters = form.watch('totalChapters') ?? ''
-  const priority = form.watch('priority') ?? ''
-  const selectedGenreIds = form.watch('genreIds')
-  const selectedTags = splitComma(form.watch('tagsText'))
-  const selectedType = typesQuery.data?.data.find((type) => type.id === form.watch('contentTypeId'))
-  const selectedStatus = statusesQuery.data?.data.find(
-    (status) => status.id === form.watch('statusId'),
-  )
+  const primaryTitle = useWatch({ control: form.control, name: 'primaryTitle' })
+  const currentChapterNumber = useWatch({ control: form.control, name: 'currentChapterNumber' })
+  const totalChapters = useWatch({ control: form.control, name: 'totalChapters' })
+  const priority = useWatch({ control: form.control, name: 'priority' })
+  const rating = useWatch({ control: form.control, name: 'rating' })
+  const selectedGenreIds = useWatch({ control: form.control, name: 'genreIds' })
+  const selectedTags = splitComma(useWatch({ control: form.control, name: 'tagsText' }))
+  const selectedTypeId = useWatch({ control: form.control, name: 'contentTypeId' })
+  const selectedStatusId = useWatch({ control: form.control, name: 'statusId' })
+  const selectedType = typesQuery.data?.data.find((type) => type.id === selectedTypeId)
+  const selectedStatus = statusesQuery.data?.data.find((status) => status.id === selectedStatusId)
   const resolvedCoverUrl = useResolvedCoverImage(bookQuery.data?.cover)
   const authorSuggestionsQuery = useQuery({
     queryKey: ['authorSuggestions', debouncedAuthorSearch],
@@ -137,10 +136,15 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
   const authorSearchPending =
     trimmedAuthorName !== debouncedAuthorSearch || authorSuggestionsQuery.isFetching
 
-  useEffect(() => {
-    initializedBookIdRef.current = null
+  const [trackedRoute, setTrackedRoute] = useState({ id, mode })
+  if (trackedRoute.id !== id || trackedRoute.mode !== mode) {
+    setTrackedRoute({ id, mode })
     setSelectedAuthorDisplay(null)
     setExistingCoverChange({ kind: 'keep' })
+  }
+
+  useEffect(() => {
+    initializedBookIdRef.current = null
   }, [id, mode])
 
   useEffect(() => {
@@ -426,14 +430,17 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
         }
       }
 
-      await (admin ? api.updateAdminBook(id!, request) : api.updateBook(id!, request))
+      if (!id) {
+        throw new Error('The book id is missing from the route.')
+      }
+      await (admin ? api.updateAdminBook(id, request) : api.updateBook(id, request))
       let coverError: string | null = null
       try {
         if (draftCover) {
-          const savedCover = await saveCover(id!, draftCover)
-          await saveBookWithCoverSourceLink(id!, request, savedCover)
+          const savedCover = await saveCover(id, draftCover)
+          await saveBookWithCoverSourceLink(id, request, savedCover)
         } else if (existingCoverChange.kind === 'remove') {
-          await api.deleteBookCover(id!)
+          await api.deleteBookCover(id)
         }
       } catch (error) {
         coverError =
@@ -444,7 +451,7 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
               : 'Failed to save cover.'
       }
 
-      return { id: id!, coverError }
+      return { id, coverError }
     },
     onSuccess: async (response) => {
       const invalidateQueries = Promise.all([
@@ -462,7 +469,7 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
         } else {
           toast.success('Book added.')
         }
-        navigate(admin ? '/admin' : `/books/${response.id}`, {
+        void navigate(admin ? '/admin' : `/books/${response.id}`, {
           replace: true,
           state: admin ? undefined : { bookListReturnTo },
         })
@@ -475,7 +482,7 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
       } else {
         toast.success('Book updated.')
       }
-      navigate(admin ? '/admin' : `/books/${response.id}`, {
+      void navigate(admin ? '/admin' : `/books/${response.id}`, {
         replace: true,
         state: admin ? undefined : { bookListReturnTo },
       })
@@ -489,6 +496,13 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
   const isLoadingDictionaries =
     typesQuery.isLoading || statusesQuery.isLoading || genresQuery.isLoading
   const isLoadingBook = mode === 'edit' && bookQuery.isLoading
+  const formReady = !isLoadingDictionaries && !isLoadingBook
+
+  useEffect(() => {
+    if (formReady) {
+      form.setFocus('primaryTitle')
+    }
+  }, [form, formReady])
   const currentCover = bookQuery.data?.cover
   const visibleCoverUrl =
     mode === 'create'
@@ -548,7 +562,7 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
         className="book-form-page mx-auto grid w-full max-w-7xl gap-5"
         data-testid="book-form"
         noValidate
-        onSubmit={form.handleSubmit((values) => mutation.mutate(values))}
+        onSubmit={(event) => void form.handleSubmit((values) => mutation.mutate(values))(event)}
       >
         <PageHeader
           actions={
@@ -579,7 +593,6 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
               <FormField error={errors.primaryTitle?.message} label="Primary title *">
                 <input
                   aria-label="Primary title"
-                  autoFocus
                   className={inputClass}
                   {...form.register('primaryTitle')}
                 />
@@ -808,7 +821,7 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
                   </FormField>
                   <FormField error={errors.rating?.message} label="Rating">
                     <RatingStars
-                      value={form.watch('rating') ?? ''}
+                      value={rating}
                       onChange={(value) =>
                         form.setValue('rating', value, { shouldDirty: true, shouldValidate: true })
                       }
@@ -971,7 +984,7 @@ function GenreChipSelect({
   selectedIds,
   onChange,
 }: {
-  options: { id: string; name: string; description?: string | null }[]
+  options: { id: string; name: string; description?: string | null | undefined }[]
   selectedIds: string[]
   onChange: (value: string[]) => void
 }) {
@@ -1068,11 +1081,11 @@ function ChipBox({
   input: string
   placeholder: string
   selected: { key: string; label: string }[]
-  suggestions: { key: string; label: string; description?: string | null }[]
+  suggestions: { key: string; label: string; description?: string | null | undefined }[]
   onInputChange: (value: string) => void
   onPick: (key: string) => void
   onRemove: (key: string) => void
-  onCreate?: (value: string) => void
+  onCreate?: ((value: string) => void) | undefined
   suggestionsPending?: boolean
 }) {
   const trimmed = input.trim()
@@ -1083,16 +1096,24 @@ function ChipBox({
     !suggestions.some((item) => item.label.toLocaleLowerCase() === trimmed.toLocaleLowerCase()),
   )
   const [activeIndex, setActiveIndex] = useState(0)
+  const activeIndexResetKey = JSON.stringify([
+    input,
+    suggestions.map((item) => item.key),
+    canCreate,
+  ])
+  const [trackedResetKey, setTrackedResetKey] = useState(activeIndexResetKey)
   const listboxId = useId()
   const choiceCount = suggestions.length + (canCreate ? 1 : 0)
 
-  useEffect(() => {
+  if (trackedResetKey !== activeIndexResetKey) {
+    setTrackedResetKey(activeIndexResetKey)
     setActiveIndex(0)
-  }, [input, suggestions.map((item) => item.key).join('|'), canCreate])
+  }
 
   function pickActiveChoice() {
-    if (activeIndex < suggestions.length) {
-      onPick(suggestions[activeIndex].key)
+    const activeSuggestion = suggestions[activeIndex]
+    if (activeSuggestion) {
+      onPick(activeSuggestion.key)
       return
     }
     if (canCreate) {
@@ -1119,9 +1140,10 @@ function ChipBox({
       return
     }
 
-    if (event.key === 'Backspace' && !input && selected.length) {
+    const lastSelected = selected.at(-1)
+    if (event.key === 'Backspace' && !input && lastSelected) {
       event.preventDefault()
-      onRemove(selected[selected.length - 1].key)
+      onRemove(lastSelected.key)
     }
   }
 
@@ -1254,12 +1276,16 @@ function CoverSourceDialog({
 
   return (
     <div
-      aria-modal="true"
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4"
-      role="dialog"
+      role="presentation"
       onClick={onClose}
     >
-      <DialogPanel className="grid max-w-xl gap-4 p-6" onClick={(event) => event.stopPropagation()}>
+      <DialogPanel
+        aria-modal="true"
+        className="grid max-w-xl gap-4 p-6"
+        role="dialog"
+        onClick={(event) => event.stopPropagation()}
+      >
         <div className="flex items-start justify-between gap-4">
           <div className="grid gap-1">
             <h2 className="text-lg font-semibold text-white">Add cover</h2>
@@ -1430,7 +1456,7 @@ function formatAuthorDisplay(primaryName: string, matchedAlias?: string) {
   return matchedAlias ? `${primaryName} (${matchedAlias})` : primaryName
 }
 
-function DescriptionHelp({ value }: { value?: string | null }) {
+function DescriptionHelp({ value }: { value?: string | null | undefined }) {
   if (!value) {
     return null
   }

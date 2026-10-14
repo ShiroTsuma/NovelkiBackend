@@ -97,7 +97,7 @@ function DescribedMetadataPill({
   variant,
 }: {
   value: string
-  description?: string | null
+  description?: string | null | undefined
   variant: 'table' | 'detail'
 }) {
   const triggerClassName =
@@ -135,7 +135,7 @@ function MetadataTooltip({
   triggerClassName: string
 }) {
   const tooltipId = useId()
-  const triggerRef = useRef<HTMLSpanElement | null>(null)
+  const triggerRef = useRef<HTMLButtonElement | null>(null)
   const [isOpen, setIsOpen] = useState(false)
   const [position, setPosition] = useState({ left: 0, top: 0, below: false })
 
@@ -181,19 +181,19 @@ function MetadataTooltip({
 
   return (
     <>
-      <span
+      <button
         aria-describedby={isOpen ? tooltipId : undefined}
         aria-label={ariaLabel}
         className={triggerClassName}
         ref={triggerRef}
-        tabIndex={0}
+        type="button"
         onBlur={() => setIsOpen(false)}
         onFocus={showTooltip}
         onMouseEnter={showTooltip}
         onMouseLeave={() => setIsOpen(false)}
       >
         {children}
-      </span>
+      </button>
       {isOpen && typeof document !== 'undefined'
         ? createPortal(
             <span

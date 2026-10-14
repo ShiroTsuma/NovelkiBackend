@@ -12,8 +12,8 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
-import { useAuth } from '@/features/auth/AuthProvider'
-import { buttonVariants } from '@/components/app/DesignSystem'
+import { useAuth } from '@/features/auth/useAuth'
+import { buttonVariants } from '@/components/app/designTokens'
 import { cn } from '@/lib/utils'
 import { isNsfwEnabled, setNsfwEnabled } from '@/lib/nsfwPreference'
 
@@ -28,7 +28,7 @@ export function AppShell() {
 
   async function handleLogout() {
     await logout()
-    navigate('/login', { replace: true })
+    void navigate('/login', { replace: true })
   }
 
   function handleNsfwToggle() {
@@ -100,7 +100,7 @@ export function AppShell() {
               aria-label="Log out"
               className={cn(buttonVariants.ghost, 'app-logout')}
               type="button"
-              onClick={handleLogout}
+              onClick={() => void handleLogout()}
             >
               <LogOut className="h-4 w-4" />
               <span className="app-logout__label">Log out</span>

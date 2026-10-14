@@ -22,7 +22,7 @@ vi.mock('sonner', () => ({
 describe('ProgressDialog', () => {
   it.each(['e', '-1', '1e9'])('rejects invalid chapter value %s before submit', async (value) => {
     const user = userEvent.setup()
-    renderWithProviders(<ProgressDialog book={books[0]} />)
+    renderWithProviders(<ProgressDialog book={books[0]!} />)
 
     await user.click(screen.getByRole('button', { name: /progress/i }))
     const chapterInput = screen.getByPlaceholderText('Chapter number')
@@ -39,7 +39,7 @@ describe('ProgressDialog', () => {
 
   it('shows a field error when chapter is greater than total chapters', async () => {
     const user = userEvent.setup()
-    renderWithProviders(<ProgressDialog book={books[0]} />)
+    renderWithProviders(<ProgressDialog book={books[0]!} />)
 
     await user.click(screen.getByRole('button', { name: /progress/i }))
     const chapterInput = screen.getByPlaceholderText('Chapter number')
@@ -54,7 +54,7 @@ describe('ProgressDialog', () => {
 
   it('limits label and comment length in the browser', async () => {
     const user = userEvent.setup()
-    renderWithProviders(<ProgressDialog book={books[0]} />)
+    renderWithProviders(<ProgressDialog book={books[0]!} />)
 
     await user.click(screen.getByRole('button', { name: /progress/i }))
     const labelInput = screen.getByPlaceholderText('Chapter label')
@@ -73,7 +73,7 @@ describe('ProgressDialog', () => {
   it('submits a comment without changing chapter', async () => {
     vi.mocked(api.updateProgress).mockResolvedValue(undefined)
     const user = userEvent.setup()
-    renderWithProviders(<ProgressDialog book={books[0]} />)
+    renderWithProviders(<ProgressDialog book={books[0]!} />)
 
     await user.click(screen.getByRole('button', { name: /progress/i }))
     await user.type(screen.getByPlaceholderText('Comment'), 'same chapter note')
@@ -81,10 +81,10 @@ describe('ProgressDialog', () => {
 
     await waitFor(() => expect(api.updateProgress).toHaveBeenCalled())
     expect(vi.mocked(api.updateProgress).mock.calls[0]).toEqual([
-      books[0].id,
+      books[0]!.id,
       {
-        currentChapterNumber: books[0].currentChapterNumber,
-        currentChapterLabel: books[0].currentChapterLabel,
+        currentChapterNumber: books[0]!.currentChapterNumber,
+        currentChapterLabel: books[0]!.currentChapterLabel,
         comment: 'same chapter note',
       },
     ])

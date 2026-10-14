@@ -43,7 +43,7 @@ describe('book API NSFW filtering', () => {
     expect(urls.slice(0, 7).map((url) => url.searchParams.get('query'))).toEqual(
       Array(7).fill('-tag:h-manhwa -genre:Adult -tag:R-18 author:Toika'),
     )
-    expect(urls[7].searchParams.get('search')).toBe(
+    expect(urls[7]?.searchParams.get('search')).toBe(
       '-tag:h-manhwa -genre:Adult -tag:R-18 author:Toika',
     )
   })
@@ -54,7 +54,7 @@ describe('book API NSFW filtering', () => {
       take: 50,
     })
 
-    const url = new URL(String(fetchMock.mock.calls[0][0]), 'http://localhost')
+    const url = new URL(String(fetchMock.mock.calls[0]?.[0]), 'http://localhost')
     expect(url.pathname).toBe('/api/v1/book/manage')
     expect(url.searchParams.get('query')).toBe('-tag:h-manhwa -genre:Adult -tag:R-18')
   })
@@ -62,7 +62,7 @@ describe('book API NSFW filtering', () => {
   it('uses the dedicated owner-scoped search suggestion endpoint with NSFW exclusions', async () => {
     await api.getBookSearchSuggestions({ field: 'author', search: 'er', take: 10 })
 
-    const url = new URL(String(fetchMock.mock.calls[0][0]), 'http://localhost')
+    const url = new URL(String(fetchMock.mock.calls[0]?.[0]), 'http://localhost')
     expect(url.pathname).toBe('/api/v1/book/search-suggestions')
     expect(url.searchParams.get('field')).toBe('author')
     expect(url.searchParams.get('search')).toBe('er')
@@ -77,7 +77,7 @@ describe('book API NSFW filtering', () => {
       take: 10,
     })
 
-    const url = new URL(String(fetchMock.mock.calls[0][0]), 'http://localhost')
+    const url = new URL(String(fetchMock.mock.calls[0]?.[0]), 'http://localhost')
     expect(url.pathname).toBe('/api/v1/book/search-suggestions')
     expect(url.searchParams.get('field')).toBe('status')
     expect(url.searchParams.has('search')).toBe(false)

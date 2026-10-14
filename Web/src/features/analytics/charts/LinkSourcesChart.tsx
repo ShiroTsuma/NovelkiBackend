@@ -1,5 +1,6 @@
 import type { BookAnalyticsDto } from '@/api/types'
-import { DrilldownLink, fieldQuery, formatCount, formatPercent } from './chartUtils'
+import { fieldQuery, formatCount, formatPercent } from './chartUtils'
+import { DrilldownLink } from './DrilldownLink'
 
 type LinkSourcesChartProps = {
   data: BookAnalyticsDto | undefined
@@ -46,13 +47,4 @@ export function LinkSourcesChart({ data }: LinkSourcesChartProps) {
       ))}
     </div>
   )
-}
-
-export function linkSourceRows(data?: BookAnalyticsDto) {
-  return (data?.quality.linkSources ?? []).map((item) => [
-    item.source || 'Unknown source',
-    formatCount(item.linkCount),
-    formatCount(item.bookCount),
-    formatPercent(item.shareOfBooks),
-  ])
 }

@@ -1,16 +1,13 @@
 import { useMutation } from '@tanstack/react-query'
 import { AlertTriangle, ArrowLeft, Braces, Check, FileCode2, X } from 'lucide-react'
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useEffect, useEffectEvent, useId, useMemo, useRef, useState } from 'react'
 import { api } from '@/api/client'
 import { HttpError } from '@/api/http'
 import type { BookHtmlParseResult } from '@/api/types'
-import {
-  Badge,
-  DialogPanel,
-  buttonVariants,
-  useBodyScrollLock,
-} from '@/components/app/DesignSystem'
-import { buttonClass, inputClass, secondaryButtonClass } from '@/components/app/FormField'
+import { buttonVariants } from '@/components/app/designTokens'
+import { Badge, DialogPanel } from '@/components/app/DesignSystem'
+import { useBodyScrollLock } from '@/components/app/useBodyScrollLock'
+import { buttonClass, inputClass, secondaryButtonClass } from '@/components/app/designTokens'
 import type { BookFormValues } from './bookFormSchema'
 
 export type BookHtmlParseField =
@@ -64,18 +61,30 @@ export function BookHtmlParseDialog({
     [currentValues, hasDraftCover, result],
   )
 
+  function closeAndReset() {
+    parseMutation.reset()
+    setHtml('')
+    setResult(null)
+    setSelected(new Set())
+    onClose()
+  }
+
+  const closeOnEscapeKey = useEffectEvent((event: KeyboardEvent) => {
+    if (event.key === 'Escape') closeAndReset()
+  })
+
   useEffect(() => {
     if (!open) return
     const frame = window.requestAnimationFrame(() => textareaRef.current?.focus())
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') closeAndReset()
+      closeOnEscapeKey(event)
     }
     window.addEventListener('keydown', closeOnEscape)
     return () => {
       window.cancelAnimationFrame(frame)
       window.removeEventListener('keydown', closeOnEscape)
     }
-  }, [onClose, open])
+  }, [open])
 
   if (!open) return null
 
@@ -85,14 +94,6 @@ export function BookHtmlParseDialog({
       : parseMutation.error instanceof Error
         ? parseMutation.error.message
         : null
-
-  function closeAndReset() {
-    parseMutation.reset()
-    setHtml('')
-    setResult(null)
-    setSelected(new Set())
-    onClose()
-  }
 
   function toggleField(key: BookHtmlParseField) {
     setSelected((current) => {
@@ -104,14 +105,14 @@ export function BookHtmlParseDialog({
   }
 
   return (
-    <div
-      aria-labelledby={titleId}
-      aria-modal="true"
-      className="book-html-dialog-backdrop"
-      role="dialog"
-      onClick={closeAndReset}
-    >
-      <DialogPanel className="book-html-dialog" onClick={(event) => event.stopPropagation()}>
+    <div className="book-html-dialog-backdrop" role="presentation" onClick={closeAndReset}>
+      <DialogPanel
+        aria-labelledby={titleId}
+        aria-modal="true"
+        className="book-html-dialog"
+        role="dialog"
+        onClick={(event) => event.stopPropagation()}
+      >
         <header className="book-html-dialog__header">
           <div className="book-html-dialog__mark" aria-hidden="true">
             <FileCode2 className="h-5 w-5" />

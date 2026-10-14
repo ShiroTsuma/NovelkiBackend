@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { api } from '@/api/client'
-import { inputClass } from '@/components/app/FormField'
+import { inputClass } from '@/components/app/designTokens'
 import { Surface } from '@/components/app/DesignSystem'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
 import {
@@ -49,17 +49,20 @@ export function BookSearchInput({
   allowedFields?: readonly string[]
 }) {
   const [draftValue, setDraftValue] = useState(value)
+  const [syncedValue, setSyncedValue] = useState(value)
   const [caret, setCaret] = useState(value.length)
   const [open, setOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(0)
+  const [activeIndexSignature, setActiveIndexSignature] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const pendingSelectionRef = useRef<number | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
+  if (syncedValue !== value) {
+    setSyncedValue(value)
     setDraftValue(value)
     setCaret((current) => Math.min(current, value.length))
-  }, [value])
+  }
 
   useLayoutEffect(() => {
     const pendingSelection = pendingSelectionRef.current
@@ -82,15 +85,15 @@ export function BookSearchInput({
   const remoteRequest =
     remoteField == null ? '' : `${remoteField}\u0000${searchValue}\u0000${scopeQuery}`
   const debouncedRequest = useDebouncedValue(remoteRequest, suggestionDelayMs)
-  const [debouncedField, debouncedSearch = '', debouncedScopeQuery = ''] =
+  const [debouncedField = '', debouncedSearch = '', debouncedScopeQuery = ''] =
     debouncedRequest.split('\u0000')
   const remoteSuggestions = useQuery({
     queryKey: ['book-search-suggestions', debouncedField, debouncedSearch, debouncedScopeQuery],
     queryFn: ({ signal }) =>
       api.getBookSearchSuggestions({
         field: debouncedField,
-        search: debouncedSearch || undefined,
-        query: debouncedScopeQuery || undefined,
+        ...(debouncedSearch ? { search: debouncedSearch } : {}),
+        ...(debouncedScopeQuery ? { query: debouncedScopeQuery } : {}),
         take: 10,
         signal,
       }),
@@ -130,12 +133,21 @@ export function BookSearchInput({
       value: suggestion.value,
     }))
     return [...local, ...values]
-  }, [allowedFields, context, debouncedRequest, remoteField, remoteRequest, remoteSuggestions.data])
+  }, [
+    allowedFields,
+    context,
+    debouncedRequest,
+    draftValue,
+    remoteField,
+    remoteRequest,
+    remoteSuggestions.data,
+  ])
 
   const suggestionSignature = suggestions.map((suggestion) => suggestion.id).join('|')
-  useEffect(() => {
+  if (activeIndexSignature !== suggestionSignature) {
+    setActiveIndexSignature(suggestionSignature)
     setActiveIndex(getNextSelectableIndex(suggestions, -1, 1))
-  }, [suggestionSignature])
+  }
 
   useEffect(() => {
     function closeOnOutsidePointer(event: PointerEvent) {
@@ -257,7 +269,7 @@ export function BookSearchInput({
           >
             {suggestions.map((suggestion, index) => (
               <button
-                aria-disabled={suggestion.disabled || undefined}
+                aria-disabled={suggestion.disabled ? true : undefined}
                 aria-selected={activeIndex === index}
                 disabled={suggestion.disabled}
                 className={`group flex min-h-11 w-full items-center gap-3 rounded-[var(--qs-control-radius)] px-3 py-2 text-left transition ${

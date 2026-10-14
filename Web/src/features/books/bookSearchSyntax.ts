@@ -146,7 +146,7 @@ export type BookSearchTokenContext = {
   text: string
   excluded: boolean
   fieldText: string
-  definition?: BookSearchFilterDefinition
+  definition?: BookSearchFilterDefinition | undefined
   hasColon: boolean
   valueText: string
   valueStart: number
@@ -252,7 +252,7 @@ export function getLocalBookSearchSuggestions(
     (definition.kind === 'number' || definition.kind === 'date') &&
     /^[<>=]*$/.test(normalizedValue)
   ) {
-    for (const operator of ['>=', '<=', '>', '<', '=']) {
+    for (const operator of comparisonOperators) {
       if (!normalizedValue || operator.startsWith(normalizedValue)) {
         items.push({
           id: `operator:${operator}`,
@@ -417,16 +417,16 @@ function tokenize(value: string) {
 
   for (let index = 0; index < value.length; index += 1) {
     const character = value[index]
-    if (start == null && !/\s/.test(character)) {
+    if (start == null && !isWhitespace(character)) {
       start = index
     }
 
     if ((character === '"' || character === "'") && start != null) {
-      quote = quote === character ? null : quote == null ? character : quote
+      quote = quote === character ? null : (quote ?? character)
       continue
     }
 
-    if (start != null && /\s/.test(character) && quote == null) {
+    if (start != null && isWhitespace(character) && quote == null) {
       const current = value.slice(start, index)
       if (current.includes(':') && current.trimEnd().endsWith(',')) {
         continue
@@ -452,7 +452,7 @@ function findActiveValueSegment(value: string, start: number, end: number, caret
   for (let index = start; index < end; index += 1) {
     const character = value[index]
     if (character === '"' || character === "'") {
-      quote = quote === character ? null : quote == null ? character : quote
+      quote = quote === character ? null : (quote ?? character)
       continue
     }
 
@@ -466,10 +466,10 @@ function findActiveValueSegment(value: string, start: number, end: number, caret
     }
   }
 
-  while (segmentStart < segmentEnd && /\s/.test(value[segmentStart])) {
+  while (segmentStart < segmentEnd && isWhitespace(value[segmentStart])) {
     segmentStart += 1
   }
-  while (segmentEnd > segmentStart && /\s/.test(value[segmentEnd - 1])) {
+  while (segmentEnd > segmentStart && isWhitespace(value[segmentEnd - 1])) {
     segmentEnd -= 1
   }
 
@@ -498,7 +498,7 @@ function replaceValueAndAdvance(
     }
   }
 
-  if (/\s/.test(query[context.end])) {
+  if (isWhitespace(query[context.end])) {
     return {
       value: result.value,
       caret: result.caret + 1,
@@ -511,11 +511,11 @@ function replaceValueAndAdvance(
 function removeToken(query: string, start: number, end: number) {
   let removeStart = start
   let removeEnd = end
-  while (removeEnd < query.length && /\s/.test(query[removeEnd])) {
+  while (removeEnd < query.length && isWhitespace(query[removeEnd])) {
     removeEnd += 1
   }
   if (removeEnd === end) {
-    while (removeStart > 0 && /\s/.test(query[removeStart - 1])) {
+    while (removeStart > 0 && isWhitespace(query[removeStart - 1])) {
       removeStart -= 1
     }
   }
@@ -545,7 +545,7 @@ function splitFilterValues(value: string) {
   for (let index = 0; index <= value.length; index += 1) {
     const character = value[index]
     if (character === '"' || character === "'") {
-      quote = quote === character ? null : quote == null ? character : quote
+      quote = quote === character ? null : (quote ?? character)
       continue
     }
     if (index === value.length || (character === ',' && quote == null)) {
@@ -583,15 +583,26 @@ function isCompleteFilterValue(definition: BookSearchFilterDefinition, value: st
   return true
 }
 
-function operatorDescription(operator: string, kind: 'number' | 'date') {
+type ComparisonOperator = '>=' | '<=' | '>' | '<' | '='
+
+const comparisonOperators: readonly ComparisonOperator[] = ['>=', '<=', '>', '<', '=']
+
+function operatorDescription(operator: ComparisonOperator, kind: 'number' | 'date') {
   const noun = kind === 'date' ? 'date' : 'value'
-  return (
-    {
-      '>': `More than the entered ${noun}`,
-      '>=': `At least the entered ${noun}`,
-      '<': `Less than the entered ${noun}`,
-      '<=': `At most the entered ${noun}`,
-      '=': `Exactly the entered ${noun}`,
-    } as Record<string, string>
-  )[operator]
+  switch (operator) {
+    case '>':
+      return `More than the entered ${noun}`
+    case '>=':
+      return `At least the entered ${noun}`
+    case '<':
+      return `Less than the entered ${noun}`
+    case '<=':
+      return `At most the entered ${noun}`
+    case '=':
+      return `Exactly the entered ${noun}`
+  }
+}
+
+function isWhitespace(character: string | undefined) {
+  return character !== undefined && /\s/.test(character)
 }

@@ -139,7 +139,7 @@ async function requestWithBody<T>(
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
     headers,
-    body,
+    body: body ?? null,
     credentials: 'include',
   })
 

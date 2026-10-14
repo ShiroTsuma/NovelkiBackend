@@ -5,7 +5,8 @@ import { api } from '@/api/client'
 import type { BookImportFinalizeResult, BookImportSessionDto } from '@/api/types'
 import { toast } from 'sonner'
 import { renderWithProviders } from '@/test/render'
-import { getImportSessionStats, ImportBooksDialog } from './ImportBooksDialog'
+import { getImportSessionStats } from './bookImportStats'
+import { ImportBooksDialog } from './ImportBooksDialog'
 
 vi.mock('@/api/client', () => ({
   api: {
@@ -77,7 +78,7 @@ describe('ImportBooksDialog', () => {
     })
   })
 
-  it('rejects dropped files that are not csv', async () => {
+  it('rejects dropped files that are not csv', () => {
     renderWithProviders(<ImportBooksDialog open onClose={vi.fn()} onImported={vi.fn()} />)
 
     const dropzone = screen.getByText(/drop a csv here or use file selection/i).closest('div')
@@ -175,8 +176,10 @@ describe('ImportBooksDialog', () => {
 
   it('downloads the CSV template from the import dialog', async () => {
     const createObjectUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:template')
-    const revokeObjectUrl = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
-    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    const revokeObjectUrl = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined)
+    const clickSpy = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(() => undefined)
     vi.mocked(api.downloadBookImportTemplate).mockResolvedValue(
       new Blob(['primaryTitle,contentType,status\n'], { type: 'text/csv' }),
     )
@@ -213,7 +216,7 @@ describe('ImportBooksDialog', () => {
       },
     })
 
-    const title = await screen.findByTitle(importSessionWithLongTitle.rows[0].primaryTitle!)
+    const title = await screen.findByTitle(importSessionWithLongTitle.rows[0]!.primaryTitle!)
     expect(title).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /edit row/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /revalidate row/i })).toBeDisabled()
@@ -292,7 +295,7 @@ describe('ImportBooksDialog', () => {
     })
 
     const [rowError] = await screen.findAllByText(/Content type is required and must exist\./)
-    expect(rowError.closest('.ui-surface')).toHaveClass('ui-surface--danger')
+    expect(rowError!.closest('.ui-surface')).toHaveClass('ui-surface--danger')
     fireEvent.click(screen.getByRole('button', { name: /edit row/i }))
 
     const typeInput = screen.getByLabelText(/^Type/)
@@ -438,7 +441,7 @@ describe('ImportBooksDialog', () => {
       ...importFinalizeFullSuccess,
       importedCount: 1_000,
       importedBooks: Array.from({ length: 30 }, (_unused, index) => ({
-        ...importFinalizeFullSuccess.importedBooks[0],
+        ...importFinalizeFullSuccess.importedBooks[0]!,
         primaryTitle: `Imported Book ${index + 1}`,
       })),
     })
@@ -556,7 +559,7 @@ const importSessionWithLongTitle: BookImportSessionDto = {
   ...importSessionWithFieldErrors,
   rows: [
     {
-      ...importSessionWithFieldErrors.rows[0],
+      ...importSessionWithFieldErrors.rows[0]!,
       primaryTitle:
         'A Very Long Imported Book Title That Should Stay Inside Its Header Without Pushing The Action Buttons Below Or Off The Right Edge',
     },
@@ -594,7 +597,7 @@ const importSessionWithMixedRows: BookImportSessionDto = {
       fieldErrors: {},
     },
     {
-      ...importSessionWithFieldErrors.rows[0],
+      ...importSessionWithFieldErrors.rows[0]!,
       rowId: 'row-invalid',
       lineNumber: 3,
     },
@@ -607,7 +610,7 @@ const importSessionAfterDiscardInvalid: BookImportSessionDto = {
   validRows: 1,
   invalidRows: 0,
   canFinalize: true,
-  rows: [importSessionWithMixedRows.rows[0]],
+  rows: [importSessionWithMixedRows.rows[0]!],
 }
 
 const importFinalizeFullSuccess: BookImportFinalizeResult = {

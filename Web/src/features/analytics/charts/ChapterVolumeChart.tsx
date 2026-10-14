@@ -1,14 +1,14 @@
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { BookAnalyticsDto } from '@/api/types'
-import { formatChapterCount } from '@/features/books/BooksPage'
+import { formatChapterCount } from '@/features/books/bookFormatters'
 import {
   analyticsTooltipProps,
-  DrilldownLink,
   fieldQuery,
   formatCount,
   getActiveChartLabel,
   useBooksDrilldown,
 } from './chartUtils'
+import { DrilldownLink } from './DrilldownLink'
 
 type ChapterVolumeChartProps = {
   data: BookAnalyticsDto | undefined
@@ -100,14 +100,4 @@ export function ChapterVolumeChart({ data }: ChapterVolumeChartProps) {
       </div>
     </div>
   )
-}
-
-export function chapterVolumeRows(data?: BookAnalyticsDto) {
-  return (data?.progress.typeVolumes ?? []).map((item) => [
-    item.type,
-    formatCount(item.bookCount),
-    formatChapterCount(item.currentChapters),
-    formatChapterCount(item.averageCurrentChapter),
-    formatChapterCount(item.medianCurrentChapter),
-  ])
 }

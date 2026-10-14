@@ -31,36 +31,45 @@ describe('BookCoverSection', () => {
     cacheNames.length = 0
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockImplementation(async () => new Response(new Blob(['cover']), { status: 200 })),
+      vi
+        .fn()
+        .mockImplementation(() =>
+          Promise.resolve(new Response(new Blob(['cover']), { status: 200 })),
+        ),
     )
     vi.stubGlobal('caches', {
-      open: vi.fn(async (cacheName: string) => {
+      open: vi.fn((cacheName: string) => {
         cacheNames.push(cacheName)
-        return {
-          add: vi.fn(async () => undefined),
-          addAll: vi.fn(async () => undefined),
-          match: vi.fn(
-            async (request: Request) => cacheEntries.get(request.url)?.clone() ?? undefined,
+        return Promise.resolve({
+          add: vi.fn(() => Promise.resolve()),
+          addAll: vi.fn(() => Promise.resolve()),
+          match: vi.fn((request: Request) =>
+            Promise.resolve(cacheEntries.get(request.url)?.clone()),
           ),
-          matchAll: vi.fn(async () => []),
-          put: vi.fn(async (request: Request, response: Response) => {
+          matchAll: vi.fn(() => Promise.resolve([])),
+          put: vi.fn((request: Request, response: Response) => {
             cacheEntries.set(request.url, response.clone())
+            return Promise.resolve()
           }),
-          keys: vi.fn(async () =>
-            Array.from(cacheEntries.keys()).map(
-              (url) => new Request(new URL(url, window.location.origin).toString()),
+          keys: vi.fn(() =>
+            Promise.resolve(
+              Array.from(cacheEntries.keys()).map(
+                (url) => new Request(new URL(url, window.location.origin).toString()),
+              ),
             ),
           ),
-          delete: vi.fn(async (request: Request) => {
+          delete: vi.fn((request: Request) => {
             const normalizedUrl = new URL(request.url)
             const relativeUrl = `${normalizedUrl.pathname}${normalizedUrl.search}`
-            return cacheEntries.delete(request.url) || cacheEntries.delete(relativeUrl)
+            return Promise.resolve(
+              cacheEntries.delete(request.url) || cacheEntries.delete(relativeUrl),
+            )
           }),
-        } satisfies Cache
+        } satisfies Cache)
       }),
     })
     vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:cover-1')
-    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined)
   })
 
   afterEach(() => {
@@ -77,7 +86,7 @@ describe('BookCoverSection', () => {
       imageUrl: 'http://localhost/api/v1/books/book-lazy/cover',
       thumbnailImageUrl: 'http://localhost/api/v1/books/book-lazy/cover?variant=thumbnail',
     }
-    let reveal = () => {}
+    let reveal = (): void => undefined
     const observe = vi.fn()
     const disconnect = vi.fn()
     class MockIntersectionObserver implements IntersectionObserver {

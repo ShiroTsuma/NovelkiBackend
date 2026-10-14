@@ -1,9 +1,17 @@
-import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import {
+  Bar,
+  BarChart,
+  Rectangle,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+  type BarShapeProps,
+} from 'recharts'
 import type { BookAnalyticsDto } from '@/api/types'
 import { Surface } from '@/components/app/DesignSystem'
 import {
   analyticsTooltipProps,
-  DrilldownLink,
   formatCount,
   formatPercent,
   getActiveChartLabel,
@@ -12,6 +20,7 @@ import {
   percent,
   useBooksDrilldown,
 } from './chartUtils'
+import { DrilldownLink } from './DrilldownLink'
 
 type RatingDistributionChartProps = {
   data: BookAnalyticsDto | undefined
@@ -67,14 +76,19 @@ export function RatingDistributionChart({ data }: RatingDistributionChartProps) 
                 {...analyticsTooltipProps}
                 formatter={(value, _name, item) => [
                   `${formatCount(Number(value))} books`,
-                  `Rating ${item.payload.rating}`,
+                  `Rating ${readRatingLabel(item.payload)}`,
                 ]}
               />
-              <Bar dataKey="bookCount" name="Books">
-                {counts.map((item) => (
-                  <Cell fill={item.bookCount > 0 ? '#8b92d8' : '#273142'} key={item.rating} />
-                ))}
-              </Bar>
+              <Bar
+                dataKey="bookCount"
+                name="Books"
+                shape={(props: BarShapeProps) => (
+                  <Rectangle
+                    {...props}
+                    fill={(counts[props.index]?.bookCount ?? 0) > 0 ? '#8b92d8' : '#273142'}
+                  />
+                )}
+              />
             </BarChart>
           </ResponsiveContainer>
           <div className="sr-only">
@@ -90,14 +104,12 @@ export function RatingDistributionChart({ data }: RatingDistributionChartProps) 
   )
 }
 
-export function ratingRows(data?: BookAnalyticsDto) {
-  const ratings = data?.ratings
-  if (!ratings) {
-    return []
+function readRatingLabel(payload: unknown) {
+  if (payload && typeof payload === 'object' && 'rating' in payload) {
+    const rating = payload.rating
+    if (typeof rating === 'number' || typeof rating === 'string') {
+      return String(rating)
+    }
   }
-
-  return [
-    ...ratings.counts.map((item) => [String(item.rating), formatCount(item.bookCount)]),
-    ['Unrated', formatCount(ratings.unratedBooks)],
-  ]
+  return ''
 }

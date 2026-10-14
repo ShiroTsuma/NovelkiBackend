@@ -1,13 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import {
-  Badge,
-  buttonVariants,
-  controlClass,
-  DialogPanel,
-  PageHeader,
-  Surface,
-} from './DesignSystem'
+import { buttonVariants, controlClass } from './designTokens'
+import { Badge, DialogPanel, PageHeader, Surface } from './DesignSystem'
 
 describe('quiet structure design system', () => {
   it('provides semantic variants instead of page-specific color strings', () => {

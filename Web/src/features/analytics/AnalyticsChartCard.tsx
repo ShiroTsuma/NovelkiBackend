@@ -1,5 +1,6 @@
 import { useId, useState, type ReactNode } from 'react'
-import { buttonVariants, Surface } from '@/components/app/DesignSystem'
+import { buttonVariants } from '@/components/app/designTokens'
+import { Surface } from '@/components/app/DesignSystem'
 
 type AnalyticsChartCardProps = {
   title: string

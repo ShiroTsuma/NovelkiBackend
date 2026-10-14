@@ -7,12 +7,10 @@ import {
   ArrowDown,
   ArrowUp,
 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
-import type { Dispatch, SetStateAction } from 'react'
-import type { SetURLSearchParams } from 'react-router-dom'
-import { inputClass } from '@/components/app/FormField'
-
-export const bookListPageSizeOptions = [20, 50, 100, 500]
+import { useEffect, useEffectEvent, useRef, useState } from 'react'
+import type { Dispatch, RefObject, SetStateAction } from 'react'
+import { inputClass } from '@/components/app/designTokens'
+import { bookListPageSizeOptions } from './bookListState'
 
 const paginationDirectionButtonClass =
   'inline-flex min-h-11 min-w-11 items-center justify-center rounded-md border border-slate-300 bg-white px-3 text-xl font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-950'
@@ -22,164 +20,6 @@ const paginationPageButtonClass =
 
 const paginationActivePageButtonClass =
   'pagination-page-button inline-flex min-h-11 min-w-11 items-center justify-center bg-slate-900 px-3 text-base font-semibold text-white'
-
-export function useBookListUrlState(
-  searchParams: URLSearchParams,
-  setSearchParams: SetURLSearchParams,
-  options: {
-    defaultSortBy?: string
-    defaultSortDirection?: string
-    pageSizeStorageKey?: string
-  } = {},
-) {
-  const defaultSortBy = options.defaultSortBy ?? 'lastModified'
-  const defaultSortDirection = options.defaultSortDirection ?? 'desc'
-  const skip = Number(searchParams.get('skip') ?? 0)
-  const pageSize = readBookListPageSize(searchParams, options.pageSizeStorageKey)
-  const sortBy = searchParams.get('sortBy') ?? defaultSortBy
-  const sortDirection = searchParams.get('sortDirection') ?? defaultSortDirection
-  const query = searchParams.get('query') ?? ''
-  const requestQuery = query.trim()
-
-  useEffect(() => {
-    if (options.pageSizeStorageKey) {
-      window.localStorage.setItem(options.pageSizeStorageKey, String(pageSize))
-    }
-  }, [options.pageSizeStorageKey, pageSize])
-
-  function updateQuery(value: string) {
-    const next = new URLSearchParams(searchParams)
-    if (value.trim()) {
-      next.set('query', value)
-    } else {
-      next.delete('query')
-    }
-    next.delete('skip')
-    setSearchParams(next)
-  }
-
-  function setSkip(nextSkip: number) {
-    const next = new URLSearchParams(searchParams)
-    next.set('skip', String(Math.max(0, nextSkip)))
-    setSearchParams(next)
-  }
-
-  function setPageSize(nextPageSize: string) {
-    if (options.pageSizeStorageKey) {
-      window.localStorage.setItem(options.pageSizeStorageKey, nextPageSize)
-    }
-    const next = new URLSearchParams(searchParams)
-    next.set('take', nextPageSize)
-    next.delete('skip')
-    setSearchParams(next)
-  }
-
-  function setSort(nextSortBy: string, nextSortDirection: string) {
-    const next = new URLSearchParams(searchParams)
-    next.set('sortBy', nextSortBy)
-    next.set('sortDirection', nextSortDirection)
-    next.delete('skip')
-    setSearchParams(next)
-  }
-
-  return {
-    pageSize,
-    query,
-    requestQuery,
-    setPageSize,
-    setSkip,
-    setSort,
-    skip,
-    sortBy,
-    sortDirection,
-    updateQuery,
-  }
-}
-
-export function useBookListPagination({
-  pageSize,
-  scrollTargetId,
-  setSkip,
-  skip,
-  total,
-}: {
-  pageSize: number
-  scrollTargetId?: string
-  setSkip: (nextSkip: number) => void
-  skip: number
-  total: number
-}) {
-  const [activePageGapId, setActivePageGapId] = useState<string | null>(null)
-  const canGoBack = skip > 0
-  const canGoForward = skip + pageSize < total
-  const totalPages = Math.max(1, Math.ceil(total / pageSize))
-  const currentPage = Math.min(totalPages, Math.floor(skip / pageSize) + 1)
-  const visiblePages = getVisiblePageNumbers(currentPage, totalPages)
-
-  function goToPage(page: number) {
-    const nextPage = Math.min(Math.max(1, page), totalPages)
-    setActivePageGapId(null)
-    scrollToResultsStart()
-    setSkip((nextPage - 1) * pageSize)
-  }
-
-  function scrollToResultsStart() {
-    if (!scrollTargetId) {
-      return
-    }
-
-    const target = document.getElementById(scrollTargetId)
-    if (!target) {
-      return
-    }
-
-    window.scrollTo({
-      top: Math.max(0, window.scrollY + target.getBoundingClientRect().top),
-      behavior: 'auto',
-    })
-  }
-
-  return {
-    activePageGapId,
-    canGoBack,
-    canGoForward,
-    currentPage,
-    setActivePageGapId,
-    totalPages,
-    visiblePages,
-    onGoToPage: goToPage,
-  }
-}
-
-export function useBookListScrollShortcuts() {
-  const [showBackToTop, setShowBackToTop] = useState(false)
-  const [showGoDown, setShowGoDown] = useState(false)
-
-  useEffect(() => {
-    function updateScrollShortcutVisibility() {
-      const distanceFromBottom =
-        document.documentElement.scrollHeight - (window.scrollY + window.innerHeight)
-      setShowBackToTop(window.scrollY > 480)
-      setShowGoDown(distanceFromBottom > 480)
-    }
-
-    updateScrollShortcutVisibility()
-    window.addEventListener('scroll', updateScrollShortcutVisibility, { passive: true })
-    window.addEventListener('resize', updateScrollShortcutVisibility)
-    return () => {
-      window.removeEventListener('scroll', updateScrollShortcutVisibility)
-      window.removeEventListener('resize', updateScrollShortcutVisibility)
-    }
-  }, [])
-
-  return {
-    showBackToTop,
-    showGoDown,
-    scrollBackToTop: () => window.scrollTo({ top: 0, behavior: 'smooth' }),
-    scrollToPageBottom: () =>
-      window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' }),
-  }
-}
 
 export function BookListFooter({
   activePageGapId,
@@ -354,20 +194,6 @@ export function ScrollShortcutButtons({
   )
 }
 
-export function getNextSortDirection(
-  nextSortBy: string,
-  currentSortBy: string,
-  currentSortDirection: string,
-) {
-  const defaultDirection =
-    nextSortBy === 'lastModified' || nextSortBy === 'created' ? 'desc' : 'asc'
-  return currentSortBy === nextSortBy
-    ? currentSortDirection === 'asc'
-      ? 'desc'
-      : 'asc'
-    : defaultDirection
-}
-
 function PageGapJump({
   gapId,
   isOpen,
@@ -383,48 +209,7 @@ function PageGapJump({
   onOpen: () => void
   onClose: () => void
 }) {
-  const [value, setValue] = useState('')
   const containerRef = useRef<HTMLDivElement | null>(null)
-
-  const parsed = Number(value)
-  const isValid = Number.isInteger(parsed) && parsed >= 1 && parsed <= totalPages
-
-  function submit() {
-    if (!isValid) {
-      return false
-    }
-
-    onGoToPage(parsed)
-    setValue('')
-    return true
-  }
-
-  useEffect(() => {
-    if (!isOpen) {
-      return
-    }
-
-    function handlePointerDown(event: PointerEvent) {
-      if (containerRef.current?.contains(event.target as Node)) {
-        return
-      }
-
-      if (submit()) {
-        return
-      }
-
-      onClose()
-    }
-
-    document.addEventListener('pointerdown', handlePointerDown)
-    return () => document.removeEventListener('pointerdown', handlePointerDown)
-  }, [isOpen, isValid, onClose, parsed, totalPages])
-
-  useEffect(() => {
-    if (!isOpen) {
-      setValue('')
-    }
-  }, [isOpen])
 
   return (
     <div className="relative" ref={containerRef}>
@@ -445,63 +230,95 @@ function PageGapJump({
         ...
       </button>
       {isOpen ? (
-        <div className="ui-popover absolute bottom-full left-1/2 mb-2 w-32 -translate-x-1/2 p-3">
-          <input
-            autoFocus
-            aria-invalid={!isValid && value.length > 0 ? 'true' : undefined}
-            data-gap-id={gapId}
-            aria-label="Page number"
-            className={`${inputClass} min-h-11 w-full text-center ${!isValid && value.length > 0 ? '!border-rose-500' : ''}`}
-            inputMode="numeric"
-            max={totalPages}
-            min={1}
-            placeholder={`1-${totalPages}`}
-            value={value}
-            onChange={(event) => setValue(event.target.value.replace(/[^\d]/g, ''))}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') {
-                submit()
-              }
-              if (event.key === 'Escape') {
-                onClose()
-              }
-            }}
-          />
-        </div>
+        <PageGapJumpPopover
+          containerRef={containerRef}
+          gapId={gapId}
+          totalPages={totalPages}
+          onClose={onClose}
+          onGoToPage={onGoToPage}
+        />
       ) : null}
     </div>
   )
 }
 
-function readBookListPageSize(searchParams: URLSearchParams, storageKey?: string) {
-  const parameter = searchParams.get('take')
-  const value = Number(
-    parameter ?? (storageKey ? window.localStorage.getItem(storageKey) : null) ?? 20,
+function PageGapJumpPopover({
+  containerRef,
+  gapId,
+  totalPages,
+  onGoToPage,
+  onClose,
+}: {
+  containerRef: RefObject<HTMLDivElement | null>
+  gapId: string
+  totalPages: number
+  onGoToPage: (page: number) => void
+  onClose: () => void
+}) {
+  const [value, setValue] = useState('')
+  const inputRef = useRef<HTMLInputElement | null>(null)
+
+  const parsed = Number(value)
+  const isValid = Number.isInteger(parsed) && parsed >= 1 && parsed <= totalPages
+
+  function submit() {
+    if (!isValid) {
+      return false
+    }
+
+    onGoToPage(parsed)
+    setValue('')
+    return true
+  }
+
+  const handleOutsidePointerDown = useEffectEvent((event: PointerEvent) => {
+    if (containerRef.current?.contains(event.target as Node)) {
+      return
+    }
+
+    if (submit()) {
+      return
+    }
+
+    onClose()
+  })
+
+  useEffect(() => {
+    inputRef.current?.focus()
+  }, [])
+
+  useEffect(() => {
+    function handlePointerDown(event: PointerEvent) {
+      handleOutsidePointerDown(event)
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown)
+    return () => document.removeEventListener('pointerdown', handlePointerDown)
+  }, [])
+
+  return (
+    <div className="ui-popover absolute bottom-full left-1/2 mb-2 w-32 -translate-x-1/2 p-3">
+      <input
+        ref={inputRef}
+        aria-invalid={!isValid && value.length > 0 ? 'true' : undefined}
+        data-gap-id={gapId}
+        aria-label="Page number"
+        className={`${inputClass} min-h-11 w-full text-center ${!isValid && value.length > 0 ? '!border-rose-500' : ''}`}
+        inputMode="numeric"
+        max={totalPages}
+        min={1}
+        placeholder={`1-${totalPages}`}
+        value={value}
+        onChange={(event) => setValue(event.target.value.replace(/[^\d]/g, ''))}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') {
+            submit()
+          }
+          if (event.key === 'Escape') {
+            onClose()
+          }
+        }}
+      />
+    </div>
   )
-  return Number.isInteger(value) && value >= 1 && value <= 1_000 ? value : 20
-}
-
-function getVisiblePageNumbers(currentPage: number, totalPages: number): (number | 'ellipsis')[] {
-  if (totalPages <= 7) {
-    return Array.from({ length: totalPages }, (_, index) => index + 1)
-  }
-
-  if (currentPage <= 4) {
-    return [1, 2, 3, 4, 5, 6, 'ellipsis', totalPages]
-  }
-
-  if (currentPage >= totalPages - 3) {
-    return [
-      1,
-      'ellipsis',
-      totalPages - 5,
-      totalPages - 4,
-      totalPages - 3,
-      totalPages - 2,
-      totalPages - 1,
-      totalPages,
-    ]
-  }
-
-  return [1, 'ellipsis', currentPage - 1, currentPage, currentPage + 1, 'ellipsis', totalPages]
 }

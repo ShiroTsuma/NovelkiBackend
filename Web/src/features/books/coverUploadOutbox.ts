@@ -116,10 +116,10 @@ async function getUpload(token: string) {
   const database = await openDatabase()
   try {
     const transaction = database.transaction(storeName, 'readonly')
-    const request = transaction.objectStore(storeName).get(token)
-    const result = await requestResult<PendingCoverUpload | undefined>(request)
+    const request: IDBRequest<unknown> = transaction.objectStore(storeName).get(token)
+    const result = await requestResult(request)
     await complete(transaction)
-    return result
+    return isPendingCoverUpload(result) ? result : undefined
   } finally {
     database.close()
   }
@@ -129,10 +129,10 @@ async function readAllUploads() {
   const database = await openDatabase()
   try {
     const transaction = database.transaction(storeName, 'readonly')
-    const request = transaction.objectStore(storeName).getAll()
-    const result = await requestResult<PendingCoverUpload[]>(request)
+    const request: IDBRequest<unknown[]> = transaction.objectStore(storeName).getAll()
+    const result = await requestResult(request)
     await complete(transaction)
-    return result
+    return result.filter(isPendingCoverUpload)
   } finally {
     database.close()
   }
@@ -147,6 +147,19 @@ async function deleteUpload(token: string) {
   } finally {
     database.close()
   }
+}
+
+function isPendingCoverUpload(value: unknown): value is PendingCoverUpload {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'token' in value &&
+    typeof value.token === 'string' &&
+    'ownerId' in value &&
+    typeof value.ownerId === 'string' &&
+    'file' in value &&
+    value.file instanceof Blob
+  )
 }
 
 function requestResult<T>(request: IDBRequest<T>) {

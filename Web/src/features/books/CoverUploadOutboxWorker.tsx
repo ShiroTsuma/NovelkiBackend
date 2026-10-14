@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { getStoredSessionUserId } from '@/api/http'
-import { useAuth } from '@/features/auth/AuthProvider'
+import { useAuth } from '@/features/auth/useAuth'
 import {
   getPendingCoverUploads,
   isPendingCoverUploadNotCreated,
@@ -24,8 +24,10 @@ export function CoverUploadOutbox() {
     }
 
     let active = true
+    // Read through a function so the check after each await sees cleanup from the effect.
+    const isActive = () => active
     async function drain() {
-      if (!active || drainingRef.current) {
+      if (!isActive() || drainingRef.current) {
         rerunRequestedRef.current = true
         return
       }
@@ -38,7 +40,7 @@ export function CoverUploadOutbox() {
         }
 
         for (const upload of await getPendingCoverUploads(ownerId)) {
-          if (!active) {
+          if (!isActive()) {
             return
           }
 

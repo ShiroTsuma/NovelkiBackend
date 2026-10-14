@@ -1,10 +1,17 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { api } from '@/api/client'
-import { bookFilesApi, formatFileSize, type FileJob, type ImportSelection } from '@/api/bookFiles'
-import { buttonVariants, controlClass } from '@/components/app/DesignSystem'
+import {
+  bookFilesApi,
+  formatFileSize,
+  type FileJob,
+  type ImportEntry,
+  type ImportSelection,
+} from '@/api/bookFiles'
+import { buttonVariants, controlClass } from '@/components/app/designTokens'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
-import { FileJobProgress, FileModal, fileError, isJobWorking, useFileJob } from './FileDialogs'
+import { FileJobProgress, FileModal } from './FileDialogs'
+import { fileError, isJobWorking, useFileJob } from './fileJobs'
 import { FileContents } from './FileContents'
 
 export function FileImportDialog({
@@ -13,8 +20,8 @@ export function FileImportDialog({
   onClose,
   onImported,
 }: {
-  bookId?: string
-  initialJob?: FileJob
+  bookId?: string | undefined
+  initialJob?: FileJob | undefined
   onClose: () => void
   onImported: () => void
 }) {
@@ -49,28 +56,24 @@ export function FileImportDialog({
     enabled: !bookId && job?.status === 'Ready',
     retry: false,
   })
-  useEffect(() => () => abort.current?.abort(), [])
-  useEffect(() => {
-    if (targets.data)
+  const [knownBooksSource, setKnownBooksSource] = useState(targets.data)
+  if (knownBooksSource !== targets.data) {
+    setKnownBooksSource(targets.data)
+    const loaded = targets.data
+    if (loaded)
       setKnownBooks((current) => ({
         ...current,
         ...Object.fromEntries(
-          targets.data.data.map((b) => [b.id, `${b.primaryTitle} · ${b.contentType}`]),
+          loaded.data.map((b) => [b.id, `${b.primaryTitle} · ${b.contentType}`]),
         ),
       }))
-  }, [targets.data])
+  }
+  useEffect(() => () => abort.current?.abort(), [])
   useEffect(() => {
     if (job?.status !== 'Ready' || job.entries.length === 0 || previewId.current === job.id) return
     previewId.current = job.id
     setSelected(new Set(job.entries.filter((e) => !e.error && !e.isDuplicate).map((e) => e.id)))
-    setDrafts(
-      Object.fromEntries(
-        job.entries.map((e) => [
-          e.id,
-          { entryId: e.id, bookId: e.bookId ?? '', title: e.title, sortOrder: e.sortOrder },
-        ]),
-      ),
-    )
+    setDrafts(Object.fromEntries(job.entries.map((e) => [e.id, initialDraft(e)])))
   }, [job])
   useEffect(() => {
     if (
@@ -90,7 +93,7 @@ export function FileImportDialog({
     setError('')
     const max = bookId ? limits.data?.maxUploadBytes : limits.data?.maxLibraryArchiveBytes
     if (
-      (!bookId && (files.length !== 1 || !files[0].name.toLowerCase().endsWith('.zip'))) ||
+      (!bookId && (files.length !== 1 || !files[0]?.name.toLowerCase().endsWith('.zip'))) ||
       files.some((f) => !/\.(epub|zip)$/i.test(f.name))
     ) {
       setError(
@@ -147,7 +150,10 @@ export function FileImportDialog({
     try {
       const next = await bookFilesApi.confirm(
         job.id,
-        Array.from(selected).map((id) => drafts[id]),
+        Array.from(selected).flatMap((id) => {
+          const draft = drafts[id]
+          return draft ? [draft] : []
+        }),
       )
       client.setQueryData(['epub-job', job.id], next)
     } catch (e) {
@@ -156,17 +162,25 @@ export function FileImportDialog({
       setBusy(false)
     }
   }
+  function updateDraft(entry: ImportEntry, patch: Partial<ImportSelection>) {
+    setDrafts((current) => ({
+      ...current,
+      [entry.id]: { ...(current[entry.id] ?? initialDraft(entry)), ...patch },
+    }))
+  }
   const selectionInvalid =
     selected.size === 0 ||
-    Array.from(selected).some(
-      (id) =>
-        !drafts[id]?.bookId ||
-        !drafts[id]?.title.trim() ||
-        drafts[id].title.trim().length > 250 ||
-        !Number.isInteger(drafts[id].sortOrder) ||
-        drafts[id].sortOrder < 0 ||
-        drafts[id].sortOrder > 1_000_000,
-    )
+    Array.from(selected).some((id) => {
+      const draft = drafts[id]
+      return (
+        !draft?.bookId ||
+        !draft.title.trim() ||
+        draft.title.trim().length > 250 ||
+        !Number.isInteger(draft.sortOrder) ||
+        draft.sortOrder < 0 ||
+        draft.sortOrder > 1_000_000
+      )
+    })
   const resume = resumable.data?.find(
     (j) =>
       j.kind === (bookId ? 'BookImport' : 'LibraryImport') &&
@@ -336,106 +350,92 @@ export function FileImportDialog({
             </label>
           )}
           <div className="file-import-list">
-            {job.entries.slice(0, visible).map((entry) => (
-              <div className="file-import-row" key={entry.id}>
-                <label className="file-check">
-                  <input
-                    type="checkbox"
-                    disabled={Boolean(entry.error)}
-                    checked={selected.has(entry.id)}
-                    aria-label={`Import ${entry.originalFileName}`}
-                    onChange={(e) =>
-                      setSelected((current) => {
-                        const next = new Set(current)
-                        e.target.checked ? next.add(entry.id) : next.delete(entry.id)
-                        return next
-                      })
-                    }
-                  />
-                  <span className="min-w-0 break-words">{entry.originalFileName}</span>
-                </label>
-                <div className="file-hint">
-                  {formatFileSize(entry.sizeBytes)}
-                  {entry.isDuplicate
-                    ? ' · Identical EPUB already present; it will be skipped for that book.'
-                    : ''}
-                </div>
-                <FileContents file={entry} />
-                {entry.error ? (
-                  <p className="file-error">{entry.error}</p>
-                ) : (
-                  <>
-                    <label className="file-hint">
-                      Title
-                      <input
-                        className={controlClass}
-                        maxLength={250}
-                        value={drafts[entry.id]?.title ?? entry.title}
-                        onChange={(e) =>
-                          setDrafts((current) => ({
-                            ...current,
-                            [entry.id]: { ...current[entry.id], title: e.target.value },
-                          }))
-                        }
-                      />
-                    </label>
-                    <div className="file-import-fields">
+            {job.entries.slice(0, visible).map((entry) => {
+              const targetBookId = selectedTargetBookId(drafts[entry.id], entry.bookId)
+              return (
+                <div className="file-import-row" key={entry.id}>
+                  <label className="file-check">
+                    <input
+                      type="checkbox"
+                      disabled={Boolean(entry.error)}
+                      checked={selected.has(entry.id)}
+                      aria-label={`Import ${entry.originalFileName}`}
+                      onChange={(e) =>
+                        setSelected((current) => {
+                          const next = new Set(current)
+                          if (e.target.checked) next.add(entry.id)
+                          else next.delete(entry.id)
+                          return next
+                        })
+                      }
+                    />
+                    <span className="min-w-0 break-words">{entry.originalFileName}</span>
+                  </label>
+                  <div className="file-hint">
+                    {formatFileSize(entry.sizeBytes)}
+                    {entry.isDuplicate
+                      ? ' · Identical EPUB already present; it will be skipped for that book.'
+                      : ''}
+                  </div>
+                  <FileContents file={entry} />
+                  {entry.error ? (
+                    <p className="file-error">{entry.error}</p>
+                  ) : (
+                    <>
                       <label className="file-hint">
-                        Order
+                        Title
                         <input
                           className={controlClass}
-                          type="number"
-                          min={0}
-                          max={1000000}
-                          value={drafts[entry.id]?.sortOrder ?? entry.sortOrder}
-                          onChange={(e) =>
-                            setDrafts((current) => ({
-                              ...current,
-                              [entry.id]: {
-                                ...current[entry.id],
-                                sortOrder: Math.max(0, Number(e.target.value)),
-                              },
-                            }))
-                          }
+                          maxLength={250}
+                          value={drafts[entry.id]?.title ?? entry.title}
+                          onChange={(e) => updateDraft(entry, { title: e.target.value })}
                         />
                       </label>
-                      {!bookId && (
+                      <div className="file-import-fields">
                         <label className="file-hint">
-                          Target book
-                          <select
+                          Order
+                          <input
                             className={controlClass}
-                            aria-label={`Target book for ${entry.originalFileName}`}
-                            value={drafts[entry.id]?.bookId ?? entry.bookId ?? ''}
+                            type="number"
+                            min={0}
+                            max={1000000}
+                            value={drafts[entry.id]?.sortOrder ?? entry.sortOrder}
                             onChange={(e) =>
-                              setDrafts((current) => ({
-                                ...current,
-                                [entry.id]: { ...current[entry.id], bookId: e.target.value },
-                              }))
+                              updateDraft(entry, { sortOrder: Math.max(0, Number(e.target.value)) })
                             }
-                          >
-                            <option value="">Choose an existing book</option>
-                            {(drafts[entry.id]?.bookId || entry.bookId) &&
-                              !targets.data?.data.some(
-                                (b) => b.id === (drafts[entry.id]?.bookId || entry.bookId),
-                              ) && (
-                                <option value={drafts[entry.id]?.bookId || entry.bookId || ''}>
-                                  {knownBooks[drafts[entry.id]?.bookId || entry.bookId || ''] ??
-                                    `${entry.bookTitle} · ${entry.contentType}`}
-                                </option>
-                              )}
-                            {targets.data?.data.map((book) => (
-                              <option key={book.id} value={book.id}>
-                                {book.primaryTitle} · {book.contentType}
-                              </option>
-                            ))}
-                          </select>
+                          />
                         </label>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
-            ))}
+                        {!bookId && (
+                          <label className="file-hint">
+                            Target book
+                            <select
+                              className={controlClass}
+                              aria-label={`Target book for ${entry.originalFileName}`}
+                              value={drafts[entry.id]?.bookId ?? entry.bookId ?? ''}
+                              onChange={(e) => updateDraft(entry, { bookId: e.target.value })}
+                            >
+                              <option value="">Choose an existing book</option>
+                              {targetBookId &&
+                                !targets.data?.data.some((b) => b.id === targetBookId) && (
+                                  <option value={targetBookId}>
+                                    {knownBooks[targetBookId] ??
+                                      `${entry.bookTitle} · ${entry.contentType}`}
+                                  </option>
+                                )}
+                              {targets.data?.data.map((book) => (
+                                <option key={book.id} value={book.id}>
+                                  {book.primaryTitle} · {book.contentType}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )
+            })}
           </div>
           {job.entries.length > visible && (
             <button className={buttonVariants.secondary} onClick={() => setVisible((v) => v + 50)}>
@@ -476,4 +476,19 @@ function maxLabel(
   return bookId
     ? `${formatFileSize(limits.maxFileBytes)} per EPUB · ${formatFileSize(limits.maxUploadBytes)} per upload.`
     : `${formatFileSize(limits.maxLibraryArchiveBytes)} per exported archive.`
+}
+
+function initialDraft(entry: ImportEntry): ImportSelection {
+  return {
+    entryId: entry.id,
+    bookId: entry.bookId ?? '',
+    title: entry.title,
+    sortOrder: entry.sortOrder,
+  }
+}
+
+// An empty draft value means "not chosen yet", so fall back to the book suggested by the server.
+function selectedTargetBookId(draft: ImportSelection | undefined, entryBookId: string | null) {
+  const draftBookId = draft?.bookId
+  return draftBookId === undefined || draftBookId === '' ? entryBookId : draftBookId
 }

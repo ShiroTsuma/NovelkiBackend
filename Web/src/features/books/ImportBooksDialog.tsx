@@ -22,14 +22,12 @@ import type {
   BookImportRowUpdateRequest,
   BookImportSessionDto,
 } from '@/api/types'
-import {
-  buttonVariants,
-  DialogPanel,
-  Surface,
-  useBodyScrollLock,
-} from '@/components/app/DesignSystem'
-import { buttonClass, inputClass, secondaryButtonClass } from '@/components/app/FormField'
+import { buttonVariants } from '@/components/app/designTokens'
+import { DialogPanel, Surface } from '@/components/app/DesignSystem'
+import { useBodyScrollLock } from '@/components/app/useBodyScrollLock'
+import { buttonClass, inputClass, secondaryButtonClass } from '@/components/app/designTokens'
 import { formatProgress } from './bookProgress'
+import { getImportSessionStats } from './bookImportStats'
 
 type ImportBooksDialogProps = {
   mode?: 'csv' | 'full'
@@ -40,20 +38,6 @@ type ImportBooksDialogProps = {
 
 function ImportRowsScroller(props: React.ComponentProps<'div'>) {
   return <div {...props} className="import-rows-scroll" />
-}
-
-export function getImportSessionStats(session: BookImportSessionDto | null) {
-  const invalidRows = session?.rows.filter((row) => !row.isValid) ?? []
-  const totalRows = session?.totalRows ?? 0
-  const validRows = session?.validRows ?? 0
-
-  return {
-    invalidRows,
-    invalidRowsCount: session?.invalidRows ?? 0,
-    progressPercent: totalRows === 0 ? 0 : (validRows / totalRows) * 100,
-    totalRows,
-    validRows,
-  }
 }
 
 export function ImportBooksDialog({
@@ -68,6 +52,7 @@ export function ImportBooksDialog({
   useBodyScrollLock(open)
   const [dropzoneActive, setDropzoneActive] = useState(false)
   const [finalizeResult, setFinalizeResult] = useState<BookImportFinalizeResult | null>(null)
+  const [trackedOpen, setTrackedOpen] = useState(open)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const importStats = useMemo(() => getImportSessionStats(session), [session])
   const invalidRows = importStats.invalidRows
@@ -142,7 +127,8 @@ export function ImportBooksDialog({
     },
   })
 
-  useEffect(() => {
+  if (trackedOpen !== open) {
+    setTrackedOpen(open)
     if (!open) {
       setSession(null)
       setExpandedRowId(null)
@@ -150,20 +136,11 @@ export function ImportBooksDialog({
       setDropzoneActive(false)
       setFinalizeResult(null)
     }
-  }, [open])
+  }
 
-  useEffect(() => {
-    if (!invalidRows.length) {
-      setExpandedRowId(null)
-      return
-    }
-
-    if (expandedRowId && invalidRows.some((row) => row.rowId === expandedRowId)) {
-      return
-    }
-
+  if (expandedRowId !== null && !invalidRows.some((row) => row.rowId === expandedRowId)) {
     setExpandedRowId(null)
-  }, [expandedRowId, invalidRows])
+  }
 
   if (!open) {
     return null
@@ -196,7 +173,7 @@ export function ImportBooksDialog({
     event.preventDefault()
     setDropzoneActive(false)
 
-    const file = event.dataTransfer.files?.[0]
+    const file = event.dataTransfer.files[0]
     if (!file) {
       return
     }
@@ -240,12 +217,13 @@ export function ImportBooksDialog({
 
   return (
     <div
-      aria-modal="true"
       className="fixed inset-0 z-50 flex items-start justify-center overflow-hidden bg-slate-950/80 p-1 sm:p-2"
-      role="dialog"
+      role="presentation"
       onClick={handleDismiss}
     >
       <DialogPanel
+        aria-modal="true"
+        role="dialog"
         data-testid="import-dialog-panel"
         className={`${session && !finalizeResult ? 'h-[calc(100vh-0.5rem)] sm:h-[calc(100vh-1rem)]' : 'max-h-[calc(100vh-0.5rem)] sm:max-h-[calc(100vh-1rem)]'} flex max-w-6xl flex-col gap-2 overflow-hidden p-3 sm:p-4`}
         onClick={(event) => event.stopPropagation()}
@@ -567,12 +545,16 @@ function CancelImportConfirmDialog({
 
   return (
     <div
-      aria-modal="true"
       className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/80 p-4"
-      role="dialog"
+      role="presentation"
       onClick={pending ? undefined : onCancel}
     >
-      <DialogPanel className="grid max-w-md gap-5 p-6" onClick={(event) => event.stopPropagation()}>
+      <DialogPanel
+        aria-modal="true"
+        className="grid max-w-md gap-5 p-6"
+        role="dialog"
+        onClick={(event) => event.stopPropagation()}
+      >
         <div className="grid gap-2">
           <h2 className="text-lg font-semibold text-slate-50">Cancel import?</h2>
           <p className="text-sm leading-6 text-slate-300">
@@ -684,39 +666,13 @@ function ExpandedImportRowEditor({
   onSessionChange: (session: BookImportSessionDto) => void
 }) {
   const formEndRef = useRef<HTMLDivElement | null>(null)
-  const [draft, setDraft] = useState<BookImportRowUpdateRequest>({
-    primaryTitle: row.primaryTitle ?? '',
-    authorName: row.authorName ?? '',
-    contentType: row.contentType ?? '',
-    status: row.status ?? '',
-    tags: row.tags ?? '',
-    totalChapters: row.totalChapters ?? '',
-    currentChapterNumber: row.currentChapterNumber ?? '',
-    currentChapterLabel: row.currentChapterLabel ?? '',
-    rating: row.rating ?? '',
-    priority: row.priority ?? '',
-    description: row.description ?? '',
-    notes: row.notes ?? '',
-    rawImportedLine: row.rawImportedLine ?? '',
-  })
+  const [draft, setDraft] = useState<BookImportRowUpdateRequest>(() => createImportRowDraft(row))
+  const [draftRow, setDraftRow] = useState(row)
 
-  useEffect(() => {
-    setDraft({
-      primaryTitle: row.primaryTitle ?? '',
-      authorName: row.authorName ?? '',
-      contentType: row.contentType ?? '',
-      status: row.status ?? '',
-      tags: row.tags ?? '',
-      totalChapters: row.totalChapters ?? '',
-      currentChapterNumber: row.currentChapterNumber ?? '',
-      currentChapterLabel: row.currentChapterLabel ?? '',
-      rating: row.rating ?? '',
-      priority: row.priority ?? '',
-      description: row.description ?? '',
-      notes: row.notes ?? '',
-      rawImportedLine: row.rawImportedLine ?? '',
-    })
-  }, [row])
+  if (draftRow !== row) {
+    setDraftRow(row)
+    setDraft(createImportRowDraft(row))
+  }
 
   useEffect(() => {
     let frame = 0
@@ -756,12 +712,12 @@ function ExpandedImportRowEditor({
 
   const deleteMutation = useDeleteImportRowMutation(sessionId, row, onSessionChange)
 
-  function update<K extends keyof BookImportRowUpdateRequest>(key: K, value: string) {
+  function update(key: keyof BookImportRowUpdateRequest, value: string) {
     setDraft((current) => ({ ...current, [key]: value }))
   }
 
   function fieldError(field: keyof BookImportRowUpdateRequest) {
-    return row.fieldErrors?.[field] ?? []
+    return row.fieldErrors[field] ?? []
   }
 
   return (
@@ -922,10 +878,10 @@ function ImportRowShell({
           </button>
           <div
             className="max-w-full text-sm text-slate-200"
-            title={row.primaryTitle?.trim() || 'Untitled row'}
+            title={(row.primaryTitle ?? '').trim() || 'Untitled row'}
           >
             <span className="block max-w-full truncate md:line-clamp-2 md:whitespace-normal">
-              {row.primaryTitle?.trim() || 'Untitled row'}
+              {(row.primaryTitle ?? '').trim() || 'Untitled row'}
             </span>
           </div>
         </div>
@@ -1157,4 +1113,22 @@ function LabeledTextarea({
       />
     </label>
   )
+}
+
+function createImportRowDraft(row: BookImportRowDto): BookImportRowUpdateRequest {
+  return {
+    primaryTitle: row.primaryTitle ?? '',
+    authorName: row.authorName ?? '',
+    contentType: row.contentType ?? '',
+    status: row.status ?? '',
+    tags: row.tags ?? '',
+    totalChapters: row.totalChapters ?? '',
+    currentChapterNumber: row.currentChapterNumber ?? '',
+    currentChapterLabel: row.currentChapterLabel ?? '',
+    rating: row.rating ?? '',
+    priority: row.priority ?? '',
+    description: row.description ?? '',
+    notes: row.notes ?? '',
+    rawImportedLine: row.rawImportedLine ?? '',
+  }
 }

@@ -5,13 +5,10 @@ import { toast } from 'sonner'
 import { api } from '@/api/client'
 import { getStoredSessionUserId, HttpError } from '@/api/http'
 import type { AdminUserDto } from '@/api/types'
-import {
-  Badge,
-  buttonVariants,
-  DialogPanel,
-  Surface,
-  useBodyScrollLock,
-} from '@/components/app/DesignSystem'
+import { buttonVariants } from '@/components/app/designTokens'
+import { Badge, DialogPanel, Surface } from '@/components/app/DesignSystem'
+import { useBodyScrollLock } from '@/components/app/useBodyScrollLock'
+import { firstFilled } from './adminText'
 
 export function AdminAccountsManager() {
   const [search, setSearch] = useState('')
@@ -65,8 +62,8 @@ export function AdminAccountsManager() {
                   <UserRound className="h-4 w-4" />
                 </span>
                 <span className="manage-item__body">
-                  <strong>{user.username || 'Unnamed user'}</strong>
-                  <small>{user.email || user.id}</small>
+                  <strong>{firstFilled(user.username) ?? 'Unnamed user'}</strong>
+                  <small>{firstFilled(user.email) ?? user.id}</small>
                 </span>
                 <Badge>{user.booksCount} books</Badge>
                 <Badge>{user.tagsCount} tags</Badge>
@@ -74,7 +71,7 @@ export function AdminAccountsManager() {
                   <Badge tone="accent">Current admin</Badge>
                 ) : (
                   <button
-                    aria-label={`Delete account ${user.username || user.email || user.id}`}
+                    aria-label={`Delete account ${firstFilled(user.username, user.email) ?? user.id}`}
                     className={buttonVariants.destructive}
                     type="button"
                     onClick={() => setSelected(user)}
@@ -105,10 +102,10 @@ function DeleteAccountDialog({
   useBodyScrollLock(user !== null)
   if (!user) return null
 
-  async function remove() {
+  async function remove(target: AdminUserDto) {
     setDeleting(true)
     try {
-      const result = await api.deleteAdminUser(user!.id)
+      const result = await api.deleteAdminUser(target.id)
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin-users'] }),
         queryClient.invalidateQueries({ queryKey: ['adminBooks'] }),
@@ -131,21 +128,18 @@ function DeleteAccountDialog({
   }
 
   return (
-    <div
-      aria-labelledby={titleId}
-      aria-modal="true"
-      className="manage-dialog"
-      role="dialog"
-      onMouseDown={onClose}
-    >
+    <div className="manage-dialog" role="presentation" onMouseDown={onClose}>
       <DialogPanel
+        aria-labelledby={titleId}
+        aria-modal="true"
         className="manage-dialog__panel"
+        role="dialog"
         onMouseDown={(event) => event.stopPropagation()}
       >
         <div className="manage-dialog__header">
           <div>
             <div className="ui-eyebrow">Destructive action</div>
-            <h2 id={titleId}>Delete {user.username || user.email || 'account'}?</h2>
+            <h2 id={titleId}>Delete {firstFilled(user.username, user.email) ?? 'account'}?</h2>
           </div>
           <button
             aria-label="Close dialog"
@@ -176,7 +170,7 @@ function DeleteAccountDialog({
               className={buttonVariants.destructive}
               disabled={deleting}
               type="button"
-              onClick={remove}
+              onClick={() => void remove(user)}
             >
               <Trash2 className="h-4 w-4" />
               {deleting ? 'Deleting…' : 'Delete account permanently'}

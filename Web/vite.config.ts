@@ -7,7 +7,12 @@ import path from 'node:path'
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const apiProxyTarget = env.VITE_API_PROXY_TARGET || 'https://localhost:7121'
+  const configuredProxyTarget = env.VITE_API_PROXY_TARGET
+  // An empty value in .env means "not configured", so it falls back to the local API as well.
+  const apiProxyTarget =
+    configuredProxyTarget === undefined || configuredProxyTarget === ''
+      ? 'https://localhost:7121'
+      : configuredProxyTarget
 
   return {
     plugins: [react(), tailwindcss()],

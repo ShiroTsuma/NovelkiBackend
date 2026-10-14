@@ -306,10 +306,10 @@ export async function installLayoutApiMocks(page: Page) {
           source: 'NovelUpdates',
           primaryTitle: 'A Layout-Test Novel With a Deliberately Long Resolved Title',
           authorName: 'Resolved Author',
-          contentType: { id: dictionaries.type[0].id, name: dictionaries.type[0].name },
+          contentType: { id: dictionaries.type[0]!.id, name: dictionaries.type[0]!.name },
           alternativeTitles: ['Alternative One', 'Alternative Two'],
           genres: [
-            { id: dictionaries.genre[0].id, name: dictionaries.genre[0].name },
+            { id: dictionaries.genre[0]!.id, name: dictionaries.genre[0]!.name },
             { id: null, name: 'Unmapped Genre With a Long Name' },
           ],
           tags: ['Chinese', 'Slow Romance', 'Long Form Adventure'],
@@ -351,7 +351,7 @@ export async function installLayoutApiMocks(page: Page) {
           data: [
             {
               id: 'snapshot-layout',
-              sourceBookId: layoutBooks[0].id,
+              sourceBookId: layoutBooks[0]!.id,
               primaryTitle: 'Lord of Mysteries',
               description: 'A shared mystery with enough metadata to exercise the card tooltips.',
               alternativeTitles: ['LOTM'],

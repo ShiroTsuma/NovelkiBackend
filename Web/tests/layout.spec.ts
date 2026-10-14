@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 import { installLayoutApiMocks, layoutBooks, seedAuthenticatedSession } from './fixtures/api.js'
 import {
   backgroundColor,
@@ -105,7 +105,7 @@ test('books table layout has no horizontal overflow and keeps controls in viewpo
   await expect(page.getByRole('table')).toBeVisible()
   const initialPopupPositions = await page.evaluate(async () => {
     const button = Array.from(document.querySelectorAll('button')).find(
-      (element) => element.textContent?.trim() === 'Columns',
+      (element) => element.textContent.trim() === 'Columns',
     )
     if (!(button instanceof HTMLButtonElement)) {
       throw new Error('Expected the Columns button after refresh.')
@@ -175,7 +175,7 @@ test('quiet structure reference screens stay visually stable', async ({ page }, 
   })
 
   await page.goto('/books/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
-  await expect(page.getByRole('heading', { name: layoutBooks[0].primaryTitle })).toBeVisible()
+  await expect(page.getByRole('heading', { name: layoutBooks[0]!.primaryTitle })).toBeVisible()
   await waitForVisualReady(page)
   await expect(page).toHaveScreenshot(`nb-054-v3-book-details-${testInfo.project.name}.png`, {
     animations: 'disabled',
@@ -199,7 +199,7 @@ test('quiet structure reference screens stay visually stable', async ({ page }, 
   })
 })
 
-async function waitForVisualReady(page: import('@playwright/test').Page) {
+async function waitForVisualReady(page: Page) {
   await page.evaluate(async () => {
     await document.fonts.ready
     await new Promise<void>((resolve) =>
@@ -250,7 +250,7 @@ test('cards layout constrains long titles and shows active toggle styles', async
       }
     }),
   )
-  const expectedWidth = cardBoxes[0].cardWidth
+  const expectedWidth = cardBoxes[0]!.cardWidth
   cardBoxes.forEach(({ cardRight, cardWidth, coverWidth }) => {
     expect(Math.abs(cardWidth - expectedWidth)).toBeLessThanOrEqual(1)
     expect(Math.abs(coverWidth - cardWidth)).toBeLessThanOrEqual(2)
@@ -642,15 +642,15 @@ test('csv import invalid rows panel keeps usable height in the browser layout', 
 })
 
 test.describe('Xiaomi Pad 6 tablet layout', () => {
-  test.beforeEach(({}, testInfo) => {
-    test.skip(!isTabletProject(testInfo.project.name), 'Xiaomi Pad 6 project only')
+  test.beforeEach(() => {
+    test.skip(!isTabletProject(test.info().project.name), 'Xiaomi Pad 6 project only')
   })
 
   test('critical routes fit portrait and landscape viewports', async ({ page }) => {
     const routes = [
       { path: '/books', heading: 'Books' },
       { path: '/books/new', heading: 'Add book' },
-      { path: `/books/${layoutBooks[0].id}`, heading: layoutBooks[0].primaryTitle },
+      { path: `/books/${layoutBooks[0]!.id}`, heading: layoutBooks[0]!.primaryTitle },
       { path: '/analytics', heading: 'Analytics' },
       { path: '/manage', heading: 'Manage' },
       { path: '/discover', heading: 'Discover books' },
@@ -683,7 +683,7 @@ test.describe('Xiaomi Pad 6 tablet layout', () => {
       await scrollSurface.evaluate((element) => {
         element.scrollLeft = element.scrollWidth
       })
-      await expectInViewport(page.getByTestId(`book-table-actions-cell-${layoutBooks[0].id}`))
+      await expectInViewport(page.getByTestId(`book-table-actions-cell-${layoutBooks[0]!.id}`))
     }
   })
 
@@ -806,8 +806,8 @@ test.describe('Xiaomi Pad 6 tablet layout', () => {
     await page.getByLabel('Primary title').blur()
     await capture('book-form')
 
-    await page.goto(`/books/${layoutBooks[0].id}`)
-    await expect(page.getByRole('heading', { name: layoutBooks[0].primaryTitle })).toBeVisible()
+    await page.goto(`/books/${layoutBooks[0]!.id}`)
+    await expect(page.getByRole('heading', { name: layoutBooks[0]!.primaryTitle })).toBeVisible()
     await capture('book-details')
 
     await page.goto('/analytics')

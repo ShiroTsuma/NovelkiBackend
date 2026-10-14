@@ -1,110 +1,46 @@
 import { X, ZoomIn } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { BookCoverSummaryDto } from '@/api/types'
-import { buttonVariants, useBodyScrollLock } from '@/components/app/DesignSystem'
-import { loadCoverBlobUrl } from './coverCache'
+import { buttonVariants } from '@/components/app/designTokens'
+import { useBodyScrollLock } from '@/components/app/useBodyScrollLock'
+import { useResolvedCoverImage } from './useResolvedCoverImage'
 
 type BookCoverArtworkProps = {
   title: string
-  cover?: BookCoverSummaryDto | null
-  imageUrl?: string | null
-  preferredVariant?: 'full' | 'thumbnail'
-  loading?: 'eager' | 'lazy'
-  interactive?: boolean
-  onClick?: () => void
-  onRemove?: () => void
-  className?: string
-  emptyLabel?: string
-  hint?: string
-  removeLabel?: string
-  emptyActionLabel?: string
-  hoverFooter?: string
+  cover?: BookCoverSummaryDto | null | undefined
+  imageUrl?: string | null | undefined
+  preferredVariant?: 'full' | 'thumbnail' | undefined
+  loading?: 'eager' | 'lazy' | undefined
+  interactive?: boolean | undefined
+  onClick?: (() => void) | undefined
+  onRemove?: (() => void) | undefined
+  className?: string | undefined
+  emptyLabel?: string | undefined
+  hint?: string | undefined
+  removeLabel?: string | undefined
+  emptyActionLabel?: string | undefined
+  hoverFooter?: string | undefined
 }
 
 type CoverLightboxProps = {
   open: boolean
   title: string
   imageUrl: string | null
-  emptyLabel?: string
-  footer?: string
+  emptyLabel?: string | undefined
+  footer?: string | undefined
   onClose: () => void
 }
 
-const COVER_CACHE_TTL_MS = 60_000
 const COVER_LAZY_LOAD_MARGIN = '600px 0px'
 
-type CoverCacheEntry = {
-  blobUrl: string | null
-  promise: Promise<string | null> | null
-  refs: number
-  cleanupTimer: ReturnType<typeof setTimeout> | null
-}
-
-const coverImageCache = new Map<string, CoverCacheEntry>()
-
-export function useResolvedCoverImage(
-  cover?: BookCoverSummaryDto | null,
-  variant: 'full' | 'thumbnail' = 'full',
-  enabled = true,
-) {
-  const [blobUrl, setBlobUrl] = useState<string | null>(null)
-
-  useEffect(() => {
-    let active = true
-    const cacheKey = getCoverCacheKey(cover, variant)
-
-    if (!enabled || !cacheKey) {
-      setBlobUrl(null)
-      return
-    }
-
-    const entry = acquireCoverCacheEntry(cacheKey)
-    setBlobUrl(entry.blobUrl)
-
-    if (!entry.promise && !entry.blobUrl) {
-      const targetUrl =
-        variant === 'thumbnail' ? (cover!.thumbnailImageUrl ?? cover!.imageUrl!) : cover!.imageUrl!
-      entry.promise = loadCoverBlobUrl(targetUrl)
-        .then((nextBlobUrl) => {
-          entry.blobUrl = nextBlobUrl
-          return nextBlobUrl
-        })
-        .finally(() => {
-          entry.promise = null
-        })
-    }
-
-    entry.promise?.then((nextBlobUrl) => {
-      if (active) {
-        setBlobUrl(nextBlobUrl)
-      }
-    })
-
-    return () => {
-      active = false
-      releaseCoverCacheEntry(cacheKey)
-    }
-  }, [cover?.imageUrl, cover?.thumbnailImageUrl, cover?.lastAttemptAt, enabled, variant])
-
-  return blobUrl
-}
-
 function useCoverLoadPermission(lazy: boolean) {
-  const targetRef = useRef<HTMLElement | null>(null)
-  const [permitted, setPermitted] = useState(!lazy)
-  const setTarget = useCallback((node: HTMLElement | null) => {
-    targetRef.current = node
-  }, [])
+  const [target, setTarget] = useState<HTMLElement | null>(null)
+  const [intersected, setIntersected] = useState(false)
+  const observerUnavailable = typeof IntersectionObserver === 'undefined'
+  const permitted = !lazy || intersected || observerUnavailable
 
   useEffect(() => {
-    if (!lazy) {
-      setPermitted(true)
-      return
-    }
-
-    const target = targetRef.current
-    if (!target || typeof IntersectionObserver === 'undefined') {
-      setPermitted(true)
+    if (permitted || !target) {
       return
     }
 
@@ -114,7 +50,7 @@ function useCoverLoadPermission(lazy: boolean) {
           return
         }
 
-        setPermitted(true)
+        setIntersected(true)
         observer.disconnect()
       },
       { rootMargin: COVER_LAZY_LOAD_MARGIN },
@@ -122,67 +58,9 @@ function useCoverLoadPermission(lazy: boolean) {
     observer.observe(target)
 
     return () => observer.disconnect()
-  }, [lazy])
+  }, [permitted, target])
 
   return { permitted, setTarget }
-}
-
-function getCoverCacheKey(
-  cover: BookCoverSummaryDto | null | undefined,
-  variant: 'full' | 'thumbnail',
-) {
-  const targetUrl =
-    variant === 'thumbnail' ? (cover?.thumbnailImageUrl ?? cover?.imageUrl) : cover?.imageUrl
-  if (!targetUrl) {
-    return null
-  }
-
-  return `${variant}::${targetUrl}::${cover?.lastAttemptAt ?? ''}`
-}
-
-function acquireCoverCacheEntry(cacheKey: string) {
-  const existing = coverImageCache.get(cacheKey)
-  if (existing) {
-    existing.refs += 1
-    if (existing.cleanupTimer) {
-      clearTimeout(existing.cleanupTimer)
-      existing.cleanupTimer = null
-    }
-    return existing
-  }
-
-  const created: CoverCacheEntry = {
-    blobUrl: null,
-    promise: null,
-    refs: 1,
-    cleanupTimer: null,
-  }
-  coverImageCache.set(cacheKey, created)
-  return created
-}
-
-function releaseCoverCacheEntry(cacheKey: string) {
-  const entry = coverImageCache.get(cacheKey)
-  if (!entry) {
-    return
-  }
-
-  entry.refs = Math.max(0, entry.refs - 1)
-  if (entry.refs > 0 || entry.cleanupTimer) {
-    return
-  }
-
-  entry.cleanupTimer = setTimeout(() => {
-    const current = coverImageCache.get(cacheKey)
-    if (!current || current.refs > 0) {
-      return
-    }
-
-    if (current.blobUrl) {
-      URL.revokeObjectURL(current.blobUrl)
-    }
-    coverImageCache.delete(cacheKey)
-  }, COVER_CACHE_TTL_MS)
 }
 
 export function BookCoverArtwork({
@@ -201,18 +79,20 @@ export function BookCoverArtwork({
   emptyActionLabel,
   hoverFooter,
 }: BookCoverArtworkProps) {
-  const loadPermission = useCoverLoadPermission(loading === 'lazy')
-  const blobUrl = useResolvedCoverImage(cover, preferredVariant, loadPermission.permitted)
+  const { permitted: loadPermitted, setTarget: setLoadTarget } = useCoverLoadPermission(
+    loading === 'lazy',
+  )
+  const blobUrl = useResolvedCoverImage(cover, preferredVariant, loadPermitted)
   const resolvedImageUrl = imageUrl ?? blobUrl
-  const wrapperClassName = [
+  const artworkClassName = [
     'book-cover-artwork group relative flex aspect-[2/3] w-full items-center justify-center overflow-hidden',
     interactive ? 'transition hover:border-slate-300' : '',
     interactive && resolvedImageUrl ? 'cursor-zoom-in' : '',
     interactive && !resolvedImageUrl ? 'cursor-pointer' : '',
-    className,
   ]
     .filter(Boolean)
     .join(' ')
+  const wrapperClassName = [artworkClassName, className].filter(Boolean).join(' ')
 
   const content = resolvedImageUrl ? (
     <img
@@ -239,7 +119,7 @@ export function BookCoverArtwork({
 
   if (!interactive) {
     return (
-      <div className={wrapperClassName} ref={loadPermission.setTarget}>
+      <div className={wrapperClassName} ref={setLoadTarget}>
         {content}
         {resolvedImageUrl && onRemove ? (
           <button
@@ -255,30 +135,9 @@ export function BookCoverArtwork({
     )
   }
 
-  return (
-    <button
-      className={wrapperClassName}
-      ref={loadPermission.setTarget}
-      type="button"
-      onClick={onClick}
-    >
+  const interactiveContent = (
+    <>
       {content}
-      {resolvedImageUrl && onRemove ? (
-        <span
-          className="absolute left-3 top-3 z-10"
-          onClick={(event) => {
-            event.preventDefault()
-            event.stopPropagation()
-            onRemove()
-          }}
-        >
-          <span
-            className={`${buttonVariants.destructive} ui-icon-button ui-icon-button--round opacity-0 group-hover:opacity-100`}
-          >
-            <X className="h-4 w-4" />
-          </span>
-        </span>
-      ) : null}
       {resolvedImageUrl ? (
         <span className="pointer-events-none absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-slate-950/75 px-2.5 py-1 text-[11px] font-medium text-white opacity-0 transition group-hover:opacity-100">
           <ZoomIn className="h-3 w-3" />
@@ -290,7 +149,33 @@ export function BookCoverArtwork({
           {hoverFooter}
         </span>
       ) : null}
-    </button>
+    </>
+  )
+
+  if (!onRemove) {
+    return (
+      <button className={wrapperClassName} ref={setLoadTarget} type="button" onClick={onClick}>
+        {interactiveContent}
+      </button>
+    )
+  }
+
+  return (
+    <div className={['group relative', className].filter(Boolean).join(' ')}>
+      <button className={artworkClassName} ref={setLoadTarget} type="button" onClick={onClick}>
+        {interactiveContent}
+      </button>
+      {resolvedImageUrl ? (
+        <button
+          aria-label={removeLabel}
+          className={`${buttonVariants.destructive} ui-icon-button ui-icon-button--round absolute left-3 top-3 z-10 opacity-0 group-hover:opacity-100 focus-visible:opacity-100`}
+          type="button"
+          onClick={onRemove}
+        >
+          <X className="h-4 w-4" />
+        </button>
+      ) : null}
+    </div>
   )
 }
 
@@ -325,15 +210,15 @@ export function CoverLightbox({
 
   return (
     <div
-      aria-modal="true"
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4"
-      role="dialog"
-      onClick={onClose}
+      role="presentation"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose()
+        }
+      }}
     >
-      <div
-        className="relative max-h-[90vh] w-full max-w-4xl"
-        onClick={(event) => event.stopPropagation()}
-      >
+      <div aria-modal="true" className="relative max-h-[90vh] w-full max-w-4xl" role="dialog">
         <button
           aria-label="Close preview"
           className={`${buttonVariants.ghost} ui-icon-button absolute right-3 top-3 z-10`}

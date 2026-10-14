@@ -70,15 +70,15 @@ export const bookFilesApi = {
   list: (bookId: string) => apiRequest<BookFileList>(`/book/${bookId}/files`),
   publicList: (snapshotId: string) => apiRequest<BookFile[]>(`/public-book/${snapshotId}/files`),
   rename: (bookId: string, fileId: string, title: string) =>
-    apiRequest<void>(`/book/${bookId}/files/${fileId}`, { method: 'PUT', body: { title } }),
+    apiRequest<undefined>(`/book/${bookId}/files/${fileId}`, { method: 'PUT', body: { title } }),
   reorder: (bookId: string, ids: string[]) =>
-    apiRequest<void>(`/book/${bookId}/files/order`, { method: 'PUT', body: ids }),
+    apiRequest<undefined>(`/book/${bookId}/files/order`, { method: 'PUT', body: ids }),
   share: (bookId: string, ids: string[]) =>
-    apiRequest<void>(`/book/${bookId}/files/shared`, { method: 'PUT', body: ids }),
+    apiRequest<undefined>(`/book/${bookId}/files/shared`, { method: 'PUT', body: ids }),
   remove: (bookId: string, fileId: string) =>
-    apiRequest<void>(`/book/${bookId}/files/${fileId}`, { method: 'DELETE' }),
+    apiRequest<undefined>(`/book/${bookId}/files/${fileId}`, { method: 'DELETE' }),
   restore: (bookId: string, fileId: string) =>
-    apiRequest<void>(`/book/${bookId}/files/${fileId}/restore`, { method: 'POST' }),
+    apiRequest<undefined>(`/book/${bookId}/files/${fileId}/restore`, { method: 'POST' }),
   upload: (
     bookId: string | undefined,
     files: File[],
@@ -98,7 +98,7 @@ export const bookFilesApi = {
   job: (id: string) => apiRequest<FileJob>(`/book/files/sessions/${id}`),
   confirm: (id: string, selection: ImportSelection[]) =>
     apiRequest<FileJob>(`/book/files/sessions/${id}/confirm`, { method: 'POST', body: selection }),
-  cancel: (id: string) => apiRequest<void>(`/book/files/sessions/${id}`, { method: 'DELETE' }),
+  cancel: (id: string) => apiRequest<undefined>(`/book/files/sessions/${id}`, { method: 'DELETE' }),
   candidates: (query?: string) =>
     apiRequest<ExportCandidate[]>(
       `/book/files/export/candidates${query ? `?query=${encodeURIComponent(query)}` : ''}`,

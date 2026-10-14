@@ -1,5 +1,7 @@
 import type { BookAnalyticsDto } from '@/api/types'
-import { DrilldownLink, formatCount, formatPercent, noneQuery } from './chartUtils'
+import { formatCount, formatPercent, noneQuery } from './chartUtils'
+import { DrilldownLink } from './DrilldownLink'
+import { formatFieldName } from './metadataCompletenessData'
 
 type MetadataCompletenessChartProps = {
   data: BookAnalyticsDto | undefined
@@ -71,23 +73,4 @@ export function MetadataCompletenessChart({ data }: MetadataCompletenessChartPro
       })}
     </div>
   )
-}
-
-export function metadataCompletenessRows(data?: BookAnalyticsDto) {
-  const totalBooks = data?.overview.totalBooks ?? 0
-  return [...(data?.quality.fieldCompleteness ?? [])]
-    .sort(
-      (left, right) =>
-        left.shareOfBooks - right.shareOfBooks || left.field.localeCompare(right.field),
-    )
-    .map((item) => [
-      formatFieldName(item.field),
-      formatCount(item.bookCount),
-      formatPercent(item.shareOfBooks),
-      formatCount(Math.max(0, totalBooks - item.bookCount)),
-    ])
-}
-
-export function formatFieldName(field: string) {
-  return field.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, (first) => first.toUpperCase())
 }

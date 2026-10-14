@@ -97,10 +97,12 @@ describe('AdminPage', () => {
       primaryTitle: 'Completed Title',
       status: 'Completed',
     })
-    vi.mocked(api.getAdminBooks).mockImplementation(async (params) =>
-      params.query === 'status:completed'
-        ? paginated([completed])
-        : paginated([reading, completed]),
+    vi.mocked(api.getAdminBooks).mockImplementation((params) =>
+      Promise.resolve(
+        params.query === 'status:completed'
+          ? paginated([completed])
+          : paginated([reading, completed]),
+      ),
     )
     const user = userEvent.setup()
 
@@ -249,7 +251,7 @@ describe('AdminPage', () => {
 
   it('shows shared scroll shortcut buttons', async () => {
     vi.mocked(api.getAdminBooks).mockResolvedValue(paginated([createAdminBook()]))
-    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined)
     const user = userEvent.setup()
     Object.defineProperty(window, 'innerHeight', { configurable: true, value: 800 })
     Object.defineProperty(document.documentElement, 'scrollHeight', {

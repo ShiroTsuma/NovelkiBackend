@@ -7,21 +7,23 @@ import { expectReadableTextContrast } from '@/test/contrast'
 import { bookListItems, books, dictionaries, paginated, statuses } from '@/test/fixtures'
 import { renderWithProviders } from '@/test/render'
 import { toast } from 'sonner'
+import { BooksPage } from './BooksPage'
 import {
-  BooksPage,
-  defaultColumnPreferences,
-  formatAverageRating,
-  formatProgress,
   getCardDetailRowClass,
   getCardPageSizeOptions,
   getCardRowMinHeightClasses,
   getCardTextSizeClasses,
   getClosestPageSize,
-  getColumnPopupPosition,
   getResponsiveCardsPerRow,
-  getVisibleColumns,
   readCardsPerRow,
-} from './BooksPage'
+} from './bookCardLayout'
+import { formatAverageRating } from './bookFormatters'
+import { formatProgress } from './bookProgress'
+import {
+  defaultColumnPreferences,
+  getColumnPopupPosition,
+  getVisibleColumns,
+} from './columnPreferences'
 
 vi.mock('@/api/client', () => ({
   api: {
@@ -359,7 +361,7 @@ describe('BooksPage', () => {
     renderWithProviders(<BooksPage />, { route: '/books?query=title%3ALordofMysteries' })
 
     await screen.findByText('Lord of Mysteries')
-    const searchInput = screen.getByRole('combobox', { name: /search books/i }) as HTMLInputElement
+    const searchInput = screen.getByRole<HTMLInputElement>('combobox', { name: /search books/i })
     searchInput.focus()
     searchInput.setSelectionRange('title:Lord'.length, 'title:Lord'.length)
     await user.keyboard(' ')
@@ -419,7 +421,7 @@ describe('BooksPage', () => {
 
   it('restores and consumes the saved scroll position after the book list loads', async () => {
     vi.mocked(api.getBooks).mockResolvedValue(paginated(bookListItems))
-    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined)
     const storageKey = 'novelki.books.scroll-position.v1:/books?take=50'
     window.sessionStorage.setItem(storageKey, '684')
 
@@ -450,7 +452,7 @@ describe('BooksPage', () => {
     vi.mocked(api.getBooks).mockResolvedValue(
       paginated([
         {
-          ...bookListItems[0],
+          ...bookListItems[0]!,
           tags: ['visible-one', 'visible-two', 'visible-three', 'known-hidden'],
           tagDescriptions: {},
           tagsCount: 26,
@@ -470,10 +472,8 @@ describe('BooksPage', () => {
 
     await screen.findByText('Lord of Mysteries')
     const topButtons = screen.getAllByRole('button')
-    expect(
-      topButtons.findIndex((button) => /summary/i.test(button.textContent ?? '')),
-    ).toBeLessThan(
-      topButtons.findIndex((button) => /^export$/i.test(button.textContent?.trim() ?? '')),
+    expect(topButtons.findIndex((button) => /summary/i.test(button.textContent))).toBeLessThan(
+      topButtons.findIndex((button) => /^export$/i.test(button.textContent.trim())),
     )
     expect(screen.getByRole('button', { name: /^export$/i })).toHaveClass(
       'gap-2.5',
@@ -492,8 +492,10 @@ describe('BooksPage', () => {
     vi.mocked(api.getBooks).mockResolvedValue(paginated(books))
     vi.mocked(api.downloadBooksExport).mockResolvedValue(new Blob(['csv'], { type: 'text/csv' }))
     const createObjectUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:books-export')
-    const revokeObjectUrl = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
-    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    const revokeObjectUrl = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined)
+    const clickSpy = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(() => undefined)
     const user = userEvent.setup()
 
     renderWithProviders(<BooksPage />, {
@@ -537,7 +539,7 @@ describe('BooksPage', () => {
     expect(menuItems[0]).toHaveTextContent(/^CSV/)
     expect(menuItems[1]).toHaveTextContent(/^Full backup/)
 
-    await user.click(menuItems[1])
+    await user.click(menuItems[1]!)
     expect(
       screen.getByRole('heading', { name: /import books from full backup/i }),
     ).toBeInTheDocument()
@@ -686,7 +688,7 @@ describe('BooksPage', () => {
     await screen.findByText('Lord of Mysteries')
     await user.click(screen.getByRole('button', { name: /summary/i }))
 
-    expectReadableTextContrast((await screen.findAllByText('Novel'))[0])
+    expectReadableTextContrast((await screen.findAllByText('Novel'))[0]!)
   })
 
   it('links summary to analytics without a query', async () => {
@@ -767,7 +769,7 @@ describe('BooksPage', () => {
   })
 
   it('uses a red rating treatment for scores up to and including five', async () => {
-    vi.mocked(api.getBooks).mockResolvedValue(paginated([books[0], { ...books[1], rating: 5 }]))
+    vi.mocked(api.getBooks).mockResolvedValue(paginated([books[0]!, { ...books[1]!, rating: 5 }]))
     const user = userEvent.setup()
 
     renderWithProviders(<BooksPage />, { route: '/books' })
@@ -869,7 +871,7 @@ describe('BooksPage', () => {
     renderWithProviders(<BooksPage />, { route: '/books' })
 
     await screen.findByText('Lord of Mysteries')
-    await user.click(screen.getByRole('button', { name: /title/i }))
+    await user.click(screen.getByRole('button', { name: /^title$/i }))
 
     await waitFor(() =>
       expect(api.getBooks).toHaveBeenLastCalledWith(
@@ -927,16 +929,18 @@ describe('BooksPage', () => {
   })
 
   it('cycles status sorting through the domain order on repeated clicks', async () => {
-    vi.mocked(api.getBooks).mockImplementation(async (params) => {
+    vi.mocked(api.getBooks).mockImplementation((params) => {
       if (params.advanceCycle) {
-        return {
+        return Promise.resolve({
           ...paginated(books),
           data:
-            params.sortDirection === statuses[0].name ? [books[1], books[0]] : [books[0], books[1]],
-        }
+            params.sortDirection === statuses[0]!.name
+              ? [books[1]!, books[0]!]
+              : [books[0]!, books[1]!],
+        })
       }
 
-      return paginated(books)
+      return Promise.resolve(paginated(books))
     })
     const user = userEvent.setup()
 
@@ -960,7 +964,7 @@ describe('BooksPage', () => {
       expect(api.getBooks).toHaveBeenLastCalledWith(
         expect.objectContaining({
           sortBy: 'status',
-          sortDirection: statuses[0].name,
+          sortDirection: statuses[0]!.name,
           advanceCycle: true,
         }),
       ),
@@ -971,7 +975,7 @@ describe('BooksPage', () => {
       expect(api.getBooks).toHaveBeenLastCalledWith(
         expect.objectContaining({
           sortBy: 'status',
-          sortDirection: statuses[1].name,
+          sortDirection: statuses[1]!.name,
           advanceCycle: true,
         }),
       ),
@@ -979,15 +983,15 @@ describe('BooksPage', () => {
   })
 
   it('does not refetch after syncing the resolved cyclic sort direction into the url', async () => {
-    vi.mocked(api.getBooks).mockImplementation(async (params) => {
+    vi.mocked(api.getBooks).mockImplementation((params) => {
       if (params.advanceCycle) {
-        return {
+        return Promise.resolve({
           ...paginated(books),
-          data: [books[0], books[1]],
-        }
+          data: [books[0]!, books[1]!],
+        })
       }
 
-      return paginated(books)
+      return Promise.resolve(paginated(books))
     })
     const user = userEvent.setup()
 
@@ -1011,24 +1015,24 @@ describe('BooksPage', () => {
 
   it('cycles type sorting through the domain order on repeated clicks', async () => {
     const typeBooks = [
-      books[0],
+      books[0]!,
       {
-        ...books[1],
+        ...books[1]!,
         contentType: 'Manga',
       },
     ]
-    vi.mocked(api.getBooks).mockImplementation(async (params) => {
+    vi.mocked(api.getBooks).mockImplementation((params) => {
       if (params.advanceCycle) {
-        return {
+        return Promise.resolve({
           ...paginated(typeBooks),
           data:
-            params.sortDirection === dictionaries[0].name
-              ? [typeBooks[1], typeBooks[0]]
-              : [typeBooks[0], typeBooks[1]],
-        }
+            params.sortDirection === dictionaries[0]!.name
+              ? [typeBooks[1]!, typeBooks[0]!]
+              : [typeBooks[0]!, typeBooks[1]!],
+        })
       }
 
-      return paginated(typeBooks)
+      return Promise.resolve(paginated(typeBooks))
     })
     const user = userEvent.setup()
 
@@ -1052,7 +1056,7 @@ describe('BooksPage', () => {
       expect(api.getBooks).toHaveBeenLastCalledWith(
         expect.objectContaining({
           sortBy: 'type',
-          sortDirection: dictionaries[0].name,
+          sortDirection: dictionaries[0]!.name,
           advanceCycle: true,
         }),
       ),
@@ -1063,7 +1067,7 @@ describe('BooksPage', () => {
       expect(api.getBooks).toHaveBeenLastCalledWith(
         expect.objectContaining({
           sortBy: 'type',
-          sortDirection: dictionaries[1].name,
+          sortDirection: dictionaries[1]!.name,
           advanceCycle: true,
         }),
       ),
@@ -1207,12 +1211,12 @@ describe('BooksPage', () => {
     const gapButtons = screen.getAllByRole('button', { name: /jump between pages/i })
     expect(gapButtons).toHaveLength(2)
 
-    await user.click(gapButtons[0])
+    await user.click(gapButtons[0]!)
     expect(screen.getByRole('textbox', { name: /page number/i })).toBeInTheDocument()
     expect(gapButtons[0]).toHaveAttribute('aria-expanded', 'true')
     expect(gapButtons[1]).toHaveAttribute('aria-expanded', 'false')
 
-    await user.click(gapButtons[1])
+    await user.click(gapButtons[1]!)
     expect(screen.getByRole('textbox', { name: /page number/i })).toBeInTheDocument()
     expect(gapButtons[0]).toHaveAttribute('aria-expanded', 'false')
     expect(gapButtons[1]).toHaveAttribute('aria-expanded', 'true')
@@ -1226,7 +1230,7 @@ describe('BooksPage', () => {
       data: books,
     })
     const user = userEvent.setup()
-    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined)
 
     Object.defineProperty(window, 'scrollY', { configurable: true, value: 1190 })
 
@@ -1251,7 +1255,7 @@ describe('BooksPage', () => {
   it('shows scroll shortcut buttons and scrolls to the top or bottom on click', async () => {
     vi.mocked(api.getBooks).mockResolvedValue(paginated(books))
     const user = userEvent.setup()
-    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined)
     Object.defineProperty(window, 'innerHeight', { configurable: true, value: 800 })
     Object.defineProperty(document.documentElement, 'scrollHeight', {
       configurable: true,
@@ -1308,17 +1312,17 @@ describe('BooksPage', () => {
   })
 
   it('formats progress with chapter label and total', () => {
-    expect(formatProgress(books[0])).toBe('348 / 1432')
+    expect(formatProgress(books[0]!)).toBe('348 / 1432')
     expect(
       formatProgress({
-        ...books[0],
+        ...books[0]!,
         currentChapterLabel: 'Side Story',
         currentChapterNumber: null,
       }),
     ).toBe('Side Story / 1432')
     expect(
       formatProgress({
-        ...books[0],
+        ...books[0]!,
         currentChapterLabel: null,
         currentChapterNumber: null,
         totalChapters: null,

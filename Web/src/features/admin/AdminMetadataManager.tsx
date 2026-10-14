@@ -1,33 +1,37 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { BookType, CircleDot, LibraryBig, Plus, Search, Tags, Trash2, X } from 'lucide-react'
-import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { api } from '@/api/client'
 import { HttpError } from '@/api/http'
 import type { DictionaryMutationRequest, TagDto } from '@/api/types'
-import {
-  Badge,
-  buttonVariants,
-  controlClass,
-  DialogPanel,
-  Surface,
-  useBodyScrollLock,
-} from '@/components/app/DesignSystem'
+import { buttonVariants, controlClass } from '@/components/app/designTokens'
+import { Badge, DialogPanel, Surface } from '@/components/app/DesignSystem'
+import { useBodyScrollLock } from '@/components/app/useBodyScrollLock'
 import { cn } from '@/lib/utils'
 
 type MetadataKind = 'statuses' | 'types' | 'genres' | 'tags'
-type MetadataItem = { id: string; name: string; description?: string | null }
+type MetadataItem = { id: string; name: string; description?: string | null | undefined }
 
-const sections: {
+type MetadataSection = {
   kind: MetadataKind
   label: string
   singular: string
   icon: typeof CircleDot
-}[] = [
-  { kind: 'statuses', label: 'Statuses', singular: 'status', icon: CircleDot },
-  { kind: 'types', label: 'Types', singular: 'type', icon: BookType },
-  { kind: 'genres', label: 'Genres', singular: 'genre', icon: LibraryBig },
-  { kind: 'tags', label: 'Global tags', singular: 'global tag', icon: Tags },
+}
+
+const sectionsByKind: Record<MetadataKind, MetadataSection> = {
+  statuses: { kind: 'statuses', label: 'Statuses', singular: 'status', icon: CircleDot },
+  types: { kind: 'types', label: 'Types', singular: 'type', icon: BookType },
+  genres: { kind: 'genres', label: 'Genres', singular: 'genre', icon: LibraryBig },
+  tags: { kind: 'tags', label: 'Global tags', singular: 'global tag', icon: Tags },
+}
+
+const sections: MetadataSection[] = [
+  sectionsByKind.statuses,
+  sectionsByKind.types,
+  sectionsByKind.genres,
+  sectionsByKind.tags,
 ]
 
 export function AdminMetadataManager() {
@@ -38,7 +42,7 @@ export function AdminMetadataManager() {
     queryKey: ['admin-metadata', kind],
     queryFn: () => loadItems(kind),
   })
-  const section = sections.find((item) => item.kind === kind)!
+  const section = sectionsByKind[kind]
   const normalizedSearch = search.trim().toLocaleLowerCase()
   const items = (query.data ?? []).filter(
     (item) =>
@@ -110,16 +114,14 @@ export function AdminMetadataManager() {
                 key={item.id}
                 className="manage-item"
                 role="group"
-                tabIndex={0}
                 onDoubleClick={() => setEditor(item)}
-                onKeyDown={(event) => event.key === 'Enter' && setEditor(item)}
               >
                 <span className="manage-item__icon">
                   <section.icon className="h-4 w-4" />
                 </span>
                 <span className="manage-item__body">
                   <strong>{item.name}</strong>
-                  <small>{item.description || 'No description'}</small>
+                  <small>{item.description?.length ? item.description : 'No description'}</small>
                 </span>
                 <button
                   aria-label={`Edit ${section.singular} ${item.name}`}
@@ -134,12 +136,15 @@ export function AdminMetadataManager() {
           </div>
         )}
       </section>
-      <MetadataDialog
-        item={editor}
-        kind={kind}
-        singular={section.singular}
-        onClose={() => setEditor(null)}
-      />
+      {editor ? (
+        <MetadataDialog
+          key={editor === 'create' ? 'create' : editor.id}
+          item={editor}
+          kind={kind}
+          singular={section.singular}
+          onClose={() => setEditor(null)}
+        />
+      ) : null}
     </Surface>
   )
 }
@@ -150,7 +155,7 @@ function MetadataDialog({
   singular,
   onClose,
 }: {
-  item: MetadataItem | 'create' | null
+  item: MetadataItem | 'create'
   kind: MetadataKind
   singular: string
   onClose: () => void
@@ -158,31 +163,30 @@ function MetadataDialog({
   const queryClient = useQueryClient()
   const titleId = useId()
   const nameRef = useRef<HTMLInputElement>(null)
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
+  // The dialog is mounted per edited item (keyed by the parent), so initial state comes from props.
+  const [name, setName] = useState(item === 'create' ? '' : item.name)
+  const [description, setDescription] = useState(item === 'create' ? '' : (item.description ?? ''))
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
-  useBodyScrollLock(item !== null)
+  useBodyScrollLock(true)
 
   useEffect(() => {
-    if (!item) return
-    setName(item === 'create' ? '' : item.name)
-    setDescription(item === 'create' ? '' : (item.description ?? ''))
-    setConfirmDelete(false)
     window.setTimeout(() => nameRef.current?.focus(), 0)
-  }, [item])
+  }, [])
 
-  if (!item) return null
   const isCreate = item === 'create'
-  const existingItem = item === 'create' ? null : item
 
-  async function save(event: FormEvent) {
+  async function save(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
     setSaving(true)
     try {
-      const request = { name: name.trim(), description: description.trim() || null }
-      if (isCreate) await createItem(kind, request)
-      else await updateItem(kind, existingItem!.id, request)
+      const trimmedDescription = description.trim()
+      const request = {
+        name: name.trim(),
+        description: trimmedDescription ? trimmedDescription : null,
+      }
+      if (item === 'create') await createItem(kind, request)
+      else await updateItem(kind, item.id, request)
       await queryClient.invalidateQueries({ queryKey: ['admin-metadata', kind] })
       toast.success(`${capitalize(singular)} ${isCreate ? 'created' : 'updated'}.`)
       onClose()
@@ -198,10 +202,10 @@ function MetadataDialog({
       setConfirmDelete(true)
       return
     }
-    if (isCreate) return
+    if (item === 'create') return
     setSaving(true)
     try {
-      await deleteItem(kind, existingItem!.id)
+      await deleteItem(kind, item.id)
       await queryClient.invalidateQueries({ queryKey: ['admin-metadata', kind] })
       toast.success(`${capitalize(singular)} deleted.`)
       onClose()
@@ -214,15 +218,12 @@ function MetadataDialog({
   }
 
   return (
-    <div
-      aria-labelledby={titleId}
-      aria-modal="true"
-      className="manage-dialog"
-      role="dialog"
-      onMouseDown={onClose}
-    >
+    <div className="manage-dialog" role="presentation" onMouseDown={onClose}>
       <DialogPanel
+        aria-labelledby={titleId}
+        aria-modal="true"
         className="manage-dialog__panel"
+        role="dialog"
         onMouseDown={(event) => event.stopPropagation()}
       >
         <div className="manage-dialog__header">
@@ -230,7 +231,7 @@ function MetadataDialog({
             <div className="ui-eyebrow">
               {isCreate ? 'Create' : 'Edit'} {singular}
             </div>
-            <h2 id={titleId}>{isCreate ? `New ${singular}` : item.name}</h2>
+            <h2 id={titleId}>{item === 'create' ? `New ${singular}` : item.name}</h2>
           </div>
           <button
             aria-label="Close dialog"
@@ -241,7 +242,7 @@ function MetadataDialog({
             <X className="h-4 w-4" />
           </button>
         </div>
-        <form className="manage-dialog__form" onSubmit={save}>
+        <form className="manage-dialog__form" onSubmit={(event) => void save(event)}>
           <label>
             <span>Name</span>
             <input
@@ -273,7 +274,7 @@ function MetadataDialog({
                 )}
                 disabled={saving}
                 type="button"
-                onClick={remove}
+                onClick={() => void remove()}
               >
                 <Trash2 className="h-4 w-4" />
                 {confirmDelete ? 'Confirm delete' : `Delete ${singular}`}

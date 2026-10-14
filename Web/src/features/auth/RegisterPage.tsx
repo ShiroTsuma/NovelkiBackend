@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import { useRef, useState } from 'react'
 import { api } from '@/api/client'
 import { HttpError } from '@/api/http'
-import { buttonClass, inputClass } from '@/components/app/FormField'
+import { buttonClass, inputClass } from '@/components/app/designTokens'
 import { AuthFrame } from './LoginPage'
 
 type RegisterFormValues = {
@@ -13,7 +13,7 @@ type RegisterFormValues = {
   password: string
 }
 
-type RegisterFormErrors = Partial<Record<keyof RegisterFormValues | 'form', string>>
+type RegisterFormErrors = Partial<Record<keyof RegisterFormValues | 'form', string | undefined>>
 
 const initialValues: RegisterFormValues = {
   username: '',
@@ -43,7 +43,7 @@ export function RegisterPage() {
     mutationFn: api.register,
     onSuccess: () => {
       toast.success('Account created. You can log in now.')
-      navigate('/login', { replace: true })
+      void navigate('/login', { replace: true })
     },
     onError: (error) => {
       if (error instanceof HttpError) {
@@ -61,7 +61,7 @@ export function RegisterPage() {
     },
   })
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
     const validationErrors = validate(values)
     setErrors(validationErrors)
@@ -158,7 +158,13 @@ export function RegisterPage() {
   )
 }
 
-function FieldError({ children, error }: { children: React.ReactNode; error?: string }) {
+function FieldError({
+  children,
+  error,
+}: {
+  children: React.ReactNode
+  error?: string | undefined
+}) {
   return (
     <label className="grid gap-1">
       {children}

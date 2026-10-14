@@ -1,10 +1,19 @@
 import { Check, Pencil } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import type { BookAnalyticsDto } from '@/api/types'
-import { buttonVariants, Surface } from '@/components/app/DesignSystem'
-import { inputClass } from '@/components/app/FormField'
-import { formatChapterCount } from '@/features/books/BooksPage'
+import { buttonVariants, inputClass } from '@/components/app/designTokens'
+import { Surface } from '@/components/app/DesignSystem'
+import { formatChapterCount } from '@/features/books/bookFormatters'
 import { formatCount } from './chartUtils'
+import {
+  formatDays,
+  formatHours,
+  formatMonths,
+  formatYears,
+  getEstimatedReadingRows,
+  getMinutesByType,
+  normalizeMinutes,
+} from './estimatedReadingTimeData'
 
 type EstimatedReadingTimeChartProps = {
   data: BookAnalyticsDto | undefined
@@ -19,7 +28,7 @@ export function EstimatedReadingTimeChart({
   isSaving = false,
   onSave,
 }: EstimatedReadingTimeChartProps) {
-  const items = data?.progress.typeVolumes ?? []
+  const items = useMemo(() => data?.progress.typeVolumes ?? [], [data])
   const minutesPerType = useMemo(() => getMinutesByType(items, settings), [items, settings])
   const [draftMinutesPerType, setDraftMinutesPerType] = useState<Record<string, number>>({})
   const [isEditing, setIsEditing] = useState(false)
@@ -28,6 +37,17 @@ export function EstimatedReadingTimeChart({
     [draftMinutesPerType, isEditing, items, minutesPerType],
   )
   const totalHours = estimates.reduce((sum, item) => sum + item.hours, 0)
+
+  async function toggleEditing() {
+    if (isEditing) {
+      await onSave(draftMinutesPerType)
+      setIsEditing(false)
+      return
+    }
+
+    setDraftMinutesPerType(minutesPerType)
+    setIsEditing(true)
+  }
 
   if (!items.length) {
     return (
@@ -52,16 +72,7 @@ export function EstimatedReadingTimeChart({
             className={buttonVariants.secondary}
             type="button"
             disabled={isSaving}
-            onClick={async () => {
-              if (isEditing) {
-                await onSave(draftMinutesPerType)
-                setIsEditing(false)
-                return
-              }
-
-              setDraftMinutesPerType(minutesPerType)
-              setIsEditing(true)
-            }}
+            onClick={() => void toggleEditing()}
           >
             {isEditing ? <Check className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
             {isEditing ? 'Done' : 'Edit estimates'}
@@ -107,60 +118,4 @@ export function EstimatedReadingTimeChart({
       </div>
     </div>
   )
-}
-
-export function estimatedReadingTimeRows(
-  data?: BookAnalyticsDto,
-  settings: Record<string, number> = {},
-) {
-  return getEstimatedReadingRows(data?.progress.typeVolumes ?? [], settings).map((item) => [
-    item.type,
-    formatChapterCount(item.currentChapters),
-    formatCount(item.minutesPerChapter),
-    formatHours(item.hours),
-  ])
-}
-
-function getMinutesByType(
-  items: NonNullable<BookAnalyticsDto['progress']>['typeVolumes'],
-  settings: Record<string, number>,
-) {
-  return Object.fromEntries(
-    items.map((item) => [item.type, normalizeMinutes(settings[item.type] ?? 5)]),
-  )
-}
-
-function getEstimatedReadingRows(
-  items: NonNullable<BookAnalyticsDto['progress']>['typeVolumes'],
-  settings: Record<string, number>,
-) {
-  return items.map((item) => {
-    const minutesPerChapter = normalizeMinutes(settings[item.type] ?? 5)
-    return {
-      type: item.type,
-      currentChapters: item.currentChapters,
-      minutesPerChapter,
-      hours: (item.currentChapters * minutesPerChapter) / 60,
-    }
-  })
-}
-
-function normalizeMinutes(value: number) {
-  return Number.isFinite(value) ? Math.max(0, value) : 0
-}
-
-function formatHours(value: number) {
-  return `${value.toLocaleString('en-US', { maximumFractionDigits: 1, minimumFractionDigits: 1 })} h`
-}
-
-function formatDays(value: number) {
-  return `${(value / 24).toLocaleString('en-US', { maximumFractionDigits: 1, minimumFractionDigits: 1 })} days`
-}
-
-function formatMonths(value: number) {
-  return `${(value / (24 * 30)).toLocaleString('en-US', { maximumFractionDigits: 1, minimumFractionDigits: 1 })} months`
-}
-
-function formatYears(value: number) {
-  return `${(value / (24 * 365)).toLocaleString('en-US', { maximumFractionDigits: 1, minimumFractionDigits: 1 })} years`
 }

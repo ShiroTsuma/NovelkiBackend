@@ -36,8 +36,8 @@ export function extractAnalyticsDateFilters(query: string): AnalyticsDateFilters
 
   return {
     query: keptTokens.join(' ').trim(),
-    from,
-    to,
+    ...(from ? { from } : {}),
+    ...(to ? { to } : {}),
   }
 }
 
@@ -85,17 +85,20 @@ function parseDatePeriod(value: string) {
   const day =
     /^(\d{4})-(\d{2})-(\d{2})$/.exec(value) ?? /^(\d{1,2})[./](\d{1,2})[./](\d{4})$/.exec(value)
   if (day) {
-    const year = day[1].length === 4 ? Number(day[1]) : Number(day[3])
-    const month = day[1].length === 4 ? Number(day[2]) : Number(day[2])
-    const date = day[1].length === 4 ? Number(day[3]) : Number(day[1])
+    // Every capture group is mandatory in both patterns, so the defaults never apply.
+    const [, first = '', second = '', third = ''] = day
+    const year = first.length === 4 ? Number(first) : Number(third)
+    const month = Number(second)
+    const date = first.length === 4 ? Number(third) : Number(first)
     const start = toDateValue(year, month, date)
     return start ? { start, endExclusive: addUtcDays(start, 1) } : null
   }
 
   const month = /^(\d{4})[-/](\d{1,2})$/.exec(value) ?? /^(\d{1,2})[./](\d{4})$/.exec(value)
   if (month) {
-    const year = month[1].length === 4 ? Number(month[1]) : Number(month[2])
-    const monthNumber = month[1].length === 4 ? Number(month[2]) : Number(month[1])
+    const [, first = '', second = ''] = month
+    const year = first.length === 4 ? Number(first) : Number(second)
+    const monthNumber = first.length === 4 ? Number(second) : Number(first)
     const start = toDateValue(year, monthNumber, 1)
     return start ? { start, endExclusive: addUtcMonths(start, 1) } : null
   }

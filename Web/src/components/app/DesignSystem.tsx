@@ -1,35 +1,5 @@
-import { useEffect, type HTMLAttributes, type ReactNode, type Ref } from 'react'
+import type { HTMLAttributes, ReactNode, Ref } from 'react'
 import { cn } from '@/lib/utils'
-
-export const buttonVariants = {
-  primary: 'ui-button ui-button--primary',
-  secondary: 'ui-button ui-button--secondary',
-  destructive: 'ui-button ui-button--destructive',
-  ghost: 'ui-button ui-button--ghost',
-} as const
-
-export const controlClass = 'ui-control'
-
-let scrollLockCount = 0
-let savedBodyOverflow = ''
-let savedRootOverflow = ''
-export function useBodyScrollLock(active: boolean) {
-  useEffect(() => {
-    if (!active) return
-    if (scrollLockCount++ === 0) {
-      savedBodyOverflow = document.body.style.overflow
-      savedRootOverflow = document.documentElement.style.overflow
-      document.body.style.overflow = 'hidden'
-      document.documentElement.style.overflow = 'hidden'
-    }
-    return () => {
-      if (--scrollLockCount === 0) {
-        document.body.style.overflow = savedBodyOverflow
-        document.documentElement.style.overflow = savedRootOverflow
-      }
-    }
-  }, [active])
-}
 
 export function Surface({
   as = 'section',

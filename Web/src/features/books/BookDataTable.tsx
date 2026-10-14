@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
-import { ColumnHeader, type ColumnDefinition } from './bookListColumns'
+import { ColumnHeader } from './bookListColumns'
+import type { ColumnDefinition } from './columnPreferences'
 
 const minimumTableWidthRem = 76
 const fallbackColumnWidthRem = 9
@@ -118,7 +119,7 @@ export function BookDataTable<T extends { id: string }>({
   )
 }
 
-export function getBookTableMinWidthRem(columns: { widthClass?: string }[]) {
+function getBookTableMinWidthRem(columns: { widthClass?: string }[]) {
   const columnWidth = columns.reduce(
     (sum, column) => sum + getTailwindWidthRem(column.widthClass),
     actionsColumnWidthRem,

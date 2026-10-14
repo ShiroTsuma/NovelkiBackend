@@ -11,7 +11,7 @@ import {
   Users,
   X,
 } from 'lucide-react'
-import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { api } from '@/api/client'
 import { HttpError } from '@/api/http'
@@ -22,15 +22,9 @@ import type {
   ManagedBookListingDto,
   TagDto,
 } from '@/api/types'
-import {
-  Badge,
-  buttonVariants,
-  controlClass,
-  DialogPanel,
-  PageHeader,
-  Surface,
-  useBodyScrollLock,
-} from '@/components/app/DesignSystem'
+import { buttonVariants, controlClass } from '@/components/app/designTokens'
+import { Badge, DialogPanel, PageHeader, Surface } from '@/components/app/DesignSystem'
+import { useBodyScrollLock } from '@/components/app/useBodyScrollLock'
 import { cn } from '@/lib/utils'
 
 type ManageSection = 'tags' | 'authors' | 'books'
@@ -66,7 +60,7 @@ export function ManagePage() {
       api.getManagedBooks({
         skip: pageParam,
         take: 50,
-        query: debouncedSearch || undefined,
+        ...(debouncedSearch ? { query: debouncedSearch } : {}),
       }),
     getNextPageParam: (lastPage) => {
       const nextSkip = lastPage.skip + lastPage.data.length
@@ -217,28 +211,28 @@ export function ManagePage() {
             <ManagedBooks
               actionId={bookActionId}
               error={libraryBooks.isError}
-              hasMore={Boolean(libraryBooks.hasNextPage)}
+              hasMore={libraryBooks.hasNextPage}
               items={libraryBookItems}
               loading={libraryBooks.isPending}
               loadingMore={libraryBooks.isFetchingNextPage}
               search={search}
               onLoadMore={() => void libraryBooks.fetchNextPage({ cancelRefetch: false })}
               onPublish={(book) =>
-                runBookAction(
+                void runBookAction(
                   book.id,
                   () => api.publishBook(book.id),
                   `“${book.primaryTitle}” is now listed.`,
                 )
               }
               onRefresh={(listing, book) =>
-                runBookAction(
+                void runBookAction(
                   book.id,
                   () => api.refreshPublishedBook(listing.id),
                   `“${book.primaryTitle}” snapshot refreshed.`,
                 )
               }
               onUnlist={(listing, book) =>
-                runBookAction(
+                void runBookAction(
                   book.id,
                   () => api.unlistPublishedBook(listing.id),
                   `“${book.primaryTitle}” was unlisted.`,
@@ -274,7 +268,13 @@ export function ManagePage() {
         </section>
       </Surface>
 
-      <ManageDialog item={selected} onClose={() => setSelected(null)} />
+      {selected ? (
+        <ManageDialog
+          key={`${selected.kind}:${selected.value?.id ?? 'new'}`}
+          item={selected}
+          onClose={() => setSelected(null)}
+        />
+      ) : null}
     </div>
   )
 }
@@ -329,6 +329,7 @@ function ManagedBooks({
       aria-busy={loadingMore}
       aria-label="Books"
       className="manage-list"
+      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- scrollable list must stay keyboard-focusable so it can be scrolled without a mouse (axe scrollable-region-focusable)
       tabIndex={0}
       onScroll={(event) => {
         const list = event.currentTarget
@@ -353,7 +354,7 @@ function ManagedBooks({
             <span className="manage-item__body">
               <strong>{book.primaryTitle}</strong>
               <small>
-                {book.author || 'Unknown author'} · {book.contentType}
+                {book.author?.length ? book.author : 'Unknown author'} · {book.contentType}
                 {listing ? ` · Snapshot ${new Date(listing.snapshotAt).toLocaleDateString()}` : ''}
               </small>
             </span>
@@ -419,7 +420,12 @@ function TagList({ tags, onEdit }: { tags: TagDto[]; onEdit: (tag: TagDto) => vo
     }),
   )
   return (
-    <div className="manage-list" aria-label="Tags" tabIndex={0}>
+    <div
+      className="manage-list"
+      aria-label="Tags"
+      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- scrollable list must stay keyboard-focusable so it can be scrolled without a mouse (axe scrollable-region-focusable)
+      tabIndex={0}
+    >
       {sortedTags.map((tag) => (
         <ManageRow
           editable={!tag.isGlobal}
@@ -432,7 +438,7 @@ function TagList({ tags, onEdit }: { tags: TagDto[]; onEdit: (tag: TagDto) => vo
           </span>
           <span className="manage-item__body">
             <strong>{tag.name}</strong>
-            <small>{tag.description || 'No description yet'}</small>
+            <small>{tag.description?.length ? tag.description : 'No description yet'}</small>
           </span>
           {tag.isGlobal ? <Badge tone="accent">Global</Badge> : null}
         </ManageRow>
@@ -455,7 +461,12 @@ function AuthorList({
     }),
   )
   return (
-    <div className="manage-list" aria-label="Authors" tabIndex={0}>
+    <div
+      className="manage-list"
+      aria-label="Authors"
+      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- scrollable list must stay keyboard-focusable so it can be scrolled without a mouse (axe scrollable-region-focusable)
+      tabIndex={0}
+    >
       {sortedAuthors.map((author) => (
         <ManageRow
           editable={author.isOwned}
@@ -513,20 +524,9 @@ function ManageRow({
   readOnlyLabel?: string
   onEdit: () => void
 }) {
-  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    if (editable && event.key === 'Enter') {
-      onEdit()
-    }
-  }
-
+  // Double-click is a pointer shortcut; keyboard users edit through the row's Edit button.
   return (
-    <div
-      className="manage-item"
-      role="group"
-      tabIndex={editable ? 0 : -1}
-      onDoubleClick={editable ? onEdit : undefined}
-      onKeyDown={handleKeyDown}
-    >
+    <div className="manage-item" role="group" onDoubleClick={editable ? onEdit : undefined}>
       {children}
       {editable ? (
         <button aria-label={label} className={buttonVariants.ghost} type="button" onClick={onEdit}>
@@ -539,39 +539,35 @@ function ManageRow({
   )
 }
 
-function ManageDialog({ item, onClose }: { item: ManagedItem | null; onClose: () => void }) {
+function ManageDialog({ item, onClose }: { item: ManagedItem; onClose: () => void }) {
   const queryClient = useQueryClient()
   const titleId = useId()
   const nameFieldRef = useRef<HTMLInputElement>(null)
   const firstFieldRef = useRef<HTMLTextAreaElement>(null)
-  const [nameValue, setNameValue] = useState('')
-  const [value, setValue] = useState('')
+  // The dialog is mounted per edited item (keyed by the parent), so initial state comes from props.
+  const [nameValue, setNameValue] = useState(() =>
+    item.value ? (item.kind === 'tag' ? item.value.name : item.value.primaryName) : '',
+  )
+  const [value, setValue] = useState(() =>
+    item.value
+      ? item.kind === 'tag'
+        ? (item.value.description ?? '')
+        : item.value.otherNames.join('\n')
+      : '',
+  )
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
-  useBodyScrollLock(item !== null)
+  useBodyScrollLock(true)
 
+  const hasExistingValue = item.value !== null
   useEffect(() => {
-    if (!item) {
-      return
-    }
-
-    setNameValue(item.value ? (item.kind === 'tag' ? item.value.name : item.value.primaryName) : '')
-    setValue(
-      item.value
-        ? item.kind === 'tag'
-          ? (item.value.description ?? '')
-          : item.value.otherNames.join('\n')
-        : '',
+    window.setTimeout(
+      () => (hasExistingValue ? firstFieldRef.current : nameFieldRef.current)?.focus(),
+      0,
     )
-    setConfirmDelete(false)
-    window.setTimeout(() => (item.value ? firstFieldRef.current : nameFieldRef.current)?.focus(), 0)
-  }, [item])
+  }, [hasExistingValue])
 
   useEffect(() => {
-    if (!item) {
-      return
-    }
-
     function closeOnEscape(event: globalThis.KeyboardEvent) {
       if (event.key === 'Escape' && !saving) {
         onClose()
@@ -580,11 +576,7 @@ function ManageDialog({ item, onClose }: { item: ManagedItem | null; onClose: ()
 
     window.addEventListener('keydown', closeOnEscape)
     return () => window.removeEventListener('keydown', closeOnEscape)
-  }, [item, onClose, saving])
-
-  if (!item) {
-    return null
-  }
+  }, [onClose, saving])
 
   const isCreate = item.value === null
   const name = item.value
@@ -594,24 +586,24 @@ function ManageDialog({ item, onClose }: { item: ManagedItem | null; onClose: ()
     : nameValue
   const section = item.kind === 'tag' ? 'tags' : 'authors'
 
-  async function handleSave(event: FormEvent) {
+  async function handleSave(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
     setSaving(true)
     try {
-      if (item?.kind === 'tag' && item.value) {
+      if (item.kind === 'tag' && item.value) {
         await api.updateTag(item.value.id, { description: value.trim() || null })
         toast.success(`Tag “${item.value.name}” updated.`)
-      } else if (item?.kind === 'tag') {
+      } else if (item.kind === 'tag') {
         await api.createTag({ name: nameValue.trim(), description: value.trim() || null })
         toast.success(`Tag “${nameValue.trim()}” created.`)
-      } else if (item?.kind === 'author' && item.value) {
+      } else if (item.value) {
         const otherNames = value
           .split('\n')
           .map((alias) => alias.trim())
           .filter(Boolean)
         await api.updateAuthor(item.value.id, { otherNames })
         toast.success(`Author “${item.value.primaryName}” updated.`)
-      } else if (item?.kind === 'author') {
+      } else {
         const otherNames = value
           .split('\n')
           .map((alias) => alias.trim())
@@ -636,12 +628,12 @@ function ManageDialog({ item, onClose }: { item: ManagedItem | null; onClose: ()
 
     setSaving(true)
     try {
-      if (item?.kind === 'tag' && item.value) {
+      if (item.kind === 'tag' && item.value) {
         await api.deleteTag(item.value.id)
-      } else if (item?.kind === 'author' && item.value) {
+      } else if (item.kind === 'author' && item.value) {
         await api.deleteAuthor(item.value.id)
       }
-      toast.success(`${item?.kind === 'tag' ? 'Tag' : 'Author'} “${name}” deleted.`)
+      toast.success(`${item.kind === 'tag' ? 'Tag' : 'Author'} “${name}” deleted.`)
       await queryClient.invalidateQueries({ queryKey: ['manage-metadata', section] })
       onClose()
     } catch (error) {
@@ -653,7 +645,7 @@ function ManageDialog({ item, onClose }: { item: ManagedItem | null; onClose: ()
   }
 
   async function handleVisibilityChange() {
-    if (item?.kind !== 'author' || !item.value) {
+    if (item.kind !== 'author' || !item.value) {
       return
     }
 
@@ -672,15 +664,12 @@ function ManageDialog({ item, onClose }: { item: ManagedItem | null; onClose: ()
   }
 
   return (
-    <div
-      aria-labelledby={titleId}
-      aria-modal="true"
-      className="manage-dialog"
-      role="dialog"
-      onMouseDown={onClose}
-    >
+    <div className="manage-dialog" role="presentation" onMouseDown={onClose}>
       <DialogPanel
+        aria-labelledby={titleId}
+        aria-modal="true"
         className="manage-dialog__panel"
+        role="dialog"
         onMouseDown={(event) => event.stopPropagation()}
       >
         <div className="manage-dialog__header">
@@ -701,7 +690,7 @@ function ManageDialog({ item, onClose }: { item: ManagedItem | null; onClose: ()
           </button>
         </div>
 
-        <form className="manage-dialog__form" onSubmit={handleSave}>
+        <form className="manage-dialog__form" onSubmit={(event) => void handleSave(event)}>
           {isCreate ? (
             <label>
               <span>{item.kind === 'tag' ? 'Tag name' : 'Primary name'}</span>
@@ -767,7 +756,7 @@ function ManageDialog({ item, onClose }: { item: ManagedItem | null; onClose: ()
                   className={buttonVariants.secondary}
                   disabled={saving}
                   type="button"
-                  onClick={handleVisibilityChange}
+                  onClick={() => void handleVisibilityChange()}
                 >
                   {item.value.isPublic ? 'Make private' : 'Make public'}
                 </button>
@@ -784,7 +773,7 @@ function ManageDialog({ item, onClose }: { item: ManagedItem | null; onClose: ()
                 )}
                 disabled={saving}
                 type="button"
-                onClick={handleDelete}
+                onClick={() => void handleDelete()}
               >
                 <Trash2 className="h-4 w-4" />
                 {confirmDelete ? 'Confirm delete' : `Delete ${item.kind}`}

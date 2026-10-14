@@ -51,7 +51,7 @@ export const api = {
       token: null,
     }),
   logout: () =>
-    apiRequest<void>('/account/logout', {
+    apiRequest<undefined>('/account/logout', {
       method: 'POST',
       token: null,
     }),
@@ -82,7 +82,7 @@ export const api = {
   }) =>
     apiRequest<PaginatedResult<BookListItemDto>>(
       `/book${toQueryString(withFilteredQuery(params))}`,
-      { signal },
+      { signal: signal ?? null },
     ),
   getManagedBooks: (params: { skip?: number; take?: number; query?: string }) =>
     apiRequest<PaginatedResult<ManagedBookListItemDto>>(
@@ -102,7 +102,7 @@ export const api = {
   }) =>
     apiRequest<BookSearchSuggestionDto[]>(
       `/book/search-suggestions${toQueryString(withFilteredQuery(params))}`,
-      { signal },
+      { signal: signal ?? null },
     ),
   getBookAnalytics: (params: { query?: string; from?: string; to?: string; bucket?: string }) =>
     apiRequest<BookAnalyticsDto>(`/book/analytics${toQueryString(withFilteredQuery(params))}`),
@@ -123,7 +123,7 @@ export const api = {
   parseBookHtml: (html: string) =>
     apiRequest<BookHtmlParseResult>('/book/parse-html', { method: 'POST', body: { html } }),
   updateBook: (id: string, request: BookMutationRequest) =>
-    apiRequest<void>(`/book/${id}`, { method: 'PUT', body: request }),
+    apiRequest<undefined>(`/book/${id}`, { method: 'PUT', body: request }),
   createBookImportSession: (file: File) => {
     const formData = new FormData()
     formData.set('file', file)
@@ -163,11 +163,11 @@ export const api = {
       method: 'POST',
     }),
   cancelBookImport: (sessionId: string) =>
-    apiRequest<void>(`/book/import/sessions/${sessionId}`, { method: 'DELETE' }),
+    apiRequest<undefined>(`/book/import/sessions/${sessionId}`, { method: 'DELETE' }),
   updateAdminBook: (id: string, request: BookMutationRequest) =>
-    apiRequest<void>(`/admin/books/${id}`, { method: 'PUT', body: request }),
+    apiRequest<undefined>(`/admin/books/${id}`, { method: 'PUT', body: request }),
   updateProgress: (id: string, request: UpdateProgressRequest) =>
-    apiRequest<void>(`/book/${id}/progress`, { method: 'PATCH', body: request }),
+    apiRequest<undefined>(`/book/${id}/progress`, { method: 'PATCH', body: request }),
   setBookCoverFromUrl: (id: string, imageUrl: string) =>
     apiRequest<BookCoverDto>(`/book/${id}/cover/url`, { method: 'PUT', body: { imageUrl } }),
   uploadBookCover: (id: string, file: File) => {
@@ -179,8 +179,8 @@ export const api = {
     apiRequest<{ bookId: string }>(`/book/cover/uploads/${token}`),
   refreshBookCover: (id: string) =>
     apiRequest<BookCoverDto>(`/book/${id}/cover/refresh`, { method: 'POST' }),
-  deleteBookCover: (id: string) => apiRequest<void>(`/book/${id}/cover`, { method: 'DELETE' }),
-  deleteBook: (id: string) => apiRequest<void>(`/book/${id}`, { method: 'DELETE' }),
+  deleteBookCover: (id: string) => apiRequest<undefined>(`/book/${id}/cover`, { method: 'DELETE' }),
+  deleteBook: (id: string) => apiRequest<undefined>(`/book/${id}`, { method: 'DELETE' }),
   searchPublicBooks: (params: {
     search?: string
     skip?: number
@@ -198,7 +198,7 @@ export const api = {
   refreshPublishedBook: (snapshotId: string) =>
     apiRequest<PublicBookSnapshotDto>(`/public-book/${snapshotId}/refresh`, { method: 'PUT' }),
   unlistPublishedBook: (snapshotId: string) =>
-    apiRequest<void>(`/public-book/${snapshotId}`, { method: 'DELETE' }),
+    apiRequest<undefined>(`/public-book/${snapshotId}`, { method: 'DELETE' }),
   copyPublicBook: (snapshotId: string) =>
     apiRequest<CopyPublicBookResult>(`/public-book/${snapshotId}/copy`, { method: 'POST' }),
   searchAuthors: (search: string, take = 10, mineOnly = false) =>
@@ -211,14 +211,14 @@ export const api = {
     apiRequest<AuthorDto>(`/author/${id}`, { method: 'PUT', body: request }),
   updateAuthorVisibility: (id: string, isPublic: boolean) =>
     apiRequest<AuthorDto>(`/author/${id}/visibility`, { method: 'PUT', body: { isPublic } }),
-  deleteAuthor: (id: string) => apiRequest<void>(`/author/${id}`, { method: 'DELETE' }),
+  deleteAuthor: (id: string) => apiRequest<undefined>(`/author/${id}`, { method: 'DELETE' }),
   searchTags: (search: string, take = 10) =>
     apiRequest<TagDto[]>(`/tag${toQueryString({ search, take })}`),
   createTag: (request: CreateTagRequest) =>
     apiRequest<TagDto>('/tag', { method: 'POST', body: request }),
   updateTag: (id: string, request: UpdateTagRequest) =>
     apiRequest<TagDto>(`/tag/${id}`, { method: 'PUT', body: request }),
-  deleteTag: (id: string) => apiRequest<void>(`/tag/${id}`, { method: 'DELETE' }),
+  deleteTag: (id: string) => apiRequest<undefined>(`/tag/${id}`, { method: 'DELETE' }),
   getTypes: () =>
     apiRequest<PaginatedResult<DictionaryDto>>(`/type${toQueryString({ skip: 0, take: 100 })}`),
   getStatuses: () =>
@@ -233,20 +233,21 @@ export const api = {
     apiRequest<DictionaryDto>('/admin/genres', { method: 'POST', body: request }),
   updateAdminStatus: (id: string, request: DictionaryMutationRequest) =>
     apiRequest<DictionaryDto>(`/status/${id}`, { method: 'PUT', body: request }),
-  deleteAdminStatus: (id: string) => apiRequest<void>(`/status/${id}`, { method: 'DELETE' }),
+  deleteAdminStatus: (id: string) => apiRequest<undefined>(`/status/${id}`, { method: 'DELETE' }),
   updateAdminType: (id: string, request: DictionaryMutationRequest) =>
     apiRequest<DictionaryDto>(`/type/${id}`, { method: 'PUT', body: request }),
-  deleteAdminType: (id: string) => apiRequest<void>(`/type/${id}`, { method: 'DELETE' }),
+  deleteAdminType: (id: string) => apiRequest<undefined>(`/type/${id}`, { method: 'DELETE' }),
   updateAdminGenre: (id: string, request: DictionaryMutationRequest) =>
     apiRequest<DictionaryDto>(`/genre/${id}`, { method: 'PUT', body: request }),
-  deleteAdminGenre: (id: string) => apiRequest<void>(`/genre/${id}`, { method: 'DELETE' }),
+  deleteAdminGenre: (id: string) => apiRequest<undefined>(`/genre/${id}`, { method: 'DELETE' }),
   searchAdminGlobalTags: (search = '', take = 100) =>
     apiRequest<TagDto[]>(`/admin/tags${toQueryString({ search, take })}`),
   createAdminGlobalTag: (request: DictionaryMutationRequest) =>
     apiRequest<TagDto>('/admin/tags', { method: 'POST', body: request }),
   updateAdminGlobalTag: (id: string, request: DictionaryMutationRequest) =>
     apiRequest<TagDto>(`/admin/tags/${id}`, { method: 'PUT', body: request }),
-  deleteAdminGlobalTag: (id: string) => apiRequest<void>(`/admin/tags/${id}`, { method: 'DELETE' }),
+  deleteAdminGlobalTag: (id: string) =>
+    apiRequest<undefined>(`/admin/tags/${id}`, { method: 'DELETE' }),
   deleteAdminBooksByOwner: (ownerId: string) =>
     apiRequest<AdminLibraryPurgeResult>(`/admin/books/owner/${ownerId}`, { method: 'DELETE' }),
   getAdminUsers: (params: { skip?: number; take?: number; search?: string }) =>

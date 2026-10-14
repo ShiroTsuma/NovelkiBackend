@@ -42,6 +42,7 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       ...jsxA11y.flatConfigs.recommended.rules,
       'react-refresh/only-export-components': ['error', { allowConstantExport: true }],
+      'jsx-a11y/label-has-associated-control': ['error', { depth: 3 }],
     },
   },
   {
@@ -75,7 +76,12 @@ export default tseslint.config(
   {
     files: ['**/*.{js,mjs,cjs}'],
     ...tseslint.configs.disableTypeChecked,
-    languageOptions: { globals: globals.node },
+    languageOptions: {
+      // Plain JS is linted without type information. The parser options
+      // override the projectService enabled above for TS files.
+      parserOptions: { projectService: false, project: false, program: null },
+      globals: globals.node,
+    },
   },
   prettier,
 )
