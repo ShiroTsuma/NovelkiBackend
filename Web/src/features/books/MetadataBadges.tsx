@@ -114,7 +114,7 @@ function DescribedMetadataPill({
     <MetadataTooltip
       ariaLabel={`${value}: ${description}`}
       content={description}
-      triggerClassName={triggerClassName}
+      triggerClassName={`${triggerClassName} cursor-help underline decoration-dotted decoration-1 underline-offset-[3px]`}
     >
       {value}
     </MetadataTooltip>
