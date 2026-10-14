@@ -25,15 +25,17 @@ test('app shell keeps stable page landmarks and primary structure', async ({ pag
   await expect(page.locator('main')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Books' })).toBeVisible()
   await expect(page.getByRole('button', { name: /log out/i })).toBeVisible()
-  const nsfwToggle = page.locator('.app-nsfw-toggle')
-  await expect(page.getByRole('button', { name: /enable nsfw content/i })).toBeVisible()
-  await expect(nsfwToggle).toHaveText('NSFW')
+  const nsfwToggle = page.getByRole('button', { name: /enable nsfw content/i })
+  await expect(nsfwToggle).toBeVisible()
   await expect(nsfwToggle).toHaveAttribute('aria-pressed', 'false')
-  await expect(nsfwToggle).toHaveCSS('box-shadow', 'none')
   await expect(page.locator('main')).toHaveCount(1)
 
-  await expect(page.getByRole('navigation', { name: /primary/i })).toBeVisible()
-  await expect(page.getByRole('link', { name: /books/i })).toHaveAttribute('aria-current', 'page')
+  const primaryNav = page.getByRole('navigation', { name: 'Primary navigation', exact: true })
+  await expect(primaryNav).toBeVisible()
+  await expect(primaryNav.getByRole('link', { name: 'Library' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  )
   await expect(page.getByRole('link', { name: /skip to content/i })).toHaveAttribute(
     'href',
     '#main-content',

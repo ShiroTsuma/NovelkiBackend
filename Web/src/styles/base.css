@@ -1,0 +1,81 @@
+/*
+ * Base element styling for the redesign: no default browser chrome should
+ * show through (scrollbars, checkboxes, number spinners, search clear button,
+ * autofill tint).
+ */
+
+@layer base {
+  *::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+  }
+
+  ::placeholder {
+    color: var(--color-ink-3);
+    opacity: 1;
+  }
+
+  input[type='number'] {
+    appearance: textfield;
+    -moz-appearance: textfield;
+  }
+
+  input[type='number']::-webkit-inner-spin-button,
+  input[type='number']::-webkit-outer-spin-button {
+    margin: 0;
+    -webkit-appearance: none;
+  }
+
+  input[type='search']::-webkit-search-cancel-button,
+  input[type='search']::-webkit-search-decoration {
+    -webkit-appearance: none;
+  }
+
+  input[type='checkbox'] {
+    display: inline-grid;
+    flex: none;
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    place-content: center;
+    border: 1.5px solid #5a5d63;
+    border-radius: 5px;
+    background: var(--color-ground);
+    cursor: pointer;
+    appearance: none;
+  }
+
+  input[type='checkbox']::before {
+    width: 10px;
+    height: 10px;
+    content: '';
+    transform: scale(0);
+    transition: transform 120ms ease;
+    background: var(--color-ink-inverse);
+    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+  }
+
+  input[type='checkbox']:checked {
+    border-color: var(--color-accent);
+    background: var(--color-accent);
+  }
+
+  input[type='checkbox']:checked::before {
+    transform: scale(1);
+  }
+
+  input[type='checkbox']:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  input:-webkit-autofill {
+    -webkit-box-shadow: 0 0 0 40px var(--color-ground) inset;
+    -webkit-text-fill-color: var(--color-ink);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    input[type='checkbox']::before {
+      transition: none;
+    }
+  }
+}

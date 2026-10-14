@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -7,22 +7,32 @@ import { createTestQueryClient } from '@/test/render'
 import { nsfwPreferenceStorageKey } from '@/lib/nsfwPreference'
 import { AppShell } from './AppShell'
 
+const authState = vi.hoisted(() => ({ isAdmin: false }))
+
 vi.mock('@/features/auth/useAuth', () => ({
   useAuth: () => ({
-    isAdmin: false,
+    isAdmin: authState.isAdmin,
     logout: vi.fn(),
   }),
 }))
 
+function primaryNav() {
+  return screen.getByRole('navigation', { name: 'Primary navigation' })
+}
+
+function mobileNav() {
+  return screen.getByRole('navigation', { name: 'Primary navigation (mobile)' })
+}
+
 describe('AppShell', () => {
-  it('exposes stable shell landmarks for page refactors', () => {
+  it('exposes stable shell landmarks', () => {
     renderAt('/books')
 
     expect(screen.getByRole('banner')).toBeInTheDocument()
-    expect(screen.getByRole('navigation', { name: /primary/i })).toBeInTheDocument()
-    expect(screen.getByRole('main')).toBeInTheDocument()
-    expect(screen.getByText('Novelki')).toBeInTheDocument()
-    expect(screen.getByText('Personal library system')).toBeInTheDocument()
+    expect(primaryNav()).toBeInTheDocument()
+    expect(mobileNav()).toBeInTheDocument()
+    expect(screen.getByRole('main')).toHaveAttribute('id', 'main-content')
+    expect(screen.getByRole('link', { name: 'Novelki' })).toHaveAttribute('href', '/books')
     expect(screen.getByRole('link', { name: /skip to content/i })).toHaveAttribute(
       'href',
       '#main-content',
@@ -32,6 +42,29 @@ describe('AppShell', () => {
       'false',
     )
     expect(screen.getByRole('button', { name: /log out/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Add book' })).toHaveAttribute('href', '/books/new')
+  })
+
+  it('lists the four destinations in both navigations', () => {
+    renderAt('/books')
+
+    for (const nav of [primaryNav(), mobileNav()]) {
+      const names = within(nav)
+        .getAllByRole('link')
+        .map((link) => link.textContent)
+      expect(names).toEqual(['Library', 'Discover', 'Stats', 'Manage'])
+    }
+  })
+
+  it('adds Admin to the desktop navigation for admins', () => {
+    authState.isAdmin = true
+    renderAt('/books')
+    authState.isAdmin = false
+
+    expect(within(primaryNav()).getByRole('link', { name: 'Admin' })).toHaveAttribute(
+      'href',
+      '/admin',
+    )
   })
 
   it('stores the NSFW preference and refreshes cached requests', async () => {
@@ -49,33 +82,37 @@ describe('AppShell', () => {
     expect(invalidateQueries).toHaveBeenCalled()
   })
 
-  it('keeps only the matching top-level nav item active on the add-book route', () => {
+  it('keeps Library inactive on the add-book route', () => {
     renderAt('/books/new')
 
-    expect(screen.getByRole('link', { name: /books/i })).not.toHaveAttribute('aria-current')
-    expect(screen.getByRole('link', { name: /add/i })).toHaveAttribute('aria-current', 'page')
+    expect(within(primaryNav()).getByRole('link', { name: 'Library' })).not.toHaveAttribute(
+      'aria-current',
+    )
   })
 
-  it('marks only books as active on the books list route', () => {
+  it('marks only Library as active on the books list route', () => {
     renderAt('/books')
 
-    expect(screen.getByRole('link', { name: /books/i })).toHaveAttribute('aria-current', 'page')
-    expect(screen.getByRole('link', { name: /analytics/i })).not.toHaveAttribute('aria-current')
-    expect(screen.getByRole('link', { name: /add/i })).not.toHaveAttribute('aria-current')
+    const nav = within(primaryNav())
+    expect(nav.getByRole('link', { name: 'Library' })).toHaveAttribute('aria-current', 'page')
+    expect(nav.getByRole('link', { name: 'Stats' })).not.toHaveAttribute('aria-current')
   })
 
-  it('marks analytics as active on the analytics route', () => {
+  it('marks Stats as active on the analytics route', () => {
     renderAt('/analytics')
 
-    expect(screen.getByRole('link', { name: /analytics/i })).toHaveAttribute('aria-current', 'page')
-    expect(screen.getByRole('link', { name: /books/i })).not.toHaveAttribute('aria-current')
+    const nav = within(primaryNav())
+    expect(nav.getByRole('link', { name: 'Stats' })).toHaveAttribute('aria-current', 'page')
+    expect(nav.getByRole('link', { name: 'Library' })).not.toHaveAttribute('aria-current')
   })
 
-  it('exposes and activates the manage workspace', () => {
+  it('marks Manage as active in the mobile navigation', () => {
     renderAt('/manage')
 
-    expect(screen.getByRole('link', { name: /manage/i })).toHaveAttribute('aria-current', 'page')
-    expect(screen.getByRole('link', { name: /books/i })).not.toHaveAttribute('aria-current')
+    expect(within(mobileNav()).getByRole('link', { name: 'Manage' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
   })
 })
 
