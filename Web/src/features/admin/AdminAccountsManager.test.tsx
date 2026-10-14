@@ -20,9 +20,14 @@ const user = {
 
 describe('AdminAccountsManager', () => {
   beforeEach(() => {
-    vi.mocked(api.getAdminUsers).mockReset().mockResolvedValue({ skip: 0, take: 100, total: 1, data: [user] })
+    vi.mocked(api.getAdminUsers)
+      .mockReset()
+      .mockResolvedValue({ skip: 0, take: 100, total: 1, data: [user] })
     vi.mocked(api.deleteAdminUser).mockReset().mockResolvedValue({
-      userId: user.id, deletedBooks: 4, deletedTags: 2, deletedAuthors: 1,
+      userId: user.id,
+      deletedBooks: 4,
+      deletedTags: 2,
+      deletedAuthors: 1,
     })
   })
 
@@ -30,8 +35,17 @@ describe('AdminAccountsManager', () => {
     const actor = userEvent.setup()
     renderWithProviders(<AdminAccountsManager />)
 
-    await actor.type(screen.getByPlaceholderText('Search by username or email…'), 'reader@example.com')
-    await waitFor(() => expect(api.getAdminUsers).toHaveBeenLastCalledWith({ skip: 0, take: 100, search: 'reader@example.com' }))
+    await actor.type(
+      screen.getByPlaceholderText('Search by username or email…'),
+      'reader@example.com',
+    )
+    await waitFor(() =>
+      expect(api.getAdminUsers).toHaveBeenLastCalledWith({
+        skip: 0,
+        take: 100,
+        search: 'reader@example.com',
+      }),
+    )
     await actor.click(await screen.findByRole('button', { name: 'Delete account reader' }))
     expect(screen.getByText(/permanently removes the account/i)).toBeInTheDocument()
     await actor.click(screen.getByRole('button', { name: 'Delete account permanently' }))

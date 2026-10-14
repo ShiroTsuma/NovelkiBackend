@@ -15,7 +15,9 @@ describe('MetadataSummary', () => {
     )
 
     await user.hover(screen.getByLabelText('2 alternative names'))
-    expect(screen.getByRole('tooltip')).toHaveTextContent('Alternative names: First Alias Second Alias')
+    expect(screen.getByRole('tooltip')).toHaveTextContent(
+      'Alternative names: First Alias Second Alias',
+    )
     expect(screen.getByRole('tooltip')).toHaveClass('metadata-tooltip', 'ui-chart-tooltip')
   })
 
@@ -31,7 +33,9 @@ describe('MetadataSummary', () => {
     )
 
     await user.hover(screen.getByLabelText('3 alternative titles'))
-    expect(screen.getByRole('tooltip')).toHaveTextContent('Alternative titles: First Title Second Title +1 more')
+    expect(screen.getByRole('tooltip')).toHaveTextContent(
+      'Alternative titles: First Title Second Title +1 more',
+    )
   })
 })
 

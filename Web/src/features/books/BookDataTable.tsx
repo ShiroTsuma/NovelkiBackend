@@ -36,9 +36,14 @@ export function BookDataTable<T extends { id: string }>({
 
   return (
     <div className={`book-table-scroll ${wrapperClassName} max-w-full overflow-x-auto`}>
-      <table className="w-full table-fixed border-collapse text-left text-sm" style={{ minWidth: `${tableMinWidthRem}rem` }}>
+      <table
+        className="w-full table-fixed border-collapse text-left text-sm"
+        style={{ minWidth: `${tableMinWidthRem}rem` }}
+      >
         <colgroup>
-          {columns.map((column) => <col className={column.widthClass ?? ''} key={column.id} />)}
+          {columns.map((column) => (
+            <col className={column.widthClass ?? ''} key={column.id} />
+          ))}
           <col className="w-32" />
         </colgroup>
         <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-500">
@@ -52,30 +57,48 @@ export function BookDataTable<T extends { id: string }>({
                 onSort={onSort}
               />
             ))}
-            <th className="sticky right-0 z-10 border-l border-slate-200 bg-slate-100 px-3 py-3 text-right">{actionHeader}</th>
+            <th className="sticky right-0 z-10 border-l border-slate-200 bg-slate-100 px-3 py-3 text-right">
+              {actionHeader}
+            </th>
           </tr>
         </thead>
         <tbody>
           {isLoading ? (
-            <tr><td className="px-4 py-8 text-center text-slate-500" colSpan={columns.length + 1}>{loadingMessage}</td></tr>
+            <tr>
+              <td className="px-4 py-8 text-center text-slate-500" colSpan={columns.length + 1}>
+                {loadingMessage}
+              </td>
+            </tr>
           ) : null}
           {items.map((item) => (
-            <tr className="book-table-row group border-t border-slate-100" data-testid={`book-table-row-${item.id}`} key={item.id}>
+            <tr
+              className="book-table-row group border-t border-slate-100"
+              data-testid={`book-table-row-${item.id}`}
+              key={item.id}
+            >
               {columns.map((column) => {
                 const content = column.render(item)
-                const title = typeof content === 'string' || typeof content === 'number'
-                  ? String(content)
-                  : undefined
+                const title =
+                  typeof content === 'string' || typeof content === 'number'
+                    ? String(content)
+                    : undefined
 
                 return (
-                  <td className="book-table-cell px-3 py-3 text-slate-600" data-testid={`book-table-cell-${item.id}-${column.id}`} key={column.id}>
+                  <td
+                    className="book-table-cell px-3 py-3 text-slate-600"
+                    data-testid={`book-table-cell-${item.id}-${column.id}`}
+                    key={column.id}
+                  >
                     <div className="overflow-hidden" title={title}>
                       {content}
                     </div>
                   </td>
                 )
               })}
-              <td className="book-table-actions-cell sticky right-0 z-10 border-l border-slate-200 bg-white px-3 py-3" data-testid={`book-table-actions-cell-${item.id}`}>
+              <td
+                className="book-table-actions-cell sticky right-0 z-10 border-l border-slate-200 bg-white px-3 py-3"
+                data-testid={`book-table-actions-cell-${item.id}`}
+              >
                 <div className="flex justify-end gap-2 whitespace-nowrap">
                   {renderActions(item)}
                 </div>
@@ -83,7 +106,11 @@ export function BookDataTable<T extends { id: string }>({
             </tr>
           ))}
           {items.length === 0 ? (
-            <tr><td className="px-4 py-8 text-center text-slate-500" colSpan={columns.length + 1}>{emptyMessage}</td></tr>
+            <tr>
+              <td className="px-4 py-8 text-center text-slate-500" colSpan={columns.length + 1}>
+                {emptyMessage}
+              </td>
+            </tr>
           ) : null}
         </tbody>
       </table>
@@ -91,8 +118,11 @@ export function BookDataTable<T extends { id: string }>({
   )
 }
 
-export function getBookTableMinWidthRem(columns: Array<{ widthClass?: string }>) {
-  const columnWidth = columns.reduce((sum, column) => sum + getTailwindWidthRem(column.widthClass), actionsColumnWidthRem)
+export function getBookTableMinWidthRem(columns: { widthClass?: string }[]) {
+  const columnWidth = columns.reduce(
+    (sum, column) => sum + getTailwindWidthRem(column.widthClass),
+    actionsColumnWidthRem,
+  )
   return Math.max(minimumTableWidthRem, columnWidth)
 }
 

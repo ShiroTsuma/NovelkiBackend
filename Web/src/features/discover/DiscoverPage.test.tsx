@@ -39,7 +39,9 @@ const snapshot = {
 
 describe('DiscoverPage', () => {
   beforeEach(() => {
-    vi.mocked(api.searchPublicBooks).mockReset().mockResolvedValue(paginated([snapshot]))
+    vi.mocked(api.searchPublicBooks)
+      .mockReset()
+      .mockResolvedValue(paginated([snapshot]))
     vi.mocked(api.copyPublicBook).mockReset().mockResolvedValue({ bookId: 'copied-book' })
   })
 
@@ -54,11 +56,13 @@ describe('DiscoverPage', () => {
     expect(screen.getByRole('tooltip')).toHaveTextContent('Alternative titles: LOTM Guimi Zhi Zhu')
 
     await user.type(screen.getByPlaceholderText(/exclude with -tag:/i), '-tag:romance')
-    await waitFor(() => expect(api.searchPublicBooks).toHaveBeenCalledWith({
-      search: '-tag:romance',
-      skip: 0,
-      take: 40,
-    }))
+    await waitFor(() =>
+      expect(api.searchPublicBooks).toHaveBeenCalledWith({
+        search: '-tag:romance',
+        skip: 0,
+        take: 40,
+      }),
+    )
 
     await user.click(screen.getByRole('button', { name: 'Add to library' }))
     await waitFor(() => expect(api.copyPublicBook).toHaveBeenCalledWith(snapshot.id))

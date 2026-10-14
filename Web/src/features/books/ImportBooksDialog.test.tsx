@@ -21,8 +21,18 @@ vi.mock('@/api/client', () => ({
 }))
 
 vi.mock('react-virtuoso', () => ({
-  Virtuoso: ({ data, itemContent }: { data: unknown[]; itemContent: (index: number, item: unknown) => ReactNode }) => (
-    <div>{data.map((item, index) => <div key={(item as { rowId: string }).rowId}>{itemContent(index, item)}</div>)}</div>
+  Virtuoso: ({
+    data,
+    itemContent,
+  }: {
+    data: unknown[]
+    itemContent: (index: number, item: unknown) => ReactNode
+  }) => (
+    <div>
+      {data.map((item, index) => (
+        <div key={(item as { rowId: string }).rowId}>{itemContent(index, item)}</div>
+      ))}
+    </div>
   ),
 }))
 
@@ -51,9 +61,7 @@ describe('ImportBooksDialog', () => {
   it('creates an import session when a csv file is dropped into the dialog', async () => {
     vi.mocked(api.createBookImportSession).mockResolvedValue(importSessionWithFieldErrors)
 
-    renderWithProviders(
-      <ImportBooksDialog open onClose={vi.fn()} onImported={vi.fn()} />,
-    )
+    renderWithProviders(<ImportBooksDialog open onClose={vi.fn()} onImported={vi.fn()} />)
 
     const dropzone = screen.getByText(/drop a csv here or use file selection/i).closest('div')
     expect(dropzone).not.toBeNull()
@@ -70,9 +78,7 @@ describe('ImportBooksDialog', () => {
   })
 
   it('rejects dropped files that are not csv', async () => {
-    renderWithProviders(
-      <ImportBooksDialog open onClose={vi.fn()} onImported={vi.fn()} />,
-    )
+    renderWithProviders(<ImportBooksDialog open onClose={vi.fn()} onImported={vi.fn()} />)
 
     const dropzone = screen.getByText(/drop a csv here or use file selection/i).closest('div')
     expect(dropzone).not.toBeNull()
@@ -94,7 +100,9 @@ describe('ImportBooksDialog', () => {
       <ImportBooksDialog mode="full" open onClose={vi.fn()} onImported={vi.fn()} />,
     )
 
-    const dropzone = screen.getByText(/drop a backup zip here or use file selection/i).closest('div')
+    const dropzone = screen
+      .getByText(/drop a backup zip here or use file selection/i)
+      .closest('div')
     expect(dropzone).not.toBeNull()
 
     const file = new File(['zip-content'], 'books-full-export.zip', { type: 'application/zip' })
@@ -169,11 +177,11 @@ describe('ImportBooksDialog', () => {
     const createObjectUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:template')
     const revokeObjectUrl = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
     const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
-    vi.mocked(api.downloadBookImportTemplate).mockResolvedValue(new Blob(['primaryTitle,contentType,status\n'], { type: 'text/csv' }))
-
-    renderWithProviders(
-      <ImportBooksDialog open onClose={vi.fn()} onImported={vi.fn()} />,
+    vi.mocked(api.downloadBookImportTemplate).mockResolvedValue(
+      new Blob(['primaryTitle,contentType,status\n'], { type: 'text/csv' }),
     )
+
+    renderWithProviders(<ImportBooksDialog open onClose={vi.fn()} onImported={vi.fn()} />)
 
     fireEvent.click(screen.getByRole('button', { name: /download template/i }))
 
@@ -255,9 +263,16 @@ describe('ImportBooksDialog', () => {
       },
     })
 
-    expect(await screen.findByTestId('import-dialog-panel')).toHaveClass('h-[calc(100vh-0.5rem)]', 'overflow-hidden')
+    expect(await screen.findByTestId('import-dialog-panel')).toHaveClass(
+      'h-[calc(100vh-0.5rem)]',
+      'overflow-hidden',
+    )
     expect(screen.getByRole('dialog')).toHaveClass('overflow-hidden')
-    expect(screen.getByTestId('import-invalid-rows-panel')).toHaveClass('min-h-0', 'flex-1', 'overflow-hidden')
+    expect(screen.getByTestId('import-invalid-rows-panel')).toHaveClass(
+      'min-h-0',
+      'flex-1',
+      'overflow-hidden',
+    )
   })
 
   it('marks import row fields with field errors', async () => {
@@ -362,8 +377,13 @@ describe('ImportBooksDialog', () => {
     const closeButton = screen.getByRole('button', { name: /^close$/i })
     const finalizeButton = screen.getByRole('button', { name: /finalize import/i })
 
-    expect((closeButton.compareDocumentPosition(discardInvalidButton) & Node.DOCUMENT_POSITION_FOLLOWING)).toBeTruthy()
-    expect((discardInvalidButton.compareDocumentPosition(finalizeButton) & Node.DOCUMENT_POSITION_FOLLOWING)).toBeTruthy()
+    expect(
+      closeButton.compareDocumentPosition(discardInvalidButton) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    expect(
+      discardInvalidButton.compareDocumentPosition(finalizeButton) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
 
     fireEvent.click(discardInvalidButton)
 
@@ -467,7 +487,9 @@ describe('ImportBooksDialog', () => {
 
     const partialMessages = await screen.findByText('Partial import messages')
     expect(partialMessages.closest('.ui-surface')).toHaveClass('ui-surface--danger')
-    expect(screen.getByText("Line 3: title 'Existing Book' already exists for content type 'Novel'.")).toBeInTheDocument()
+    expect(
+      screen.getByText("Line 3: title 'Existing Book' already exists for content type 'Novel'."),
+    ).toBeInTheDocument()
     expect(screen.getByText('Skipped')).toBeInTheDocument()
   })
 
@@ -535,7 +557,8 @@ const importSessionWithLongTitle: BookImportSessionDto = {
   rows: [
     {
       ...importSessionWithFieldErrors.rows[0],
-      primaryTitle: 'A Very Long Imported Book Title That Should Stay Inside Its Header Without Pushing The Action Buttons Below Or Off The Right Edge',
+      primaryTitle:
+        'A Very Long Imported Book Title That Should Stay Inside Its Header Without Pushing The Action Buttons Below Or Off The Right Edge',
     },
   ],
 }

@@ -1,0 +1,8 @@
+dist/
+node_modules/
+coverage/
+playwright-report/
+test-results/
+tests/layout.spec.ts-snapshots/
+package-lock.json
+public/

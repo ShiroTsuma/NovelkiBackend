@@ -1,7 +1,17 @@
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { BookAnalyticsDto } from '@/api/types'
 import { Surface } from '@/components/app/DesignSystem'
-import { analyticsTooltipProps, DrilldownLink, formatCount, formatPercent, getActiveChartLabel, noneQuery, numberQuery, percent, useBooksDrilldown } from './chartUtils'
+import {
+  analyticsTooltipProps,
+  DrilldownLink,
+  formatCount,
+  formatPercent,
+  getActiveChartLabel,
+  noneQuery,
+  numberQuery,
+  percent,
+  useBooksDrilldown,
+} from './chartUtils'
 
 type RatingDistributionChartProps = {
   data: BookAnalyticsDto | undefined
@@ -15,7 +25,11 @@ export function RatingDistributionChart({ data }: RatingDistributionChartProps) 
   const openBooks = useBooksDrilldown()
 
   if (!ratings || totalBooks === 0) {
-    return <div className="grid min-h-56 place-items-center text-sm text-slate-500">No rating data for this analytics scope.</div>
+    return (
+      <div className="grid min-h-56 place-items-center text-sm text-slate-500">
+        No rating data for this analytics scope.
+      </div>
+    )
   }
 
   return (
@@ -31,7 +45,9 @@ export function RatingDistributionChart({ data }: RatingDistributionChartProps) 
           <div className="mt-3 text-sm text-slate-500">
             Avg {ratings.averageRating == null ? '-' : ratings.averageRating.toFixed(1)}
           </div>
-          <DrilldownLink query={noneQuery('rating')}>Unrated: {formatCount(ratings.unratedBooks)}</DrilldownLink>
+          <DrilldownLink query={noneQuery('rating')}>
+            Unrated: {formatCount(ratings.unratedBooks)}
+          </DrilldownLink>
         </Surface>
         <div className="analytics-drilldown-chart h-64 min-w-0">
           <ResponsiveContainer>
@@ -47,13 +63,16 @@ export function RatingDistributionChart({ data }: RatingDistributionChartProps) 
             >
               <XAxis dataKey="rating" tickLine={false} />
               <YAxis allowDecimals={false} tickLine={false} />
-              <Tooltip {...analyticsTooltipProps} formatter={(value, _name, item) => [`${formatCount(Number(value))} books`, `Rating ${item.payload.rating}`]} />
+              <Tooltip
+                {...analyticsTooltipProps}
+                formatter={(value, _name, item) => [
+                  `${formatCount(Number(value))} books`,
+                  `Rating ${item.payload.rating}`,
+                ]}
+              />
               <Bar dataKey="bookCount" name="Books">
                 {counts.map((item) => (
-                  <Cell
-                    fill={item.bookCount > 0 ? '#8b92d8' : '#273142'}
-                    key={item.rating}
-                  />
+                  <Cell fill={item.bookCount > 0 ? '#8b92d8' : '#273142'} key={item.rating} />
                 ))}
               </Bar>
             </BarChart>

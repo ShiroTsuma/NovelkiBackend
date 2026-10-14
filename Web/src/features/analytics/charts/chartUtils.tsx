@@ -2,7 +2,16 @@ import type { ReactNode } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { addDays, addMonths, addWeeks, format, parseISO } from 'date-fns'
 
-export const chartColors = ['#8b92d8', '#75b69c', '#d1aa6e', '#8e7ea8', '#6f91aa', '#b47f8d', '#879b70', '#657b78']
+export const chartColors = [
+  '#8b92d8',
+  '#75b69c',
+  '#d1aa6e',
+  '#8e7ea8',
+  '#6f91aa',
+  '#b47f8d',
+  '#879b70',
+  '#657b78',
+]
 
 export const analyticsTooltipProps = {
   contentStyle: {
@@ -74,7 +83,15 @@ export function quoteQueryValue(value: string) {
   return /^[A-Za-z0-9_-]+$/.test(value) ? value : `"${value.replaceAll('"', '\\"')}"`
 }
 
-export function DrilldownLink({ children, className = '', query }: { children: ReactNode; className?: string; query: string }) {
+export function DrilldownLink({
+  children,
+  className = '',
+  query,
+}: {
+  children: ReactNode
+  className?: string
+  query: string
+}) {
   const [searchParams] = useSearchParams()
   const mergedQuery = mergeAnalyticsQuery(searchParams, query)
 
@@ -85,7 +102,9 @@ export function DrilldownLink({ children, className = '', query }: { children: R
       to={booksHref(mergedQuery)}
     >
       {children}
-      <span aria-hidden="true" className="text-xs">↗</span>
+      <span aria-hidden="true" className="text-xs">
+        ↗
+      </span>
     </Link>
   )
 }
@@ -104,7 +123,9 @@ function mergeAnalyticsQuery(searchParams: URLSearchParams, drilldownQuery: stri
     from ? `created:>=${from}` : '',
     to ? `created:<${to}` : '',
     drilldownQuery.trim(),
-  ].filter(Boolean).join(' ')
+  ]
+    .filter(Boolean)
+    .join(' ')
 }
 
 export function getActiveChartLabel(event: unknown) {
@@ -120,11 +141,12 @@ export type AnalyticsDateBucket = 'day' | 'week' | 'month'
 
 export function dateRangeForBucket(date: string, bucket: string): { start: string; end: string } {
   const start = parseISO(date)
-  const end = bucket === 'month'
-    ? addMonths(start, 1)
-    : bucket === 'week'
-      ? addWeeks(start, 1)
-      : addDays(start, 1)
+  const end =
+    bucket === 'month'
+      ? addMonths(start, 1)
+      : bucket === 'week'
+        ? addWeeks(start, 1)
+        : addDays(start, 1)
 
   return {
     start: format(start, 'yyyy-MM-dd'),

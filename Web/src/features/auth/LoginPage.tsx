@@ -36,7 +36,12 @@ export function LoginPage() {
   return (
     <AuthFrame title="Log in" description="Enter your library.">
       <form className="grid gap-4" onSubmit={handleSubmit}>
-        <input className={inputClass} name="identifier" placeholder="Email or username" type="text" />
+        <input
+          className={inputClass}
+          name="identifier"
+          placeholder="Email or username"
+          type="text"
+        />
         <input className={inputClass} name="password" placeholder="Password" type="password" />
         <button className={buttonClass} disabled={mutation.isPending} type="submit">
           Log in

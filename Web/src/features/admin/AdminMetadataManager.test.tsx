@@ -7,23 +7,47 @@ import { AdminMetadataManager } from './AdminMetadataManager'
 
 vi.mock('@/api/client', () => ({
   api: {
-    getStatuses: vi.fn(), getTypes: vi.fn(), getGenres: vi.fn(), searchAdminGlobalTags: vi.fn(),
-    createAdminStatus: vi.fn(), createAdminType: vi.fn(), createAdminGenre: vi.fn(), createAdminGlobalTag: vi.fn(),
-    updateAdminStatus: vi.fn(), updateAdminType: vi.fn(), updateAdminGenre: vi.fn(), updateAdminGlobalTag: vi.fn(),
-    deleteAdminStatus: vi.fn(), deleteAdminType: vi.fn(), deleteAdminGenre: vi.fn(), deleteAdminGlobalTag: vi.fn(),
+    getStatuses: vi.fn(),
+    getTypes: vi.fn(),
+    getGenres: vi.fn(),
+    searchAdminGlobalTags: vi.fn(),
+    createAdminStatus: vi.fn(),
+    createAdminType: vi.fn(),
+    createAdminGenre: vi.fn(),
+    createAdminGlobalTag: vi.fn(),
+    updateAdminStatus: vi.fn(),
+    updateAdminType: vi.fn(),
+    updateAdminGenre: vi.fn(),
+    updateAdminGlobalTag: vi.fn(),
+    deleteAdminStatus: vi.fn(),
+    deleteAdminType: vi.fn(),
+    deleteAdminGenre: vi.fn(),
+    deleteAdminGlobalTag: vi.fn(),
   },
 }))
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
 const status = { id: 'status-1', name: 'Reading', description: 'Currently reading' }
-const globalTag = { id: 'tag-1', name: 'official', description: 'Shared with everyone', color: null, isGlobal: true }
+const globalTag = {
+  id: 'tag-1',
+  name: 'official',
+  description: 'Shared with everyone',
+  color: null,
+  isGlobal: true,
+}
 
 describe('AdminMetadataManager', () => {
   beforeEach(() => {
-    vi.mocked(api.getStatuses).mockReset().mockResolvedValue({ skip: 0, take: 100, total: 1, data: [status] })
-    vi.mocked(api.getTypes).mockReset().mockResolvedValue({ skip: 0, take: 100, total: 0, data: [] })
-    vi.mocked(api.getGenres).mockReset().mockResolvedValue({ skip: 0, take: 100, total: 0, data: [] })
+    vi.mocked(api.getStatuses)
+      .mockReset()
+      .mockResolvedValue({ skip: 0, take: 100, total: 1, data: [status] })
+    vi.mocked(api.getTypes)
+      .mockReset()
+      .mockResolvedValue({ skip: 0, take: 100, total: 0, data: [] })
+    vi.mocked(api.getGenres)
+      .mockReset()
+      .mockResolvedValue({ skip: 0, take: 100, total: 0, data: [] })
     vi.mocked(api.searchAdminGlobalTags).mockReset().mockResolvedValue([globalTag])
     vi.mocked(api.createAdminStatus).mockReset().mockResolvedValue(status)
     vi.mocked(api.createAdminGlobalTag).mockReset().mockResolvedValue(globalTag)
@@ -40,7 +64,12 @@ describe('AdminMetadataManager', () => {
     await user.type(screen.getByLabelText('Description'), 'Temporarily paused')
     await user.click(screen.getByRole('button', { name: 'Create status' }))
 
-    await waitFor(() => expect(api.createAdminStatus).toHaveBeenCalledWith({ name: 'Paused', description: 'Temporarily paused' }))
+    await waitFor(() =>
+      expect(api.createAdminStatus).toHaveBeenCalledWith({
+        name: 'Paused',
+        description: 'Temporarily paused',
+      }),
+    )
   })
 
   it('edits and deletes a global tag', async () => {
@@ -52,7 +81,12 @@ describe('AdminMetadataManager', () => {
     await user.clear(screen.getByLabelText('Description'))
     await user.type(screen.getByLabelText('Description'), 'Updated globally')
     await user.click(screen.getByRole('button', { name: 'Save changes' }))
-    await waitFor(() => expect(api.updateAdminGlobalTag).toHaveBeenCalledWith('tag-1', { name: 'official', description: 'Updated globally' }))
+    await waitFor(() =>
+      expect(api.updateAdminGlobalTag).toHaveBeenCalledWith('tag-1', {
+        name: 'official',
+        description: 'Updated globally',
+      }),
+    )
 
     await user.click(await screen.findByRole('button', { name: 'Edit global tag official' }))
     await user.click(screen.getByRole('button', { name: 'Delete global tag' }))

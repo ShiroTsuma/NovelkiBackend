@@ -100,9 +100,11 @@ export function ColumnSettingsPopup<T>({
   }
 
   function toggleColumn(id: string) {
-    onChange(preferences.map((preference) => (
-      preference.id === id ? { ...preference, visible: !preference.visible } : preference
-    )))
+    onChange(
+      preferences.map((preference) =>
+        preference.id === id ? { ...preference, visible: !preference.visible } : preference,
+      ),
+    )
   }
 
   function moveColumn(id: string, direction: -1 | 1) {
@@ -147,7 +149,13 @@ export function ColumnSettingsPopup<T>({
               <div className="text-sm font-semibold text-slate-950">{title}</div>
               <div className="text-xs font-normal text-slate-500">{description}</div>
             </div>
-            <button className="tablet-touch-target text-xs font-semibold text-slate-500 hover:text-slate-950" type="button" onClick={resetColumns}>Reset</button>
+            <button
+              className="tablet-touch-target text-xs font-semibold text-slate-500 hover:text-slate-950"
+              type="button"
+              onClick={resetColumns}
+            >
+              Reset
+            </button>
           </div>
           {preferences.map((preference, index) => {
             const column = columns.find((item) => item.id === preference.id)
@@ -156,22 +164,43 @@ export function ColumnSettingsPopup<T>({
             }
 
             return (
-              <div className={`flex items-center justify-between gap-3 rounded-md border bg-white px-3.5 py-2.5 text-sm text-slate-700 ${preference.visible ? 'border-emerald-400' : 'border-slate-200'}`} key={preference.id}>
+              <div
+                className={`flex items-center justify-between gap-3 rounded-md border bg-white px-3.5 py-2.5 text-sm text-slate-700 ${preference.visible ? 'border-emerald-400' : 'border-slate-200'}`}
+                key={preference.id}
+              >
                 <button
                   aria-pressed={preference.visible}
                   className="tablet-touch-target inline-flex min-w-0 flex-1 items-center gap-2 text-left font-medium text-inherit"
                   type="button"
                   onClick={() => toggleColumn(preference.id)}
                 >
-                  <span className={`book-column-switch relative inline-flex h-5 w-9 shrink-0 rounded-full border transition ${preference.visible ? 'book-column-switch--active' : ''}`}>
-                    <span className={`absolute top-0.5 h-3.5 w-3.5 rounded-full bg-white shadow transition ${preference.visible ? 'left-4' : 'left-0.5'}`} />
+                  <span
+                    className={`book-column-switch relative inline-flex h-5 w-9 shrink-0 rounded-full border transition ${preference.visible ? 'book-column-switch--active' : ''}`}
+                  >
+                    <span
+                      className={`absolute top-0.5 h-3.5 w-3.5 rounded-full bg-white shadow transition ${preference.visible ? 'left-4' : 'left-0.5'}`}
+                    />
                   </span>
                   {column.label}
                 </button>
                 {allowReorder ? (
                   <div className="flex shrink-0 gap-1">
-                    <button className="min-h-11 border border-slate-200 px-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:text-slate-300" disabled={index === 0} type="button" onClick={() => moveColumn(preference.id, -1)}>Up</button>
-                    <button className="min-h-11 border border-slate-200 px-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:text-slate-300" disabled={index === preferences.length - 1} type="button" onClick={() => moveColumn(preference.id, 1)}>Down</button>
+                    <button
+                      className="min-h-11 border border-slate-200 px-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:text-slate-300"
+                      disabled={index === 0}
+                      type="button"
+                      onClick={() => moveColumn(preference.id, -1)}
+                    >
+                      Up
+                    </button>
+                    <button
+                      className="min-h-11 border border-slate-200 px-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:text-slate-300"
+                      disabled={index === preferences.length - 1}
+                      type="button"
+                      onClick={() => moveColumn(preference.id, 1)}
+                    >
+                      Down
+                    </button>
                   </div>
                 ) : null}
               </div>
@@ -184,7 +213,9 @@ export function ColumnSettingsPopup<T>({
 }
 
 export function useColumnPreferences<T>(storageKey: string, columns: ColumnDefinition<T>[]) {
-  const [preferences, setPreferences] = useState<ColumnPreference[]>(() => readColumnPreferences(storageKey, columns))
+  const [preferences, setPreferences] = useState<ColumnPreference[]>(() =>
+    readColumnPreferences(storageKey, columns),
+  )
 
   function updatePreferences(next: ColumnPreference[]) {
     setPreferences(next)
@@ -199,13 +230,14 @@ export function getColumnPopupPosition(
   viewportWidth: number,
   viewportHeight: number,
 ) {
-  const maxWidth = Math.min(columnPopupWidthPx, viewportWidth - (columnPopupEdgeGapPx * 2))
-  const left = viewportWidth < 640
-    ? columnPopupEdgeGapPx
-    : Math.min(
-      Math.max(columnPopupEdgeGapPx, rect.right - maxWidth),
-      viewportWidth - maxWidth - columnPopupEdgeGapPx,
-    )
+  const maxWidth = Math.min(columnPopupWidthPx, viewportWidth - columnPopupEdgeGapPx * 2)
+  const left =
+    viewportWidth < 640
+      ? columnPopupEdgeGapPx
+      : Math.min(
+          Math.max(columnPopupEdgeGapPx, rect.right - maxWidth),
+          viewportWidth - maxWidth - columnPopupEdgeGapPx,
+        )
   const top = Math.min(
     Math.max(columnPopupEdgeGapPx, rect.bottom + columnPopupVerticalGapPx),
     viewportHeight - columnPopupEdgeGapPx,
@@ -231,7 +263,10 @@ export function useViewMode(storageKey: string) {
   return [viewMode, setViewMode] as const
 }
 
-export function getVisibleColumns<T>(columns: ColumnDefinition<T>[], preferences: ColumnPreference[]) {
+export function getVisibleColumns<T>(
+  columns: ColumnDefinition<T>[],
+  preferences: ColumnPreference[],
+) {
   return preferences
     .filter((preference) => preference.visible)
     .map((preference) => columns.find((column) => column.id === preference.id))
@@ -253,13 +288,14 @@ export function ColumnHeader<T>({
   column: ColumnDefinition<T>
   onSort: (sortBy: string) => void
 }) {
-  const Icon = isCyclic && activeDirection
-    ? RefreshCw
-    : activeDirection === 'asc'
-      ? ArrowUp
-      : activeDirection === 'desc'
-        ? ArrowDown
-        : ChevronsUpDown
+  const Icon =
+    isCyclic && activeDirection
+      ? RefreshCw
+      : activeDirection === 'asc'
+        ? ArrowUp
+        : activeDirection === 'desc'
+          ? ArrowDown
+          : ChevronsUpDown
 
   if (!column.sortBy) {
     return <th className={`${column.widthClass ?? ''} px-4 py-3`}>{column.label}</th>
@@ -290,7 +326,9 @@ function readColumnPreferences<T>(storageKey: string, columns: ColumnDefinition<
     const parsed = JSON.parse(stored) as ColumnPreference[]
     const knownIds = new Set(columns.map((column) => column.id))
     const storedKnown = parsed.filter((preference) => knownIds.has(preference.id))
-    const missing = defaults.filter((preference) => !storedKnown.some((item) => item.id === preference.id))
+    const missing = defaults.filter(
+      (preference) => !storedKnown.some((item) => item.id === preference.id),
+    )
     return [...storedKnown, ...missing]
   } catch {
     return defaults

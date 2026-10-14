@@ -62,9 +62,8 @@ export function useResolvedCoverImage(
     setBlobUrl(entry.blobUrl)
 
     if (!entry.promise && !entry.blobUrl) {
-      const targetUrl = variant === 'thumbnail'
-        ? cover!.thumbnailImageUrl ?? cover!.imageUrl!
-        : cover!.imageUrl!
+      const targetUrl =
+        variant === 'thumbnail' ? (cover!.thumbnailImageUrl ?? cover!.imageUrl!) : cover!.imageUrl!
       entry.promise = loadCoverBlobUrl(targetUrl)
         .then((nextBlobUrl) => {
           entry.blobUrl = nextBlobUrl
@@ -109,14 +108,17 @@ function useCoverLoadPermission(lazy: boolean) {
       return
     }
 
-    const observer = new IntersectionObserver((entries) => {
-      if (!entries.some((entry) => entry.isIntersecting)) {
-        return
-      }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) {
+          return
+        }
 
-      setPermitted(true)
-      observer.disconnect()
-    }, { rootMargin: COVER_LAZY_LOAD_MARGIN })
+        setPermitted(true)
+        observer.disconnect()
+      },
+      { rootMargin: COVER_LAZY_LOAD_MARGIN },
+    )
     observer.observe(target)
 
     return () => observer.disconnect()
@@ -125,10 +127,12 @@ function useCoverLoadPermission(lazy: boolean) {
   return { permitted, setTarget }
 }
 
-function getCoverCacheKey(cover: BookCoverSummaryDto | null | undefined, variant: 'full' | 'thumbnail') {
-  const targetUrl = variant === 'thumbnail'
-    ? cover?.thumbnailImageUrl ?? cover?.imageUrl
-    : cover?.imageUrl
+function getCoverCacheKey(
+  cover: BookCoverSummaryDto | null | undefined,
+  variant: 'full' | 'thumbnail',
+) {
+  const targetUrl =
+    variant === 'thumbnail' ? (cover?.thumbnailImageUrl ?? cover?.imageUrl) : cover?.imageUrl
   if (!targetUrl) {
     return null
   }
@@ -206,7 +210,9 @@ export function BookCoverArtwork({
     interactive && resolvedImageUrl ? 'cursor-zoom-in' : '',
     interactive && !resolvedImageUrl ? 'cursor-pointer' : '',
     className,
-  ].filter(Boolean).join(' ')
+  ]
+    .filter(Boolean)
+    .join(' ')
 
   const content = resolvedImageUrl ? (
     <img
@@ -218,7 +224,9 @@ export function BookCoverArtwork({
     />
   ) : (
     <div className="grid place-items-center gap-2 px-6 text-center text-slate-500">
-      <div className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">No Cover</div>
+      <div className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">
+        No Cover
+      </div>
       <div className="text-sm">{emptyLabel}</div>
       {hint ? <div className="whitespace-pre-line text-xs text-slate-400">{hint}</div> : null}
       {emptyActionLabel ? (
@@ -248,7 +256,12 @@ export function BookCoverArtwork({
   }
 
   return (
-    <button className={wrapperClassName} ref={loadPermission.setTarget} type="button" onClick={onClick}>
+    <button
+      className={wrapperClassName}
+      ref={loadPermission.setTarget}
+      type="button"
+      onClick={onClick}
+    >
       {content}
       {resolvedImageUrl && onRemove ? (
         <span
@@ -259,7 +272,9 @@ export function BookCoverArtwork({
             onRemove()
           }}
         >
-          <span className={`${buttonVariants.destructive} ui-icon-button ui-icon-button--round opacity-0 group-hover:opacity-100`}>
+          <span
+            className={`${buttonVariants.destructive} ui-icon-button ui-icon-button--round opacity-0 group-hover:opacity-100`}
+          >
             <X className="h-4 w-4" />
           </span>
         </span>
@@ -315,7 +330,10 @@ export function CoverLightbox({
       role="dialog"
       onClick={onClose}
     >
-      <div className="relative max-h-[90vh] w-full max-w-4xl" onClick={(event) => event.stopPropagation()}>
+      <div
+        className="relative max-h-[90vh] w-full max-w-4xl"
+        onClick={(event) => event.stopPropagation()}
+      >
         <button
           aria-label="Close preview"
           className={`${buttonVariants.ghost} ui-icon-button absolute right-3 top-3 z-10`}
@@ -326,7 +344,11 @@ export function CoverLightbox({
         </button>
         {imageUrl ? (
           <div className="grid gap-3">
-            <img alt={title} className="max-h-[82vh] w-full rounded-[var(--qs-dialog-radius)] bg-white object-contain shadow-2xl" src={imageUrl} />
+            <img
+              alt={title}
+              className="max-h-[82vh] w-full rounded-[var(--qs-dialog-radius)] bg-white object-contain shadow-2xl"
+              src={imageUrl}
+            />
             {footer ? (
               <div className="ui-surface ui-surface--elevated px-4 py-3 text-sm text-slate-100">
                 {footer}
@@ -336,7 +358,9 @@ export function CoverLightbox({
         ) : (
           <div className="grid min-h-[70vh] place-items-center rounded-[var(--qs-dialog-radius)] border border-dashed border-slate-600 bg-slate-900 px-8 text-center text-slate-200 shadow-2xl">
             <div className="grid gap-2">
-              <div className="text-xs font-semibold uppercase tracking-[0.32em] text-slate-500">No Cover</div>
+              <div className="text-xs font-semibold uppercase tracking-[0.32em] text-slate-500">
+                No Cover
+              </div>
               <div className="text-lg font-medium">{emptyLabel}</div>
             </div>
           </div>

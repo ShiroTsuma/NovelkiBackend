@@ -14,11 +14,7 @@ export function FormField({ label, error, children }: FormFieldProps) {
       <div className="relative dark-field">
         {children}
         {error ? (
-          <span
-            aria-live="polite"
-            className="ui-field-error"
-            role="alert"
-          >
+          <span aria-live="polite" className="ui-field-error" role="alert">
             {error}
           </span>
         ) : null}

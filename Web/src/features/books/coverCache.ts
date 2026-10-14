@@ -72,17 +72,18 @@ async function pruneOlderVariants(cache: Cache, nextAbsoluteUrl: string) {
 
   const keys = await cache.keys()
 
-  await Promise.all(keys.map(async (request) => {
-    const currentUrl = parseUrl(request.url)
-    if (!currentUrl) {
-      return
-    }
+  await Promise.all(
+    keys.map(async (request) => {
+      const currentUrl = parseUrl(request.url)
+      if (!currentUrl) {
+        return
+      }
 
-    if (currentUrl.pathname === nextUrl.pathname &&
-        currentUrl.search !== nextUrl.search) {
-      await cache.delete(request)
-    }
-  }))
+      if (currentUrl.pathname === nextUrl.pathname && currentUrl.search !== nextUrl.search) {
+        await cache.delete(request)
+      }
+    }),
+  )
 }
 
 async function fetchCoverBlob(absoluteUrl: string) {

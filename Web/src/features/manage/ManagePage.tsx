@@ -1,15 +1,41 @@
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query'
-import { BookOpen, EyeOff, Globe2, Plus, RefreshCw, Search, Tags, Trash2, Users, X } from 'lucide-react'
+import {
+  BookOpen,
+  EyeOff,
+  Globe2,
+  Plus,
+  RefreshCw,
+  Search,
+  Tags,
+  Trash2,
+  Users,
+  X,
+} from 'lucide-react'
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { toast } from 'sonner'
 import { api } from '@/api/client'
 import { HttpError } from '@/api/http'
-import type { AuthorDto, BookListItemDto, ManagedBookListItemDto, ManagedBookListingDto, TagDto } from '@/api/types'
-import { Badge, buttonVariants, controlClass, DialogPanel, PageHeader, Surface, useBodyScrollLock } from '@/components/app/DesignSystem'
+import type {
+  AuthorDto,
+  BookListItemDto,
+  ManagedBookListItemDto,
+  ManagedBookListingDto,
+  TagDto,
+} from '@/api/types'
+import {
+  Badge,
+  buttonVariants,
+  controlClass,
+  DialogPanel,
+  PageHeader,
+  Surface,
+  useBodyScrollLock,
+} from '@/components/app/DesignSystem'
 import { cn } from '@/lib/utils'
 
 type ManageSection = 'tags' | 'authors' | 'books'
-type ManagedItem = { kind: 'tag'; value: TagDto | null } | { kind: 'author'; value: AuthorDto | null }
+type ManagedItem =
+  { kind: 'tag'; value: TagDto | null } | { kind: 'author'; value: AuthorDto | null }
 
 export function ManagePage() {
   const [section, setSection] = useState<ManageSection>('tags')
@@ -26,20 +52,22 @@ export function ManagePage() {
 
   const results = useQuery<TagDto[] | AuthorDto[]>({
     queryKey: ['manage-metadata', section, debouncedSearch],
-    queryFn: () => section === 'tags'
-      ? api.searchTags(debouncedSearch, 50)
-      : api.searchAuthors(debouncedSearch, 50),
+    queryFn: () =>
+      section === 'tags'
+        ? api.searchTags(debouncedSearch, 50)
+        : api.searchAuthors(debouncedSearch, 50),
     enabled: section !== 'books',
   })
 
   const libraryBooks = useInfiniteQuery({
     queryKey: ['manage-books', debouncedSearch],
     initialPageParam: 0,
-    queryFn: ({ pageParam }) => api.getManagedBooks({
-      skip: pageParam,
-      take: 50,
-      query: debouncedSearch || undefined,
-    }),
+    queryFn: ({ pageParam }) =>
+      api.getManagedBooks({
+        skip: pageParam,
+        take: 50,
+        query: debouncedSearch || undefined,
+      }),
     getNextPageParam: (lastPage) => {
       const nextSkip = lastPage.skip + lastPage.data.length
       return nextSkip < lastPage.total ? nextSkip : undefined
@@ -56,12 +84,11 @@ export function ManagePage() {
   const libraryBookPages = libraryBooks.data?.pages ?? []
   const libraryBookItems = Array.from(
     new Map(
-      libraryBookPages
-        .flatMap((page) => page.data)
-        .map((item) => [item.book.id, item] as const),
+      libraryBookPages.flatMap((page) => page.data).map((item) => [item.book.id, item] as const),
     ).values(),
   )
-  const itemCount = section === 'books' ? libraryBookPages[0]?.total ?? 0 : results.data?.length ?? 0
+  const itemCount =
+    section === 'books' ? (libraryBookPages[0]?.total ?? 0) : (results.data?.length ?? 0)
 
   async function runBookAction(bookId: string, action: () => Promise<unknown>, success: string) {
     setBookActionId(bookId)
@@ -124,19 +151,38 @@ export function ManagePage() {
         <section className="manage-content" role="tabpanel">
           <div className="manage-toolbar">
             <div>
-              <div className="ui-eyebrow">{section === 'tags' ? 'Personal taxonomy' : section === 'authors' ? 'Shared identities' : 'Community listings'}</div>
-              <h2 className="manage-title">{section === 'tags' ? 'Saved tags' : section === 'authors' ? 'Known authors' : 'Your books'}</h2>
+              <div className="ui-eyebrow">
+                {section === 'tags'
+                  ? 'Personal taxonomy'
+                  : section === 'authors'
+                    ? 'Shared identities'
+                    : 'Community listings'}
+              </div>
+              <h2 className="manage-title">
+                {section === 'tags'
+                  ? 'Saved tags'
+                  : section === 'authors'
+                    ? 'Known authors'
+                    : 'Your books'}
+              </h2>
             </div>
             <div className="flex items-center gap-2">
               <Badge tone="neutral">{itemCount} shown</Badge>
-              {section !== 'books' ? <button
-                className={buttonVariants.primary}
-                type="button"
-                onClick={() => setSelected({ kind: section === 'tags' ? 'tag' : 'author', value: null } as ManagedItem)}
-              >
-                <Plus className="h-4 w-4" />
-                Add {section === 'tags' ? 'tag' : 'author'}
-              </button> : null}
+              {section !== 'books' ? (
+                <button
+                  className={buttonVariants.primary}
+                  type="button"
+                  onClick={() =>
+                    setSelected({
+                      kind: section === 'tags' ? 'tag' : 'author',
+                      value: null,
+                    })
+                  }
+                >
+                  <Plus className="h-4 w-4" />
+                  Add {section === 'tags' ? 'tag' : 'author'}
+                </button>
+              ) : null}
             </div>
           </div>
 
@@ -145,17 +191,27 @@ export function ManagePage() {
             <span className="sr-only">Search {section}</span>
             <input
               autoComplete="off"
-              placeholder={section === 'tags' ? 'Search tags…' : section === 'authors' ? 'Search authors or aliases…' : 'Search your books, e.g. -tag:dropped…'}
+              placeholder={
+                section === 'tags'
+                  ? 'Search tags…'
+                  : section === 'authors'
+                    ? 'Search authors or aliases…'
+                    : 'Search your books, e.g. -tag:dropped…'
+              }
               type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
-            {(section === 'books' ? libraryBooks.isFetching : results.isFetching) ? <span className="manage-search__status">Searching…</span> : null}
+            {(section === 'books' ? libraryBooks.isFetching : results.isFetching) ? (
+              <span className="manage-search__status">Searching…</span>
+            ) : null}
           </label>
 
-          <p className="manage-hint">{section === 'books'
-            ? 'Listing creates a public snapshot. Refresh it after editing your private copy; existing imports never change.'
-            : 'Double-click a row to edit it, or use the Edit button.'}</p>
+          <p className="manage-hint">
+            {section === 'books'
+              ? 'Listing creates a public snapshot. Refresh it after editing your private copy; existing imports never change.'
+              : 'Double-click a row to edit it, or use the Edit button.'}
+          </p>
 
           {section === 'books' ? (
             <ManagedBooks
@@ -167,23 +223,53 @@ export function ManagePage() {
               loadingMore={libraryBooks.isFetchingNextPage}
               search={search}
               onLoadMore={() => void libraryBooks.fetchNextPage({ cancelRefetch: false })}
-              onPublish={(book) => runBookAction(book.id, () => api.publishBook(book.id), `“${book.primaryTitle}” is now listed.`)}
-              onRefresh={(listing, book) => runBookAction(book.id, () => api.refreshPublishedBook(listing.id), `“${book.primaryTitle}” snapshot refreshed.`)}
-              onUnlist={(listing, book) => runBookAction(book.id, () => api.unlistPublishedBook(listing.id), `“${book.primaryTitle}” was unlisted.`)}
+              onPublish={(book) =>
+                runBookAction(
+                  book.id,
+                  () => api.publishBook(book.id),
+                  `“${book.primaryTitle}” is now listed.`,
+                )
+              }
+              onRefresh={(listing, book) =>
+                runBookAction(
+                  book.id,
+                  () => api.refreshPublishedBook(listing.id),
+                  `“${book.primaryTitle}” snapshot refreshed.`,
+                )
+              }
+              onUnlist={(listing, book) =>
+                runBookAction(
+                  book.id,
+                  () => api.unlistPublishedBook(listing.id),
+                  `“${book.primaryTitle}” was unlisted.`,
+                )
+              }
             />
           ) : results.isError ? (
-            <div className="manage-state manage-state--error">Could not load {section}. Try again.</div>
+            <div className="manage-state manage-state--error">
+              Could not load {section}. Try again.
+            </div>
           ) : results.isPending ? (
             <div className="manage-state">Loading {section}…</div>
           ) : itemCount === 0 ? (
             <div className="manage-state">
               <span>No {section} found.</span>
-              <small>{search.trim() ? 'Try a broader search.' : `Use Add ${section === 'tags' ? 'tag' : 'author'} to create one.`}</small>
+              <small>
+                {search.trim()
+                  ? 'Try a broader search.'
+                  : `Use Add ${section === 'tags' ? 'tag' : 'author'} to create one.`}
+              </small>
             </div>
           ) : section === 'tags' ? (
-            <TagList tags={results.data as TagDto[]} onEdit={(tag) => setSelected({ kind: 'tag', value: tag })} />
+            <TagList
+              tags={results.data as TagDto[]}
+              onEdit={(tag) => setSelected({ kind: 'tag', value: tag })}
+            />
           ) : (
-            <AuthorList authors={results.data as AuthorDto[]} onEdit={(author) => setSelected({ kind: 'author', value: author })} />
+            <AuthorList
+              authors={results.data as AuthorDto[]}
+              onEdit={(author) => setSelected({ kind: 'author', value: author })}
+            />
           )}
         </section>
       </Surface>
@@ -193,7 +279,19 @@ export function ManagePage() {
   )
 }
 
-function ManagedBooks({ items, actionId, loading, loadingMore, hasMore, error, search, onLoadMore, onPublish, onRefresh, onUnlist }: {
+function ManagedBooks({
+  items,
+  actionId,
+  loading,
+  loadingMore,
+  hasMore,
+  error,
+  search,
+  onLoadMore,
+  onPublish,
+  onRefresh,
+  onUnlist,
+}: {
   items: ManagedBookListItemDto[]
   actionId: string | null
   loading: boolean
@@ -206,13 +304,22 @@ function ManagedBooks({ items, actionId, loading, loadingMore, hasMore, error, s
   onRefresh: (listing: ManagedBookListingDto, book: BookListItemDto) => void
   onUnlist: (listing: ManagedBookListingDto, book: BookListItemDto) => void
 }) {
-  if (error) return <div className="manage-state manage-state--error">Could not load your book listings. Try again.</div>
+  if (error)
+    return (
+      <div className="manage-state manage-state--error">
+        Could not load your book listings. Try again.
+      </div>
+    )
   if (loading) return <div className="manage-state">Loading your books…</div>
   if (items.length === 0) {
     return (
       <div className="manage-state">
         <span>No books found.</span>
-        <small>{search.trim() ? 'Try a broader search.' : 'Add a book to your library before creating a public listing.'}</small>
+        <small>
+          {search.trim()
+            ? 'Try a broader search.'
+            : 'Add a book to your library before creating a public listing.'}
+        </small>
       </div>
     )
   }
@@ -225,7 +332,11 @@ function ManagedBooks({ items, actionId, loading, loadingMore, hasMore, error, s
       tabIndex={0}
       onScroll={(event) => {
         const list = event.currentTarget
-        if (hasMore && !loadingMore && list.scrollHeight - list.scrollTop - list.clientHeight < 96) {
+        if (
+          hasMore &&
+          !loadingMore &&
+          list.scrollHeight - list.scrollTop - list.clientHeight < 96
+        ) {
           onLoadMore()
         }
       }}
@@ -236,10 +347,15 @@ function ManagedBooks({ items, actionId, loading, loadingMore, hasMore, error, s
         const canPublish = missingRequirements.length === 0
         return (
           <div className="manage-item" key={book.id}>
-            <span className="manage-item__icon"><BookOpen className="h-4 w-4" /></span>
+            <span className="manage-item__icon">
+              <BookOpen className="h-4 w-4" />
+            </span>
             <span className="manage-item__body">
               <strong>{book.primaryTitle}</strong>
-              <small>{book.author || 'Unknown author'} · {book.contentType}{listing ? ` · Snapshot ${new Date(listing.snapshotAt).toLocaleDateString()}` : ''}</small>
+              <small>
+                {book.author || 'Unknown author'} · {book.contentType}
+                {listing ? ` · Snapshot ${new Date(listing.snapshotAt).toLocaleDateString()}` : ''}
+              </small>
             </span>
             <Badge tone={listing ? 'success' : 'neutral'}>{listing ? 'Listed' : 'Private'}</Badge>
             {listing ? (
@@ -249,7 +365,11 @@ function ManagedBooks({ items, actionId, loading, loadingMore, hasMore, error, s
                   className={buttonVariants.secondary}
                   disabled={busy || !canPublish}
                   type="button"
-                  title={canPublish ? undefined : `Required before refreshing: ${missingRequirements.join(', ')}`}
+                  title={
+                    canPublish
+                      ? undefined
+                      : `Required before refreshing: ${missingRequirements.join(', ')}`
+                  }
                   onClick={() => onRefresh(listing, book)}
                 >
                   <RefreshCw className="h-4 w-4" />
@@ -272,7 +392,11 @@ function ManagedBooks({ items, actionId, loading, loadingMore, hasMore, error, s
                 className={buttonVariants.primary}
                 disabled={busy || !canPublish}
                 type="button"
-                title={canPublish ? undefined : `Required before listing: ${missingRequirements.join(', ')}`}
+                title={
+                  canPublish
+                    ? undefined
+                    : `Required before listing: ${missingRequirements.join(', ')}`
+                }
                 onClick={() => onPublish(book)}
               >
                 <Globe2 className="h-4 w-4" />
@@ -288,15 +412,24 @@ function ManagedBooks({ items, actionId, loading, loadingMore, hasMore, error, s
 }
 
 function TagList({ tags, onEdit }: { tags: TagDto[]; onEdit: (tag: TagDto) => void }) {
-  const sortedTags = [...tags].sort((left, right) => left.name.localeCompare(right.name, undefined, {
-    sensitivity: 'base',
-    numeric: true,
-  }))
+  const sortedTags = [...tags].sort((left, right) =>
+    left.name.localeCompare(right.name, undefined, {
+      sensitivity: 'base',
+      numeric: true,
+    }),
+  )
   return (
     <div className="manage-list" aria-label="Tags" tabIndex={0}>
       {sortedTags.map((tag) => (
-        <ManageRow editable={!tag.isGlobal} key={tag.id} label={`Edit tag ${tag.name}`} onEdit={() => onEdit(tag)}>
-          <span className="manage-item__icon"><Tags className="h-4 w-4" /></span>
+        <ManageRow
+          editable={!tag.isGlobal}
+          key={tag.id}
+          label={`Edit tag ${tag.name}`}
+          onEdit={() => onEdit(tag)}
+        >
+          <span className="manage-item__icon">
+            <Tags className="h-4 w-4" />
+          </span>
           <span className="manage-item__body">
             <strong>{tag.name}</strong>
             <small>{tag.description || 'No description yet'}</small>
@@ -308,23 +441,47 @@ function TagList({ tags, onEdit }: { tags: TagDto[]; onEdit: (tag: TagDto) => vo
   )
 }
 
-function AuthorList({ authors, onEdit }: { authors: AuthorDto[]; onEdit: (author: AuthorDto) => void }) {
-  const sortedAuthors = [...authors].sort((left, right) => left.primaryName.localeCompare(right.primaryName, undefined, {
-    sensitivity: 'base',
-    numeric: true,
-  }))
+function AuthorList({
+  authors,
+  onEdit,
+}: {
+  authors: AuthorDto[]
+  onEdit: (author: AuthorDto) => void
+}) {
+  const sortedAuthors = [...authors].sort((left, right) =>
+    left.primaryName.localeCompare(right.primaryName, undefined, {
+      sensitivity: 'base',
+      numeric: true,
+    }),
+  )
   return (
     <div className="manage-list" aria-label="Authors" tabIndex={0}>
       {sortedAuthors.map((author) => (
-        <ManageRow editable={author.isOwned} key={author.id} label={`Edit author ${author.primaryName}`} onEdit={() => onEdit(author)} readOnlyLabel="Global identity">
-          <span className="manage-item__icon"><Users className="h-4 w-4" /></span>
+        <ManageRow
+          editable={author.isOwned}
+          key={author.id}
+          label={`Edit author ${author.primaryName}`}
+          onEdit={() => onEdit(author)}
+          readOnlyLabel="Global identity"
+        >
+          <span className="manage-item__icon">
+            <Users className="h-4 w-4" />
+          </span>
           <span className="manage-item__body">
             <strong>{author.primaryName}</strong>
-            <small>{author.otherNames.length > 0 ? author.otherNames.join(' · ') : 'No alternative names'}</small>
+            <small>
+              {author.otherNames.length > 0
+                ? author.otherNames.join(' · ')
+                : 'No alternative names'}
+            </small>
           </span>
-          <Badge tone={author.isOwned ? 'neutral' : 'accent'}>{author.isOwned ? 'Yours' : 'Global'}</Badge>
+          <Badge tone={author.isOwned ? 'neutral' : 'accent'}>
+            {author.isOwned ? 'Yours' : 'Global'}
+          </Badge>
           {author.isOwned && author.isPublic ? <Badge tone="accent">Public</Badge> : null}
-          <Badge tone={author.otherNames.length > 0 ? 'accent' : 'neutral'}>{author.otherNames.length} aliases</Badge>
+          <Badge tone={author.otherNames.length > 0 ? 'accent' : 'neutral'}>
+            {author.otherNames.length} aliases
+          </Badge>
         </ManageRow>
       ))}
     </div>
@@ -343,7 +500,19 @@ function getMissingListingRequirements(book: BookListItemDto) {
   return missing
 }
 
-function ManageRow({ children, editable = true, label, readOnlyLabel = 'Managed by admin', onEdit }: { children: React.ReactNode; editable?: boolean; label: string; readOnlyLabel?: string; onEdit: () => void }) {
+function ManageRow({
+  children,
+  editable = true,
+  label,
+  readOnlyLabel = 'Managed by admin',
+  onEdit,
+}: {
+  children: React.ReactNode
+  editable?: boolean
+  label: string
+  readOnlyLabel?: string
+  onEdit: () => void
+}) {
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (editable && event.key === 'Enter') {
       onEdit()
@@ -351,9 +520,21 @@ function ManageRow({ children, editable = true, label, readOnlyLabel = 'Managed 
   }
 
   return (
-    <div className="manage-item" role="group" tabIndex={editable ? 0 : -1} onDoubleClick={editable ? onEdit : undefined} onKeyDown={handleKeyDown}>
+    <div
+      className="manage-item"
+      role="group"
+      tabIndex={editable ? 0 : -1}
+      onDoubleClick={editable ? onEdit : undefined}
+      onKeyDown={handleKeyDown}
+    >
       {children}
-      {editable ? <button aria-label={label} className={buttonVariants.ghost} type="button" onClick={onEdit}>Edit</button> : <span className="text-xs text-[var(--qs-subtle)]">{readOnlyLabel}</span>}
+      {editable ? (
+        <button aria-label={label} className={buttonVariants.ghost} type="button" onClick={onEdit}>
+          Edit
+        </button>
+      ) : (
+        <span className="text-xs text-[var(--qs-subtle)]">{readOnlyLabel}</span>
+      )}
     </div>
   )
 }
@@ -375,7 +556,13 @@ function ManageDialog({ item, onClose }: { item: ManagedItem | null; onClose: ()
     }
 
     setNameValue(item.value ? (item.kind === 'tag' ? item.value.name : item.value.primaryName) : '')
-    setValue(item.value ? (item.kind === 'tag' ? item.value.description ?? '' : item.value.otherNames.join('\n')) : '')
+    setValue(
+      item.value
+        ? item.kind === 'tag'
+          ? (item.value.description ?? '')
+          : item.value.otherNames.join('\n')
+        : '',
+    )
     setConfirmDelete(false)
     window.setTimeout(() => (item.value ? firstFieldRef.current : nameFieldRef.current)?.focus(), 0)
   }, [item])
@@ -400,7 +587,11 @@ function ManageDialog({ item, onClose }: { item: ManagedItem | null; onClose: ()
   }
 
   const isCreate = item.value === null
-  const name = item.value ? (item.kind === 'tag' ? item.value.name : item.value.primaryName) : nameValue
+  const name = item.value
+    ? item.kind === 'tag'
+      ? item.value.name
+      : item.value.primaryName
+    : nameValue
   const section = item.kind === 'tag' ? 'tags' : 'authors'
 
   async function handleSave(event: FormEvent) {
@@ -414,11 +605,17 @@ function ManageDialog({ item, onClose }: { item: ManagedItem | null; onClose: ()
         await api.createTag({ name: nameValue.trim(), description: value.trim() || null })
         toast.success(`Tag “${nameValue.trim()}” created.`)
       } else if (item?.kind === 'author' && item.value) {
-        const otherNames = value.split('\n').map((alias) => alias.trim()).filter(Boolean)
+        const otherNames = value
+          .split('\n')
+          .map((alias) => alias.trim())
+          .filter(Boolean)
         await api.updateAuthor(item.value.id, { otherNames })
         toast.success(`Author “${item.value.primaryName}” updated.`)
       } else if (item?.kind === 'author') {
-        const otherNames = value.split('\n').map((alias) => alias.trim()).filter(Boolean)
+        const otherNames = value
+          .split('\n')
+          .map((alias) => alias.trim())
+          .filter(Boolean)
         await api.createAuthor({ primaryName: nameValue.trim(), otherNames })
         toast.success(`Author “${nameValue.trim()}” created.`)
       }
@@ -475,14 +672,31 @@ function ManageDialog({ item, onClose }: { item: ManagedItem | null; onClose: ()
   }
 
   return (
-    <div aria-labelledby={titleId} aria-modal="true" className="manage-dialog" role="dialog" onMouseDown={onClose}>
-      <DialogPanel className="manage-dialog__panel" onMouseDown={(event) => event.stopPropagation()}>
+    <div
+      aria-labelledby={titleId}
+      aria-modal="true"
+      className="manage-dialog"
+      role="dialog"
+      onMouseDown={onClose}
+    >
+      <DialogPanel
+        className="manage-dialog__panel"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
         <div className="manage-dialog__header">
           <div>
-            <div className="ui-eyebrow">{isCreate ? 'Create' : 'Edit'} {item.kind}</div>
+            <div className="ui-eyebrow">
+              {isCreate ? 'Create' : 'Edit'} {item.kind}
+            </div>
             <h2 id={titleId}>{isCreate ? `New ${item.kind}` : name}</h2>
           </div>
-          <button aria-label="Close dialog" className={`${buttonVariants.ghost} ui-icon-button`} disabled={saving} type="button" onClick={onClose}>
+          <button
+            aria-label="Close dialog"
+            className={`${buttonVariants.ghost} ui-icon-button`}
+            disabled={saving}
+            type="button"
+            onClick={onClose}
+          >
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -529,7 +743,10 @@ function ManageDialog({ item, onClose }: { item: ManagedItem | null; onClose: ()
                 value={value}
                 onChange={(event) => setValue(event.target.value)}
               />
-              <small>One name per line. The primary name stays unchanged.{isCreate ? ' New authors start private.' : ''}</small>
+              <small>
+                One name per line. The primary name stays unchanged.
+                {isCreate ? ' New authors start private.' : ''}
+              </small>
             </label>
           )}
 
@@ -559,22 +776,44 @@ function ManageDialog({ item, onClose }: { item: ManagedItem | null; onClose: ()
           ) : null}
 
           <div className="manage-dialog__actions">
-            {!isCreate ? <button
-              className={cn(buttonVariants.destructive, confirmDelete && 'manage-delete--confirm')}
+            {!isCreate ? (
+              <button
+                className={cn(
+                  buttonVariants.destructive,
+                  confirmDelete && 'manage-delete--confirm',
+                )}
+                disabled={saving}
+                type="button"
+                onClick={handleDelete}
+              >
+                <Trash2 className="h-4 w-4" />
+                {confirmDelete ? 'Confirm delete' : `Delete ${item.kind}`}
+              </button>
+            ) : null}
+            <span className="manage-dialog__action-spacer" />
+            <button
+              className={buttonVariants.secondary}
               disabled={saving}
               type="button"
-              onClick={handleDelete}
+              onClick={onClose}
             >
-              <Trash2 className="h-4 w-4" />
-              {confirmDelete ? 'Confirm delete' : `Delete ${item.kind}`}
-            </button> : null}
-            <span className="manage-dialog__action-spacer" />
-            <button className={buttonVariants.secondary} disabled={saving} type="button" onClick={onClose}>Cancel</button>
-            <button className={buttonVariants.primary} disabled={saving || (isCreate && !nameValue.trim())} type="submit">{saving ? 'Saving…' : isCreate ? `Create ${item.kind}` : 'Save changes'}</button>
+              Cancel
+            </button>
+            <button
+              className={buttonVariants.primary}
+              disabled={saving || (isCreate && !nameValue.trim())}
+              type="submit"
+            >
+              {saving ? 'Saving…' : isCreate ? `Create ${item.kind}` : 'Save changes'}
+            </button>
           </div>
-          {confirmDelete ? <p className="manage-delete-note">{item.kind === 'author' && item.value?.isPublic
-            ? 'Your own books must stop using this author first. Other readers keep private copies.'
-            : 'This cannot be undone. Items still used by books cannot be deleted.'}</p> : null}
+          {confirmDelete ? (
+            <p className="manage-delete-note">
+              {item.kind === 'author' && item.value?.isPublic
+                ? 'Your own books must stop using this author first. Other readers keep private copies.'
+                : 'This cannot be undone. Items still used by books cannot be deleted.'}
+            </p>
+          ) : null}
         </form>
       </DialogPanel>
     </div>

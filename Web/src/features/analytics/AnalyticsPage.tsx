@@ -6,17 +6,29 @@ import { useSearchParams } from 'react-router-dom'
 import { api } from '@/api/client'
 import { getStoredSession } from '@/api/http'
 import type { BookAnalyticsDto } from '@/api/types'
-import { Badge, buttonVariants, controlClass, PageHeader, Surface } from '@/components/app/DesignSystem'
+import {
+  Badge,
+  buttonVariants,
+  controlClass,
+  PageHeader,
+  Surface,
+} from '@/components/app/DesignSystem'
 import { formatAverageRating, formatChapterCount } from '@/features/books/BooksPage'
 import { BookSearchInput } from '@/features/books/BookSearchInput'
 import { AnalyticsChartCard } from './AnalyticsChartCard'
 import { ChapterVolumeChart, chapterVolumeRows } from './charts/ChapterVolumeChart'
 import { formatCount } from './charts/chartUtils'
 import { CoverAvailabilityChart, coverAvailabilityRows } from './charts/CoverAvailabilityChart'
-import { EstimatedReadingTimeChart, estimatedReadingTimeRows } from './charts/EstimatedReadingTimeChart'
+import {
+  EstimatedReadingTimeChart,
+  estimatedReadingTimeRows,
+} from './charts/EstimatedReadingTimeChart'
 import { LibraryGrowthChart, libraryGrowthRows } from './charts/LibraryGrowthChart'
 import { LinkSourcesChart, linkSourceRows } from './charts/LinkSourcesChart'
-import { MetadataCompletenessChart, metadataCompletenessRows } from './charts/MetadataCompletenessChart'
+import {
+  MetadataCompletenessChart,
+  metadataCompletenessRows,
+} from './charts/MetadataCompletenessChart'
 import { PriorityByStatusChart, priorityRows } from './charts/PriorityByStatusChart'
 import { RatingDistributionChart, ratingRows } from './charts/RatingDistributionChart'
 import { ReadingActivityChart, readingActivityRows } from './charts/ReadingActivityChart'
@@ -47,7 +59,13 @@ export function AnalyticsPage() {
   }, [urlFilters])
 
   const analyticsQuery = useQuery({
-    queryKey: ['book-analytics', urlFilters.query, urlFilters.from, urlFilters.to, urlFilters.bucket],
+    queryKey: [
+      'book-analytics',
+      urlFilters.query,
+      urlFilters.from,
+      urlFilters.to,
+      urlFilters.bucket,
+    ],
     queryFn: () => api.getBookAnalytics(toAnalyticsRequest(urlFilters)),
     placeholderData: keepPreviousData,
     staleTime: 30_000,
@@ -64,7 +82,10 @@ export function AnalyticsPage() {
 
   const data = analyticsQuery.data
   const readingTimeSettings = Object.fromEntries(
-    (readingTimeSettingsQuery.data ?? []).map((setting) => [setting.contentType, setting.minutesPerChapter]),
+    (readingTimeSettingsQuery.data ?? []).map((setting) => [
+      setting.contentType,
+      setting.minutesPerChapter,
+    ]),
   )
   const isInitialLoading = analyticsQuery.isLoading && !data
   const emptyMessage = getAnalyticsEmptyMessage(data, urlFilters.query)
@@ -76,7 +97,9 @@ export function AnalyticsPage() {
   return (
     <div className="grid min-w-0 gap-5 overflow-x-hidden">
       <PageHeader
-        actions={analyticsQuery.isFetching && data ? <Badge tone="accent">Refreshing...</Badge> : undefined}
+        actions={
+          analyticsQuery.isFetching && data ? <Badge tone="accent">Refreshing...</Badge> : undefined
+        }
         description="Library metrics scoped by book search and created-date range."
         eyebrow="Library intelligence"
         title="Analytics"
@@ -101,13 +124,28 @@ export function AnalyticsPage() {
             <select
               className={controlClass}
               value={draftFilters.bucket}
-              onChange={(event) => setDraftFilters((current) => ({ ...current, bucket: normalizeBucket(event.target.value) }))}
+              onChange={(event) =>
+                setDraftFilters((current) => ({
+                  ...current,
+                  bucket: normalizeBucket(event.target.value),
+                }))
+              }
             >
-              {analyticsBuckets.map((bucket) => <option key={bucket} value={bucket}>{bucket}</option>)}
+              {analyticsBuckets.map((bucket) => (
+                <option key={bucket} value={bucket}>
+                  {bucket}
+                </option>
+              ))}
             </select>
           </label>
           <div className="flex items-end">
-            <button className={`${buttonVariants.secondary} w-full`} type="button" onClick={applyFilters}>Apply filters</button>
+            <button
+              className={`${buttonVariants.secondary} w-full`}
+              type="button"
+              onClick={applyFilters}
+            >
+              Apply filters
+            </button>
           </div>
         </div>
       </Surface>
@@ -115,8 +153,14 @@ export function AnalyticsPage() {
       {analyticsQuery.isError && !data ? (
         <Surface className="p-4" tone="danger">
           <h2 className="ui-panel-title text-inherit">Could not load analytics.</h2>
-          <p className="mt-1 text-sm text-inherit opacity-85">Check filters and retry the request.</p>
-          <button className={`${buttonVariants.destructive} mt-3`} type="button" onClick={() => analyticsQuery.refetch()}>
+          <p className="mt-1 text-sm text-inherit opacity-85">
+            Check filters and retry the request.
+          </p>
+          <button
+            className={`${buttonVariants.destructive} mt-3`}
+            type="button"
+            onClick={() => analyticsQuery.refetch()}
+          >
             Retry
           </button>
         </Surface>
@@ -129,185 +173,223 @@ export function AnalyticsPage() {
       ) : null}
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-        <MetricCard label="Total books" loading={isInitialLoading} value={data ? formatCount(data.overview.totalBooks) : '-'} />
-        <MetricCard label="Rated" loading={isInitialLoading} value={data ? formatCount(data.overview.ratedBooks) : '-'} />
-        <MetricCard label="Unrated" loading={isInitialLoading} value={data ? formatCount(data.overview.unratedBooks) : '-'} />
-        <MetricCard label="Average rating" loading={isInitialLoading} value={data ? formatAverageRating(data.overview.averageRating) : '-'} />
-        <MetricCard label="Current chapters" loading={isInitialLoading} value={data ? formatChapterCount(data.overview.currentChapters) : '-'} />
+        <MetricCard
+          label="Total books"
+          loading={isInitialLoading}
+          value={data ? formatCount(data.overview.totalBooks) : '-'}
+        />
+        <MetricCard
+          label="Rated"
+          loading={isInitialLoading}
+          value={data ? formatCount(data.overview.ratedBooks) : '-'}
+        />
+        <MetricCard
+          label="Unrated"
+          loading={isInitialLoading}
+          value={data ? formatCount(data.overview.unratedBooks) : '-'}
+        />
+        <MetricCard
+          label="Average rating"
+          loading={isInitialLoading}
+          value={data ? formatAverageRating(data.overview.averageRating) : '-'}
+        />
+        <MetricCard
+          label="Current chapters"
+          loading={isInitialLoading}
+          value={data ? formatChapterCount(data.overview.currentChapters) : '-'}
+        />
       </div>
 
       <div className="grid min-w-0 items-start gap-5 xl:grid-cols-2">
         <div className="grid min-w-0 gap-5" data-testid="analytics-left-column">
-        <AnalyticsChartCard
-          columns={['Type', 'Status', 'Books', 'Share of type']}
-          dataTableEnabled={false}
-          description="See which content types are concentrated in each reading status."
-          emptyMessage="No status/type data for this analytics scope."
-          isEmpty={!isInitialLoading && !statusByTypeRows(data).length}
-          isError={analyticsQuery.isError && !!data}
-          isLoading={isInitialLoading}
-          rows={statusByTypeRows(data)}
-          title="Status by type"
-          onRetry={() => analyticsQuery.refetch()}
-        >
-          <StatusByTypeChart data={data} />
-        </AnalyticsChartCard>
-        <AnalyticsChartCard
-          columns={['Genre', 'Books', 'Share of books']}
-          description="Find the genres that dominate the current filters."
-          emptyMessage="No genre data for this analytics scope."
-          isEmpty={!isInitialLoading && !(data?.composition.genres.length)}
-          isError={analyticsQuery.isError && !!data}
-          isLoading={isInitialLoading}
-          rows={relationRows(data?.composition.genres ?? [])}
-          title="Top genres"
-          onRetry={() => analyticsQuery.refetch()}
-        >
-          <TopRelationsChart field="genre" items={data?.composition.genres ?? []} title="Genres" />
-        </AnalyticsChartCard>
-        <AnalyticsChartCard
-          columns={['Tag', 'Books', 'Share of books']}
-          dataTableEnabled={false}
-          description="Find the tags that dominate the current filters."
-          emptyMessage="No tag data for this analytics scope."
-          isEmpty={!isInitialLoading && !(data?.composition.tags.length)}
-          isError={analyticsQuery.isError && !!data}
-          isLoading={isInitialLoading}
-          rows={relationRows(data?.composition.tags ?? [])}
-          title="Top tags"
-          onRetry={() => analyticsQuery.refetch()}
-        >
-          <TopRelationsChart field="tag" items={data?.composition.tags ?? []} title="Tags" />
-        </AnalyticsChartCard>
-        <AnalyticsChartCard
-          columns={['Status', 'Priority', 'Books', 'Share of status']}
-          dataTableEnabled={false}
-          description="Spot statuses where books are still unprioritized or clustered in one priority."
-          emptyMessage="No priority data for this analytics scope."
-          isEmpty={!isInitialLoading && !(data?.planning.prioritiesByStatus.length)}
-          isError={analyticsQuery.isError && !!data}
-          isLoading={isInitialLoading}
-          rows={priorityRows(data)}
-          title="Priority by status"
-          onRetry={() => analyticsQuery.refetch()}
-        >
-          <PriorityByStatusChart data={data} />
-        </AnalyticsChartCard>
-        <AnalyticsChartCard
-          columns={['Source', 'Links', 'Books', 'Coverage']}
-          description="Check which external sources are represented in matching books."
-          emptyMessage="0 link sources found for this scope."
-          isEmpty={!isInitialLoading && !(data?.quality.linkSources.length)}
-          isError={analyticsQuery.isError && !!data}
-          isLoading={isInitialLoading}
-          rows={linkSourceRows(data)}
-          title="Link sources"
-          onRetry={() => analyticsQuery.refetch()}
-        >
-          <LinkSourcesChart data={data} />
-        </AnalyticsChartCard>
-        <AnalyticsChartCard
-          columns={['Kind', 'Bucket', 'Books', 'Coverage']}
-          description="Review cover fetch state and provider coverage without opening each book."
-          emptyMessage="0 cover records reported for this scope."
-          isEmpty={!isInitialLoading && !(data?.quality.coverStatuses.length || data?.quality.coverSources.length)}
-          isError={analyticsQuery.isError && !!data}
-          isLoading={isInitialLoading}
-          rows={coverAvailabilityRows(data)}
-          title="Cover availability"
-          onRetry={() => analyticsQuery.refetch()}
-        >
-          <CoverAvailabilityChart data={data} />
-        </AnalyticsChartCard>
+          <AnalyticsChartCard
+            columns={['Type', 'Status', 'Books', 'Share of type']}
+            dataTableEnabled={false}
+            description="See which content types are concentrated in each reading status."
+            emptyMessage="No status/type data for this analytics scope."
+            isEmpty={!isInitialLoading && !statusByTypeRows(data).length}
+            isError={analyticsQuery.isError && !!data}
+            isLoading={isInitialLoading}
+            rows={statusByTypeRows(data)}
+            title="Status by type"
+            onRetry={() => analyticsQuery.refetch()}
+          >
+            <StatusByTypeChart data={data} />
+          </AnalyticsChartCard>
+          <AnalyticsChartCard
+            columns={['Genre', 'Books', 'Share of books']}
+            description="Find the genres that dominate the current filters."
+            emptyMessage="No genre data for this analytics scope."
+            isEmpty={!isInitialLoading && !data?.composition.genres.length}
+            isError={analyticsQuery.isError && !!data}
+            isLoading={isInitialLoading}
+            rows={relationRows(data?.composition.genres ?? [])}
+            title="Top genres"
+            onRetry={() => analyticsQuery.refetch()}
+          >
+            <TopRelationsChart
+              field="genre"
+              items={data?.composition.genres ?? []}
+              title="Genres"
+            />
+          </AnalyticsChartCard>
+          <AnalyticsChartCard
+            columns={['Tag', 'Books', 'Share of books']}
+            dataTableEnabled={false}
+            description="Find the tags that dominate the current filters."
+            emptyMessage="No tag data for this analytics scope."
+            isEmpty={!isInitialLoading && !data?.composition.tags.length}
+            isError={analyticsQuery.isError && !!data}
+            isLoading={isInitialLoading}
+            rows={relationRows(data?.composition.tags ?? [])}
+            title="Top tags"
+            onRetry={() => analyticsQuery.refetch()}
+          >
+            <TopRelationsChart field="tag" items={data?.composition.tags ?? []} title="Tags" />
+          </AnalyticsChartCard>
+          <AnalyticsChartCard
+            columns={['Status', 'Priority', 'Books', 'Share of status']}
+            dataTableEnabled={false}
+            description="Spot statuses where books are still unprioritized or clustered in one priority."
+            emptyMessage="No priority data for this analytics scope."
+            isEmpty={!isInitialLoading && !data?.planning.prioritiesByStatus.length}
+            isError={analyticsQuery.isError && !!data}
+            isLoading={isInitialLoading}
+            rows={priorityRows(data)}
+            title="Priority by status"
+            onRetry={() => analyticsQuery.refetch()}
+          >
+            <PriorityByStatusChart data={data} />
+          </AnalyticsChartCard>
+          <AnalyticsChartCard
+            columns={['Source', 'Links', 'Books', 'Coverage']}
+            description="Check which external sources are represented in matching books."
+            emptyMessage="0 link sources found for this scope."
+            isEmpty={!isInitialLoading && !data?.quality.linkSources.length}
+            isError={analyticsQuery.isError && !!data}
+            isLoading={isInitialLoading}
+            rows={linkSourceRows(data)}
+            title="Link sources"
+            onRetry={() => analyticsQuery.refetch()}
+          >
+            <LinkSourcesChart data={data} />
+          </AnalyticsChartCard>
+          <AnalyticsChartCard
+            columns={['Kind', 'Bucket', 'Books', 'Coverage']}
+            description="Review cover fetch state and provider coverage without opening each book."
+            emptyMessage="0 cover records reported for this scope."
+            isEmpty={
+              !isInitialLoading &&
+              !(data?.quality.coverStatuses.length || data?.quality.coverSources.length)
+            }
+            isError={analyticsQuery.isError && !!data}
+            isLoading={isInitialLoading}
+            rows={coverAvailabilityRows(data)}
+            title="Cover availability"
+            onRetry={() => analyticsQuery.refetch()}
+          >
+            <CoverAvailabilityChart data={data} />
+          </AnalyticsChartCard>
         </div>
         <div className="grid min-w-0 gap-5" data-testid="analytics-right-column">
-        <AnalyticsChartCard
-          columns={['Rating', 'Books']}
-          dataTableEnabled={false}
-          description="See the rating spread and jump directly to unrated books."
-          emptyMessage="No rating data for this analytics scope."
-          isEmpty={!isInitialLoading && !(data?.overview.totalBooks)}
-          isError={analyticsQuery.isError && !!data}
-          isLoading={isInitialLoading}
-          rows={ratingRows(data)}
-          title="Rating distribution"
-          onRetry={() => analyticsQuery.refetch()}
-        >
-          <RatingDistributionChart data={data} />
-        </AnalyticsChartCard>
-        <AnalyticsChartCard
-          columns={['Type', 'Books', 'Current chapters', 'Average current', 'Median current']}
-          description="Compare where your chapter backlog sits by content type."
-          emptyMessage="No chapter volume data for this analytics scope."
-          isEmpty={!isInitialLoading && !(data?.progress.typeVolumes.length)}
-          isError={analyticsQuery.isError && !!data}
-          isLoading={isInitialLoading}
-          rows={chapterVolumeRows(data)}
-          title="Chapter volume by type"
-          onRetry={() => analyticsQuery.refetch()}
-        >
-          <ChapterVolumeChart data={data} />
-        </AnalyticsChartCard>
-        <AnalyticsChartCard
-          columns={['Type', 'Current chapters', 'Minutes / chapter', 'Estimated time']}
-          description="Estimate reading effort from chapter counts and your minutes-per-chapter settings."
-          emptyMessage="No chapter data to estimate reading time."
-          isEmpty={!isInitialLoading && !(data?.progress.typeVolumes.length)}
-          isError={analyticsQuery.isError && !!data}
-          isLoading={isInitialLoading}
-          rows={estimatedReadingTimeRows(data, readingTimeSettings)}
-          title="Estimated reading time"
-          onRetry={() => analyticsQuery.refetch()}
-        >
-          <EstimatedReadingTimeChart
-            data={data}
-            isSaving={readingTimeSettingsMutation.isPending}
-            settings={readingTimeSettings}
-            onSave={(settings) => readingTimeSettingsMutation.mutateAsync({
-              settings: Object.entries(settings).map(([contentType, minutesPerChapter]) => ({ contentType, minutesPerChapter })),
-            })}
-          />
-        </AnalyticsChartCard>
-        <AnalyticsChartCard
-          columns={['Date', 'Daily chapters', 'Cumulative chapters', 'Progress events', 'Books touched']}
-          description="Compare daily chapter progress with the cumulative reading total in the selected range."
-          emptyMessage="No reading activity in this time range."
-          isEmpty={!isInitialLoading && !(data?.activity.points.length)}
-          isError={analyticsQuery.isError && !!data}
-          isLoading={isInitialLoading}
-          rows={readingActivityRows(data)}
-          title="Reading activity"
-          onRetry={() => analyticsQuery.refetch()}
-        >
-          <ReadingActivityChart data={data} />
-        </AnalyticsChartCard>
-        <AnalyticsChartCard
-          columns={['Date', 'Books added', 'Cumulative books', 'By type']}
-          description="See when books were added and which types caused growth."
-          emptyMessage="No library growth points in this time range."
-          isEmpty={!isInitialLoading && !(data?.libraryGrowth.points.length)}
-          isError={analyticsQuery.isError && !!data}
-          isLoading={isInitialLoading}
-          rows={libraryGrowthRows(data)}
-          title="Library growth"
-          onRetry={() => analyticsQuery.refetch()}
-        >
-          <LibraryGrowthChart data={data} />
-        </AnalyticsChartCard>
-        <AnalyticsChartCard
-          columns={['Field', 'Complete books', 'Coverage', 'Missing books']}
-          dataTableEnabled={false}
-          description="Find fields that are missing most often in the current scope."
-          emptyMessage="0 metadata fields reported for this scope."
-          isEmpty={!isInitialLoading && !(data?.quality.fieldCompleteness.length)}
-          isError={analyticsQuery.isError && !!data}
-          isLoading={isInitialLoading}
-          rows={metadataCompletenessRows(data)}
-          title="Metadata completeness"
-          onRetry={() => analyticsQuery.refetch()}
-        >
-          <MetadataCompletenessChart data={data} />
-        </AnalyticsChartCard>
+          <AnalyticsChartCard
+            columns={['Rating', 'Books']}
+            dataTableEnabled={false}
+            description="See the rating spread and jump directly to unrated books."
+            emptyMessage="No rating data for this analytics scope."
+            isEmpty={!isInitialLoading && !data?.overview.totalBooks}
+            isError={analyticsQuery.isError && !!data}
+            isLoading={isInitialLoading}
+            rows={ratingRows(data)}
+            title="Rating distribution"
+            onRetry={() => analyticsQuery.refetch()}
+          >
+            <RatingDistributionChart data={data} />
+          </AnalyticsChartCard>
+          <AnalyticsChartCard
+            columns={['Type', 'Books', 'Current chapters', 'Average current', 'Median current']}
+            description="Compare where your chapter backlog sits by content type."
+            emptyMessage="No chapter volume data for this analytics scope."
+            isEmpty={!isInitialLoading && !data?.progress.typeVolumes.length}
+            isError={analyticsQuery.isError && !!data}
+            isLoading={isInitialLoading}
+            rows={chapterVolumeRows(data)}
+            title="Chapter volume by type"
+            onRetry={() => analyticsQuery.refetch()}
+          >
+            <ChapterVolumeChart data={data} />
+          </AnalyticsChartCard>
+          <AnalyticsChartCard
+            columns={['Type', 'Current chapters', 'Minutes / chapter', 'Estimated time']}
+            description="Estimate reading effort from chapter counts and your minutes-per-chapter settings."
+            emptyMessage="No chapter data to estimate reading time."
+            isEmpty={!isInitialLoading && !data?.progress.typeVolumes.length}
+            isError={analyticsQuery.isError && !!data}
+            isLoading={isInitialLoading}
+            rows={estimatedReadingTimeRows(data, readingTimeSettings)}
+            title="Estimated reading time"
+            onRetry={() => analyticsQuery.refetch()}
+          >
+            <EstimatedReadingTimeChart
+              data={data}
+              isSaving={readingTimeSettingsMutation.isPending}
+              settings={readingTimeSettings}
+              onSave={(settings) =>
+                readingTimeSettingsMutation.mutateAsync({
+                  settings: Object.entries(settings).map(([contentType, minutesPerChapter]) => ({
+                    contentType,
+                    minutesPerChapter,
+                  })),
+                })
+              }
+            />
+          </AnalyticsChartCard>
+          <AnalyticsChartCard
+            columns={[
+              'Date',
+              'Daily chapters',
+              'Cumulative chapters',
+              'Progress events',
+              'Books touched',
+            ]}
+            description="Compare daily chapter progress with the cumulative reading total in the selected range."
+            emptyMessage="No reading activity in this time range."
+            isEmpty={!isInitialLoading && !data?.activity.points.length}
+            isError={analyticsQuery.isError && !!data}
+            isLoading={isInitialLoading}
+            rows={readingActivityRows(data)}
+            title="Reading activity"
+            onRetry={() => analyticsQuery.refetch()}
+          >
+            <ReadingActivityChart data={data} />
+          </AnalyticsChartCard>
+          <AnalyticsChartCard
+            columns={['Date', 'Books added', 'Cumulative books', 'By type']}
+            description="See when books were added and which types caused growth."
+            emptyMessage="No library growth points in this time range."
+            isEmpty={!isInitialLoading && !data?.libraryGrowth.points.length}
+            isError={analyticsQuery.isError && !!data}
+            isLoading={isInitialLoading}
+            rows={libraryGrowthRows(data)}
+            title="Library growth"
+            onRetry={() => analyticsQuery.refetch()}
+          >
+            <LibraryGrowthChart data={data} />
+          </AnalyticsChartCard>
+          <AnalyticsChartCard
+            columns={['Field', 'Complete books', 'Coverage', 'Missing books']}
+            dataTableEnabled={false}
+            description="Find fields that are missing most often in the current scope."
+            emptyMessage="0 metadata fields reported for this scope."
+            isEmpty={!isInitialLoading && !data?.quality.fieldCompleteness.length}
+            isError={analyticsQuery.isError && !!data}
+            isLoading={isInitialLoading}
+            rows={metadataCompletenessRows(data)}
+            title="Metadata completeness"
+            onRetry={() => analyticsQuery.refetch()}
+          >
+            <MetadataCompletenessChart data={data} />
+          </AnalyticsChartCard>
         </div>
       </div>
     </div>
@@ -367,7 +449,7 @@ function DateRangeChooser({
     }
   }, [isOpen, filters.from, filters.to])
 
-  function applyPreset(preset: typeof analyticsRangePresets[number]) {
+  function applyPreset(preset: (typeof analyticsRangePresets)[number]) {
     const today = getToday()
     if (isPresetDisabled(preset, today, accountStartDate)) {
       return
@@ -435,7 +517,9 @@ function DateRangeChooser({
       >
         <span className="truncate">{display.label}</span>
         {display.toLabel ? (
-          <Badge className="shrink-0" tone="accent">{display.toLabel}</Badge>
+          <Badge className="shrink-0" tone="accent">
+            {display.toLabel}
+          </Badge>
         ) : null}
       </button>
       {isOpen ? (
@@ -481,7 +565,13 @@ function MetricCard({ label, loading, value }: { label: string; loading: boolean
   return (
     <Surface as="div" className="px-4 py-3" tone="elevated">
       <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</div>
-      <div className="mt-1 text-2xl font-semibold text-slate-950">{loading ? <span className="inline-block h-8 w-16 animate-pulse rounded bg-slate-200" /> : value}</div>
+      <div className="mt-1 text-2xl font-semibold text-slate-950">
+        {loading ? (
+          <span className="inline-block h-8 w-16 animate-pulse rounded bg-slate-200" />
+        ) : (
+          value
+        )}
+      </div>
     </Surface>
   )
 }
@@ -517,7 +607,7 @@ function createAnalyticsSearchParams(filters: ReturnType<typeof getAnalyticsFilt
 }
 
 function normalizeBucket(value?: string | null): AnalyticsBucket {
-  return analyticsBuckets.includes(value as AnalyticsBucket) ? value as AnalyticsBucket : 'week'
+  return analyticsBuckets.includes(value as AnalyticsBucket) ? (value as AnalyticsBucket) : 'week'
 }
 
 function defaultToDate() {
@@ -562,15 +652,17 @@ function getDefaultFromDate(today: Date, accountStartDate: Date) {
 }
 
 function getPresetFromDate(
-  preset: typeof analyticsRangePresets[number],
+  preset: (typeof analyticsRangePresets)[number],
   today: Date,
   accountStartDate: Date,
 ) {
-  return preset.label === 'Beginning' ? accountStartDate : preset.getFrom(today) ?? accountStartDate
+  return preset.label === 'Beginning'
+    ? accountStartDate
+    : (preset.getFrom(today) ?? accountStartDate)
 }
 
 function isPresetDisabled(
-  preset: typeof analyticsRangePresets[number],
+  preset: (typeof analyticsRangePresets)[number],
   today: Date,
   accountStartDate: Date,
 ) {
@@ -586,7 +678,10 @@ function getInclusiveToDate(exclusiveToValue: string) {
   return addDays(parseDateInput(exclusiveToValue), -1)
 }
 
-function getDateRangeDisplay(filters: ReturnType<typeof getAnalyticsFilters>, accountStartDate: Date) {
+function getDateRangeDisplay(
+  filters: ReturnType<typeof getAnalyticsFilters>,
+  accountStartDate: Date,
+) {
   const from = parseDateInput(filters.from)
   const toInclusive = getInclusiveToDate(filters.to)
   const today = getToday()
@@ -600,10 +695,12 @@ function getDateRangeDisplay(filters: ReturnType<typeof getAnalyticsFilters>, ac
     }
   }
 
-  const preset = analyticsRangePresets.find((item) =>
-    !isPresetDisabled(item, today, accountStartDate) &&
-    isSameDay(from, getPresetFromDate(item, today, accountStartDate)) &&
-    isSameDay(toInclusive, today))
+  const preset = analyticsRangePresets.find(
+    (item) =>
+      !isPresetDisabled(item, today, accountStartDate) &&
+      isSameDay(from, getPresetFromDate(item, today, accountStartDate)) &&
+      isSameDay(toInclusive, today),
+  )
   const toLabel = isSameDay(toInclusive, today) ? 'Today' : format(toInclusive, 'MMM d, yyyy')
   const label = preset ? preset.label : `${format(from, 'MMM d, yyyy')} – ${toLabel}`
 
@@ -619,18 +716,22 @@ const dayPickerClassNames = {
   root: 'text-[var(--qs-text)]',
   months: 'grid gap-4 md:grid-cols-2',
   month: 'space-y-3',
-  month_caption: 'flex items-center justify-center px-8 py-1 text-sm font-semibold text-[var(--qs-text)]',
+  month_caption:
+    'flex items-center justify-center px-8 py-1 text-sm font-semibold text-[var(--qs-text)]',
   caption_label: 'px-2 py-1',
   nav: 'absolute right-3 top-[4.75rem] flex gap-2',
-  button_previous: 'grid h-11 w-11 place-items-center rounded-[var(--qs-control-radius)] border border-[var(--qs-border)] bg-[var(--qs-surface-muted)] text-[var(--qs-muted)] hover:border-[var(--qs-accent)] hover:text-[var(--qs-text)]',
-  button_next: 'grid h-11 w-11 place-items-center rounded-[var(--qs-control-radius)] border border-[var(--qs-border)] bg-[var(--qs-surface-muted)] text-[var(--qs-muted)] hover:border-[var(--qs-accent)] hover:text-[var(--qs-text)]',
+  button_previous:
+    'grid h-11 w-11 place-items-center rounded-[var(--qs-control-radius)] border border-[var(--qs-border)] bg-[var(--qs-surface-muted)] text-[var(--qs-muted)] hover:border-[var(--qs-accent)] hover:text-[var(--qs-text)]',
+  button_next:
+    'grid h-11 w-11 place-items-center rounded-[var(--qs-control-radius)] border border-[var(--qs-border)] bg-[var(--qs-surface-muted)] text-[var(--qs-muted)] hover:border-[var(--qs-accent)] hover:text-[var(--qs-text)]',
   chevron: 'h-4 w-4 fill-current',
   month_grid: 'w-full border-separate border-spacing-1',
   weekdays: 'text-xs uppercase tracking-wide text-[var(--qs-subtle)]',
   weekday: 'h-8 text-center font-semibold',
   week: '',
   day: 'analytics-calendar-day h-11 w-11 text-center text-sm',
-  day_button: 'analytics-calendar-day-button h-11 w-11 rounded-[var(--qs-control-radius)] font-medium',
+  day_button:
+    'analytics-calendar-day-button h-11 w-11 rounded-[var(--qs-control-radius)] font-medium',
   today: 'analytics-calendar-day--today',
   selected: 'analytics-calendar-day--selected',
   range_start: 'analytics-calendar-day--range-start rounded-l-full',

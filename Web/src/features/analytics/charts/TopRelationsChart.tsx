@@ -20,13 +20,18 @@ export function TopRelationsChart({ field, items, title }: TopRelationsChartProp
   const expanded = visibleLimit > topLimit
 
   if (!items.length) {
-    return <div className="grid min-h-56 place-items-center text-sm text-slate-500">No {title.toLowerCase()} data for this analytics scope.</div>
+    return (
+      <div className="grid min-h-56 place-items-center text-sm text-slate-500">
+        No {title.toLowerCase()} data for this analytics scope.
+      </div>
+    )
   }
 
   return (
     <div className="grid gap-3">
       <p className="text-sm text-slate-500">
-        Multi-value books can count in more than one {title.toLowerCase()} bucket; shares are measured against matching books.
+        Multi-value books can count in more than one {title.toLowerCase()} bucket; shares are
+        measured against matching books.
       </p>
       {rows.map((item) => (
         <div className="grid gap-1" key={item.name}>
@@ -36,10 +41,15 @@ export function TopRelationsChart({ field, items, title }: TopRelationsChartProp
             ) : (
               <DrilldownLink query={fieldQuery(field, item.name)}>{item.name}</DrilldownLink>
             )}
-            <span className="text-slate-500">{formatCount(item.bookCount)} books · {formatPercent(item.shareOfBooks)}</span>
+            <span className="text-slate-500">
+              {formatCount(item.bookCount)} books · {formatPercent(item.shareOfBooks)}
+            </span>
           </div>
           <div className="ui-progress-track">
-            <div className="ui-progress-fill" style={{ width: `${Math.min(100, item.shareOfBooks)}%` }} />
+            <div
+              className="ui-progress-fill"
+              style={{ width: `${Math.min(100, item.shareOfBooks)}%` }}
+            />
           </div>
         </div>
       ))}
@@ -86,7 +96,9 @@ function toAllRelationRows(items: BookAnalyticsRelationCountDto[]) {
 }
 
 function toLimitedRelationRows(items: BookAnalyticsRelationCountDto[], limit: number) {
-  const sorted = [...items].sort((left, right) => right.bookCount - left.bookCount || left.name.localeCompare(right.name))
+  const sorted = [...items].sort(
+    (left, right) => right.bookCount - left.bookCount || left.name.localeCompare(right.name),
+  )
   const top = sorted.slice(0, limit).map((item) => ({ ...item, isOther: false }))
   const other = sorted.slice(limit)
   if (!other.length) {

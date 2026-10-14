@@ -16,11 +16,7 @@ import {
   useColumnPreferences,
   type ColumnDefinition,
 } from '@/features/books/bookListColumns'
-import {
-  BookAdvancedSearch,
-  formatDate,
-  formatProgress,
-} from '@/features/books/BooksPage'
+import { BookAdvancedSearch, formatDate, formatProgress } from '@/features/books/BooksPage'
 import {
   BookListFooter,
   getNextSortDirection,
@@ -33,30 +29,182 @@ import {
 const adminColumnsStorageKey = 'novelki.adminBooks.columns.v1'
 
 const adminBookColumns: ColumnDefinition<AdminBookListItemDto>[] = [
-  { id: 'id', label: 'Id', defaultVisible: false, widthClass: 'w-36', render: (book) => <span className="block truncate font-mono text-xs" title={book.id}>{book.id}</span> },
-  { id: 'title', label: 'Title', defaultVisible: true, sortBy: 'title', widthClass: 'w-[24%]', render: (book) => <span className="block truncate font-medium text-slate-950" title={book.primaryTitle}>{book.primaryTitle}</span> },
-  { id: 'ownerId', label: 'OwnerId', defaultVisible: true, sortBy: 'owner', widthClass: 'w-[15%]', render: (book) => <span className="block truncate font-mono text-xs" title={book.ownerId}>{book.ownerId}</span> },
-  { id: 'ownerUsername', label: 'Username', defaultVisible: false, widthClass: 'w-[12%]', render: (book) => <TruncatedCellText value={book.ownerUsername} /> },
-  { id: 'ownerEmail', label: 'Email', defaultVisible: false, widthClass: 'w-[16%]', render: (book) => <TruncatedCellText value={book.ownerEmail} /> },
-  { id: 'author', label: 'Author', defaultVisible: true, sortBy: 'author', widthClass: 'w-[11%]', render: (book) => <TruncatedCellText value={book.author} /> },
-  { id: 'status', label: 'Status', defaultVisible: true, sortBy: 'status', widthClass: 'w-20', render: (book) => book.status },
-  { id: 'type', label: 'Type', defaultVisible: true, sortBy: 'type', widthClass: 'w-20', render: (book) => book.contentType },
-  { id: 'progress', label: 'Progress', defaultVisible: true, sortBy: 'progress', widthClass: 'w-24', render: formatProgress },
-  { id: 'totalChapters', label: totalChaptersColumnLabel(), defaultVisible: false, sortBy: 'chapters', widthClass: 'w-28', render: (book) => book.totalChapters ?? '-' },
-  { id: 'rating', label: 'Rating', defaultVisible: true, sortBy: 'rating', widthClass: 'w-16', render: (book) => book.rating ?? '-' },
-  { id: 'priority', label: 'Priority', defaultVisible: false, sortBy: 'priority', widthClass: 'w-20', render: (book) => book.priority ?? '-' },
-  { id: 'created', label: 'Created', defaultVisible: false, sortBy: 'created', widthClass: 'w-36', render: (book) => formatDate(book.created) },
-  { id: 'lastModified', label: 'Updated', defaultVisible: true, sortBy: 'lastModified', widthClass: 'w-32', render: (book) => formatDate(book.lastModified || book.created) },
-  { id: 'genres', label: 'Genres', defaultVisible: false, widthClass: 'w-[10%]', render: (book) => <DescribedMetadataPills descriptions={book.genreDescriptions} totalCount={book.genresCount} values={book.genres} /> },
-  { id: 'tags', label: 'Tags', defaultVisible: false, widthClass: 'w-[10%]', render: (book) => <DescribedMetadataPills descriptions={book.tagDescriptions} totalCount={book.tagsCount} values={book.tags} /> },
-  { id: 'links', label: 'Links', defaultVisible: false, widthClass: 'w-16', render: (book) => book.linksCount },
-  { id: 'notes', label: 'Notes', defaultVisible: false, widthClass: 'w-[16%]', render: (book) => <TruncatedCellText value={book.notes} /> },
-  { id: 'description', label: 'Description', defaultVisible: false, widthClass: 'w-[16%]', render: (book) => <TruncatedCellText value={book.description} /> },
+  {
+    id: 'id',
+    label: 'Id',
+    defaultVisible: false,
+    widthClass: 'w-36',
+    render: (book) => (
+      <span className="block truncate font-mono text-xs" title={book.id}>
+        {book.id}
+      </span>
+    ),
+  },
+  {
+    id: 'title',
+    label: 'Title',
+    defaultVisible: true,
+    sortBy: 'title',
+    widthClass: 'w-[24%]',
+    render: (book) => (
+      <span className="block truncate font-medium text-slate-950" title={book.primaryTitle}>
+        {book.primaryTitle}
+      </span>
+    ),
+  },
+  {
+    id: 'ownerId',
+    label: 'OwnerId',
+    defaultVisible: true,
+    sortBy: 'owner',
+    widthClass: 'w-[15%]',
+    render: (book) => (
+      <span className="block truncate font-mono text-xs" title={book.ownerId}>
+        {book.ownerId}
+      </span>
+    ),
+  },
+  {
+    id: 'ownerUsername',
+    label: 'Username',
+    defaultVisible: false,
+    widthClass: 'w-[12%]',
+    render: (book) => <TruncatedCellText value={book.ownerUsername} />,
+  },
+  {
+    id: 'ownerEmail',
+    label: 'Email',
+    defaultVisible: false,
+    widthClass: 'w-[16%]',
+    render: (book) => <TruncatedCellText value={book.ownerEmail} />,
+  },
+  {
+    id: 'author',
+    label: 'Author',
+    defaultVisible: true,
+    sortBy: 'author',
+    widthClass: 'w-[11%]',
+    render: (book) => <TruncatedCellText value={book.author} />,
+  },
+  {
+    id: 'status',
+    label: 'Status',
+    defaultVisible: true,
+    sortBy: 'status',
+    widthClass: 'w-20',
+    render: (book) => book.status,
+  },
+  {
+    id: 'type',
+    label: 'Type',
+    defaultVisible: true,
+    sortBy: 'type',
+    widthClass: 'w-20',
+    render: (book) => book.contentType,
+  },
+  {
+    id: 'progress',
+    label: 'Progress',
+    defaultVisible: true,
+    sortBy: 'progress',
+    widthClass: 'w-24',
+    render: formatProgress,
+  },
+  {
+    id: 'totalChapters',
+    label: totalChaptersColumnLabel(),
+    defaultVisible: false,
+    sortBy: 'chapters',
+    widthClass: 'w-28',
+    render: (book) => book.totalChapters ?? '-',
+  },
+  {
+    id: 'rating',
+    label: 'Rating',
+    defaultVisible: true,
+    sortBy: 'rating',
+    widthClass: 'w-16',
+    render: (book) => book.rating ?? '-',
+  },
+  {
+    id: 'priority',
+    label: 'Priority',
+    defaultVisible: false,
+    sortBy: 'priority',
+    widthClass: 'w-20',
+    render: (book) => book.priority ?? '-',
+  },
+  {
+    id: 'created',
+    label: 'Created',
+    defaultVisible: false,
+    sortBy: 'created',
+    widthClass: 'w-36',
+    render: (book) => formatDate(book.created),
+  },
+  {
+    id: 'lastModified',
+    label: 'Updated',
+    defaultVisible: true,
+    sortBy: 'lastModified',
+    widthClass: 'w-32',
+    render: (book) => formatDate(book.lastModified || book.created),
+  },
+  {
+    id: 'genres',
+    label: 'Genres',
+    defaultVisible: false,
+    widthClass: 'w-[10%]',
+    render: (book) => (
+      <DescribedMetadataPills
+        descriptions={book.genreDescriptions}
+        totalCount={book.genresCount}
+        values={book.genres}
+      />
+    ),
+  },
+  {
+    id: 'tags',
+    label: 'Tags',
+    defaultVisible: false,
+    widthClass: 'w-[10%]',
+    render: (book) => (
+      <DescribedMetadataPills
+        descriptions={book.tagDescriptions}
+        totalCount={book.tagsCount}
+        values={book.tags}
+      />
+    ),
+  },
+  {
+    id: 'links',
+    label: 'Links',
+    defaultVisible: false,
+    widthClass: 'w-16',
+    render: (book) => book.linksCount,
+  },
+  {
+    id: 'notes',
+    label: 'Notes',
+    defaultVisible: false,
+    widthClass: 'w-[16%]',
+    render: (book) => <TruncatedCellText value={book.notes} />,
+  },
+  {
+    id: 'description',
+    label: 'Description',
+    defaultVisible: false,
+    widthClass: 'w-[16%]',
+    render: (book) => <TruncatedCellText value={book.description} />,
+  },
 ]
 
 export function AdminPage() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const [columnPreferences, setColumnPreferences] = useColumnPreferences(adminColumnsStorageKey, adminBookColumns)
+  const [columnPreferences, setColumnPreferences] = useColumnPreferences(
+    adminColumnsStorageKey,
+    adminBookColumns,
+  )
   const {
     pageSize,
     query,
@@ -72,7 +220,8 @@ export function AdminPage() {
   const visibleColumns = getVisibleColumns(adminBookColumns, columnPreferences)
   const adminBooksQuery = useQuery({
     queryKey: ['adminBooks', skip, pageSize, requestQuery, sortBy, sortDirection],
-    queryFn: () => api.getAdminBooks({ skip, take: pageSize, query: requestQuery, sortBy, sortDirection }),
+    queryFn: () =>
+      api.getAdminBooks({ skip, take: pageSize, query: requestQuery, sortBy, sortDirection }),
     placeholderData: keepPreviousData,
     staleTime: 30_000,
   })
@@ -107,7 +256,11 @@ export function AdminPage() {
           {adminBooksQuery.isFetching && !adminBooksQuery.isLoading ? (
             <span className="mr-auto text-xs font-medium text-slate-500">Searching...</span>
           ) : null}
-          <ColumnSettingsPopup columns={adminBookColumns} preferences={columnPreferences} onChange={setColumnPreferences} />
+          <ColumnSettingsPopup
+            columns={adminBookColumns}
+            preferences={columnPreferences}
+            onChange={setColumnPreferences}
+          />
         </div>
         <BookDataTable
           columns={visibleColumns}
@@ -116,7 +269,13 @@ export function AdminPage() {
           items={adminBooksQuery.data?.data ?? []}
           renderActions={(book) => (
             <div className="flex justify-end">
-              <Link aria-label={`Edit ${book.primaryTitle}`} className={`${secondaryButtonClass} ui-icon-button`} to={`/admin/books/${book.id}/edit`}><Edit className="h-4 w-4" /></Link>
+              <Link
+                aria-label={`Edit ${book.primaryTitle}`}
+                className={`${secondaryButtonClass} ui-icon-button`}
+                to={`/admin/books/${book.id}/edit`}
+              >
+                <Edit className="h-4 w-4" />
+              </Link>
             </div>
           )}
           sortBy={sortBy}
@@ -150,5 +309,9 @@ export function AdminPage() {
 
 function TruncatedCellText({ value }: { value?: string | null }) {
   const text = value || '-'
-  return <span className="block truncate" title={value ?? undefined}>{text}</span>
+  return (
+    <span className="block truncate" title={value ?? undefined}>
+      {text}
+    </span>
+  )
 }

@@ -1,0 +1,6 @@
+# Prettier enforces LF; keep the working copy LF on every OS (core.autocrlf would otherwise break format:check on Windows).
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.webp binary
+*.woff2 binary

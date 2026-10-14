@@ -1,13 +1,33 @@
 import { useMutation } from '@tanstack/react-query'
-import { AlertCircle, ChevronDown, Download, FileUp, LoaderCircle, Save, Trash2, Upload, X } from 'lucide-react'
+import {
+  AlertCircle,
+  ChevronDown,
+  Download,
+  FileUp,
+  LoaderCircle,
+  Save,
+  Trash2,
+  Upload,
+  X,
+} from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Virtuoso } from 'react-virtuoso'
 import { toast } from 'sonner'
 import { api } from '@/api/client'
 import { HttpError } from '@/api/http'
-import type { BookImportFinalizeResult, BookImportRowDto, BookImportRowUpdateRequest, BookImportSessionDto } from '@/api/types'
-import { buttonVariants, DialogPanel, Surface, useBodyScrollLock } from '@/components/app/DesignSystem'
+import type {
+  BookImportFinalizeResult,
+  BookImportRowDto,
+  BookImportRowUpdateRequest,
+  BookImportSessionDto,
+} from '@/api/types'
+import {
+  buttonVariants,
+  DialogPanel,
+  Surface,
+  useBodyScrollLock,
+} from '@/components/app/DesignSystem'
 import { buttonClass, inputClass, secondaryButtonClass } from '@/components/app/FormField'
 import { formatProgress } from './bookProgress'
 
@@ -36,7 +56,12 @@ export function getImportSessionStats(session: BookImportSessionDto | null) {
   }
 }
 
-export function ImportBooksDialog({ mode = 'csv', open, onClose, onImported }: ImportBooksDialogProps) {
+export function ImportBooksDialog({
+  mode = 'csv',
+  open,
+  onClose,
+  onImported,
+}: ImportBooksDialogProps) {
   const [session, setSession] = useState<BookImportSessionDto | null>(null)
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null)
   const [confirmCancelOpen, setConfirmCancelOpen] = useState(false)
@@ -50,18 +75,21 @@ export function ImportBooksDialog({ mode = 'csv', open, onClose, onImported }: I
   const expectedExtension = isFullImport ? '.zip' : '.csv'
 
   const createSessionMutation = useMutation({
-    mutationFn: (file: File) => isFullImport
-      ? api.createFullBookImportSession(file)
-      : api.createBookImportSession(file),
+    mutationFn: (file: File) =>
+      isFullImport ? api.createFullBookImportSession(file) : api.createBookImportSession(file),
     onSuccess: (nextSession) => {
       setSession(nextSession)
       setExpandedRowId(null)
       toast.success('Import draft created.')
     },
     onError: (error) => {
-      toast.error(error instanceof HttpError
-        ? error.apiError.detail
-        : isFullImport ? 'Could not read the full backup.' : 'Could not parse CSV.')
+      toast.error(
+        error instanceof HttpError
+          ? error.apiError.detail
+          : isFullImport
+            ? 'Could not read the full backup.'
+            : 'Could not parse CSV.',
+      )
     },
   })
 
@@ -89,7 +117,9 @@ export function ImportBooksDialog({ mode = 'csv', open, onClose, onImported }: I
       toast.success('Invalid rows removed.')
     },
     onError: (error) => {
-      toast.error(error instanceof HttpError ? error.apiError.detail : 'Could not remove invalid rows.')
+      toast.error(
+        error instanceof HttpError ? error.apiError.detail : 'Could not remove invalid rows.',
+      )
     },
   })
 
@@ -106,7 +136,9 @@ export function ImportBooksDialog({ mode = 'csv', open, onClose, onImported }: I
       URL.revokeObjectURL(url)
     },
     onError: (error) => {
-      toast.error(error instanceof HttpError ? error.apiError.detail : 'Could not download CSV template.')
+      toast.error(
+        error instanceof HttpError ? error.apiError.detail : 'Could not download CSV template.',
+      )
     },
   })
 
@@ -213,14 +245,22 @@ export function ImportBooksDialog({ mode = 'csv', open, onClose, onImported }: I
       role="dialog"
       onClick={handleDismiss}
     >
-      <DialogPanel data-testid="import-dialog-panel" className={`${session && !finalizeResult ? 'h-[calc(100vh-0.5rem)] sm:h-[calc(100vh-1rem)]' : 'max-h-[calc(100vh-0.5rem)] sm:max-h-[calc(100vh-1rem)]'} flex max-w-6xl flex-col gap-2 overflow-hidden p-3 sm:p-4`} onClick={(event) => event.stopPropagation()}>
+      <DialogPanel
+        data-testid="import-dialog-panel"
+        className={`${session && !finalizeResult ? 'h-[calc(100vh-0.5rem)] sm:h-[calc(100vh-1rem)]' : 'max-h-[calc(100vh-0.5rem)] sm:max-h-[calc(100vh-1rem)]'} flex max-w-6xl flex-col gap-2 overflow-hidden p-3 sm:p-4`}
+        onClick={(event) => event.stopPropagation()}
+      >
         <div className="flex items-start justify-between gap-2">
           <div className="grid gap-1">
-            <h2 className={`${session && !finalizeResult ? 'text-base' : 'text-lg'} font-semibold text-slate-50`}>
+            <h2
+              className={`${session && !finalizeResult ? 'text-base' : 'text-lg'} font-semibold text-slate-50`}
+            >
               {isFullImport ? 'Import books from full backup' : 'Import books from CSV'}
             </h2>
             {session && !finalizeResult ? null : (
-              <p className="text-sm text-slate-400">Upload a file, fix invalid rows, then finalize to save books to your library.</p>
+              <p className="text-sm text-slate-400">
+                Upload a file, fix invalid rows, then finalize to save books to your library.
+              </p>
             )}
           </div>
           <div className="flex items-center gap-2">
@@ -235,7 +275,12 @@ export function ImportBooksDialog({ mode = 'csv', open, onClose, onImported }: I
                 {templateMutation.isPending ? 'Downloading...' : 'Download template'}
               </button>
             ) : null}
-            <button aria-label="Close import dialog" className={`${buttonVariants.ghost} ui-icon-button`} type="button" onClick={handleDismiss}>
+            <button
+              aria-label="Close import dialog"
+              className={`${buttonVariants.ghost} ui-icon-button`}
+              type="button"
+              onClick={handleDismiss}
+            >
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -274,20 +319,36 @@ export function ImportBooksDialog({ mode = 'csv', open, onClose, onImported }: I
             onDrop={handleDrop}
           >
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-md bg-slate-900 text-white">
-              {createSessionMutation.isPending ? <LoaderCircle className="h-6 w-6 animate-spin" /> : <FileUp className="h-6 w-6" />}
+              {createSessionMutation.isPending ? (
+                <LoaderCircle className="h-6 w-6 animate-spin" />
+              ) : (
+                <FileUp className="h-6 w-6" />
+              )}
             </div>
             <div className="grid gap-1">
               <div className="text-base font-semibold text-slate-50">
                 {createSessionMutation.isPending
-                  ? isFullImport ? 'Reading full backup...' : 'Parsing CSV draft...'
-                  : isFullImport ? 'Choose a full backup ZIP' : 'Choose a CSV file'}
+                  ? isFullImport
+                    ? 'Reading full backup...'
+                    : 'Parsing CSV draft...'
+                  : isFullImport
+                    ? 'Choose a full backup ZIP'
+                    : 'Choose a CSV file'}
               </div>
               <div className="text-sm text-slate-400">
-                {isFullImport && 'This backup restores book data and covers; use EPUB archive import for EPUB files. '}Drop {isFullImport ? 'a backup ZIP' : 'a CSV'} here or use file selection. Nothing is written to the database until you press final save.
+                {isFullImport &&
+                  'This backup restores book data and covers; use EPUB archive import for EPUB files. '}
+                Drop {isFullImport ? 'a backup ZIP' : 'a CSV'} here or use file selection. Nothing
+                is written to the database until you press final save.
               </div>
             </div>
             <div className="flex justify-center">
-              <button className={buttonClass} disabled={createSessionMutation.isPending} type="button" onClick={openFilePicker}>
+              <button
+                className={buttonClass}
+                disabled={createSessionMutation.isPending}
+                type="button"
+                onClick={openFilePicker}
+              >
                 <Upload className="h-4 w-4" />
                 Select file
               </button>
@@ -299,13 +360,20 @@ export function ImportBooksDialog({ mode = 'csv', open, onClose, onImported }: I
               <SummaryCard label="File" value={session.fileName} />
               <SummaryCard label="Rows" value={formatImportCount(importStats.totalRows)} />
               <SummaryCard label="Positive" value={formatImportCount(importStats.validRows)} />
-              <SummaryCard label="Negative" value={formatImportCount(importStats.invalidRowsCount)} tone={importStats.invalidRowsCount ? 'warn' : 'ok'} />
+              <SummaryCard
+                label="Negative"
+                value={formatImportCount(importStats.invalidRowsCount)}
+                tone={importStats.invalidRowsCount ? 'warn' : 'ok'}
+              />
             </div>
 
             <Surface as="div" className="grid gap-1 px-3 py-2" tone="elevated">
               <div className="flex items-center justify-between gap-3">
                 <div className="text-sm font-semibold text-slate-100">Progress</div>
-                <div className="text-sm text-slate-300">{formatImportCount(importStats.validRows)} / {formatImportCount(importStats.totalRows)} valid</div>
+                <div className="text-sm text-slate-300">
+                  {formatImportCount(importStats.validRows)} /{' '}
+                  {formatImportCount(importStats.totalRows)} valid
+                </div>
               </div>
               <div className="ui-progress-track h-2">
                 <div
@@ -315,7 +383,12 @@ export function ImportBooksDialog({ mode = 'csv', open, onClose, onImported }: I
               </div>
             </Surface>
 
-            <Surface as="div" className="min-h-0 flex-1 overflow-hidden p-2" data-testid="import-invalid-rows-panel" tone="elevated">
+            <Surface
+              as="div"
+              className="min-h-0 flex-1 overflow-hidden p-2"
+              data-testid="import-invalid-rows-panel"
+              tone="elevated"
+            >
               {invalidRows.length ? (
                 <div className="grid h-full min-h-0 gap-3">
                   <Virtuoso
@@ -346,16 +419,27 @@ export function ImportBooksDialog({ mode = 'csv', open, onClose, onImported }: I
                   />
                 </div>
               ) : (
-                <Surface as="div" className="grid place-items-center gap-2 px-4 py-10 text-center" tone="success">
+                <Surface
+                  as="div"
+                  className="grid place-items-center gap-2 px-4 py-10 text-center"
+                  tone="success"
+                >
                   <Save className="h-6 w-6" />
                   <div className="text-base font-semibold">All rows are valid</div>
-                  <div className="text-sm">You can finalize the import now. Books will be added only after final save.</div>
+                  <div className="text-sm">
+                    You can finalize the import now. Books will be added only after final save.
+                  </div>
                 </Surface>
               )}
             </Surface>
 
             <div className="flex flex-wrap justify-end gap-2">
-              <button className={secondaryButtonClass} disabled={finalizeMutation.isPending} type="button" onClick={handleDismiss}>
+              <button
+                className={secondaryButtonClass}
+                disabled={finalizeMutation.isPending}
+                type="button"
+                onClick={handleDismiss}
+              >
                 Close
               </button>
               {invalidRows.length ? (
@@ -366,7 +450,9 @@ export function ImportBooksDialog({ mode = 'csv', open, onClose, onImported }: I
                   onClick={() => deleteInvalidRowsMutation.mutate(session.sessionId)}
                 >
                   <Trash2 className="h-4 w-4" />
-                  {deleteInvalidRowsMutation.isPending ? 'Removing invalid...' : 'Discard all invalid'}
+                  {deleteInvalidRowsMutation.isPending
+                    ? 'Removing invalid...'
+                    : 'Discard all invalid'}
                 </button>
               ) : null}
               <button
@@ -392,18 +478,30 @@ export function ImportBooksDialog({ mode = 'csv', open, onClose, onImported }: I
   )
 }
 
-function ImportFinalizeSuccess({ result, onClose }: { result: BookImportFinalizeResult; onClose: () => void }) {
+function ImportFinalizeSuccess({
+  result,
+  onClose,
+}: {
+  result: BookImportFinalizeResult
+  onClose: () => void
+}) {
   return (
     <div className="grid min-h-0 gap-4">
       <div className="grid gap-4 md:grid-cols-2">
         <SummaryCard label="Imported" value={formatImportCount(result.importedCount)} tone="ok" />
-        <SummaryCard label="Skipped" value={formatImportCount(result.skippedCount)} tone={result.skippedCount ? 'warn' : 'neutral'} />
+        <SummaryCard
+          label="Skipped"
+          value={formatImportCount(result.skippedCount)}
+          tone={result.skippedCount ? 'warn' : 'neutral'}
+        />
       </div>
 
       {result.errors.length ? (
         <Surface as="div" className="grid gap-2 p-4 text-sm" tone="danger">
           <div className="font-semibold">Partial import messages</div>
-          {result.errors.map((error) => <p key={error}>{error}</p>)}
+          {result.errors.map((error) => (
+            <p key={error}>{error}</p>
+          ))}
         </Surface>
       ) : null}
 
@@ -424,7 +522,10 @@ function ImportFinalizeSuccess({ result, onClose }: { result: BookImportFinalize
               </thead>
               <tbody>
                 {result.importedBooks.map((book) => (
-                  <tr className="border-t border-slate-800" key={`${book.contentType}:${book.primaryTitle}`}>
+                  <tr
+                    className="border-t border-slate-800"
+                    key={`${book.contentType}:${book.primaryTitle}`}
+                  >
                     <td className="px-4 py-3 font-medium text-slate-100">{book.primaryTitle}</td>
                     <td className="px-4 py-3 text-slate-300">{book.contentType}</td>
                     <td className="px-4 py-3 text-slate-300">{formatProgress(book)}</td>
@@ -479,7 +580,12 @@ function CancelImportConfirmDialog({
           </p>
         </div>
         <div className="flex justify-end gap-2">
-          <button className={secondaryButtonClass} disabled={pending} type="button" onClick={onCancel}>
+          <button
+            className={secondaryButtonClass}
+            disabled={pending}
+            type="button"
+            onClick={onCancel}
+          >
             Keep editing
           </button>
           <button
@@ -642,7 +748,9 @@ function ExpandedImportRowEditor({
       toast.success(`Row ${row.lineNumber} updated.`)
     },
     onError: (error) => {
-      toast.error(error instanceof HttpError ? error.apiError.detail : 'Could not update import row.')
+      toast.error(
+        error instanceof HttpError ? error.apiError.detail : 'Could not update import row.',
+      )
     },
   })
 
@@ -667,21 +775,83 @@ function ExpandedImportRowEditor({
       onToggle={onToggle}
     >
       <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-4">
-        <LabeledInput error={fieldError('primaryTitle')} label="Title" value={draft.primaryTitle ?? ''} onChange={(value) => update('primaryTitle', value)} />
-        <LabeledInput error={fieldError('authorName')} label="Author" value={draft.authorName ?? ''} onChange={(value) => update('authorName', value)} />
-        <LabeledInput error={fieldError('tags')} label="Tags" value={draft.tags ?? ''} onChange={(value) => update('tags', value)} />
-        <LabeledInput error={fieldError('contentType')} label="Type" suggestions={availableContentTypes} value={draft.contentType ?? ''} onChange={(value) => update('contentType', value)} />
-        <LabeledInput error={fieldError('status')} label="Status" suggestions={availableStatuses} value={draft.status ?? ''} onChange={(value) => update('status', value)} />
-        <LabeledInput error={fieldError('currentChapterLabel')} label="Current label" value={draft.currentChapterLabel ?? ''} onChange={(value) => update('currentChapterLabel', value)} />
-        <LabeledInput error={fieldError('currentChapterNumber')} label="Current chapter" value={draft.currentChapterNumber ?? ''} onChange={(value) => update('currentChapterNumber', value)} />
-        <LabeledInput error={fieldError('totalChapters')} label="Total chapters" value={draft.totalChapters ?? ''} onChange={(value) => update('totalChapters', value)} />
-        <LabeledInput error={fieldError('rating')} label="Rating" value={draft.rating ?? ''} onChange={(value) => update('rating', value)} />
-        <LabeledInput error={fieldError('priority')} label="Priority" value={draft.priority ?? ''} onChange={(value) => update('priority', value)} />
+        <LabeledInput
+          error={fieldError('primaryTitle')}
+          label="Title"
+          value={draft.primaryTitle ?? ''}
+          onChange={(value) => update('primaryTitle', value)}
+        />
+        <LabeledInput
+          error={fieldError('authorName')}
+          label="Author"
+          value={draft.authorName ?? ''}
+          onChange={(value) => update('authorName', value)}
+        />
+        <LabeledInput
+          error={fieldError('tags')}
+          label="Tags"
+          value={draft.tags ?? ''}
+          onChange={(value) => update('tags', value)}
+        />
+        <LabeledInput
+          error={fieldError('contentType')}
+          label="Type"
+          suggestions={availableContentTypes}
+          value={draft.contentType ?? ''}
+          onChange={(value) => update('contentType', value)}
+        />
+        <LabeledInput
+          error={fieldError('status')}
+          label="Status"
+          suggestions={availableStatuses}
+          value={draft.status ?? ''}
+          onChange={(value) => update('status', value)}
+        />
+        <LabeledInput
+          error={fieldError('currentChapterLabel')}
+          label="Current label"
+          value={draft.currentChapterLabel ?? ''}
+          onChange={(value) => update('currentChapterLabel', value)}
+        />
+        <LabeledInput
+          error={fieldError('currentChapterNumber')}
+          label="Current chapter"
+          value={draft.currentChapterNumber ?? ''}
+          onChange={(value) => update('currentChapterNumber', value)}
+        />
+        <LabeledInput
+          error={fieldError('totalChapters')}
+          label="Total chapters"
+          value={draft.totalChapters ?? ''}
+          onChange={(value) => update('totalChapters', value)}
+        />
+        <LabeledInput
+          error={fieldError('rating')}
+          label="Rating"
+          value={draft.rating ?? ''}
+          onChange={(value) => update('rating', value)}
+        />
+        <LabeledInput
+          error={fieldError('priority')}
+          label="Priority"
+          value={draft.priority ?? ''}
+          onChange={(value) => update('priority', value)}
+        />
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
-        <LabeledTextarea error={fieldError('notes')} label="Notes" value={draft.notes ?? ''} onChange={(value) => update('notes', value)} />
-        <LabeledTextarea error={fieldError('description')} label="Description" value={draft.description ?? ''} onChange={(value) => update('description', value)} />
+        <LabeledTextarea
+          error={fieldError('notes')}
+          label="Notes"
+          value={draft.notes ?? ''}
+          onChange={(value) => update('notes', value)}
+        />
+        <LabeledTextarea
+          error={fieldError('description')}
+          label="Description"
+          value={draft.description ?? ''}
+          onChange={(value) => update('description', value)}
+        />
       </div>
       <div ref={formEndRef} aria-hidden="true" />
     </ImportRowShell>
@@ -734,14 +904,26 @@ function ImportRowShell({
   const busy = savePending || deletePending
 
   return (
-    <Surface as="div" className="grid gap-4 p-4" data-testid={`import-row-${row.rowId}`} tone="elevated">
+    <Surface
+      as="div"
+      className="grid gap-4 p-4"
+      data-testid={`import-row-${row.rowId}`}
+      tone="elevated"
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="grid min-w-0 flex-1 gap-1">
-          <button className="inline-flex items-center gap-2 text-left text-sm font-semibold text-amber-300" type="button" onClick={onToggle}>
+          <button
+            className="inline-flex items-center gap-2 text-left text-sm font-semibold text-amber-300"
+            type="button"
+            onClick={onToggle}
+          >
             <AlertCircle className="h-4 w-4" />
             Line {row.lineNumber}
           </button>
-          <div className="max-w-full text-sm text-slate-200" title={row.primaryTitle?.trim() || 'Untitled row'}>
+          <div
+            className="max-w-full text-sm text-slate-200"
+            title={row.primaryTitle?.trim() || 'Untitled row'}
+          >
             <span className="block max-w-full truncate md:line-clamp-2 md:whitespace-normal">
               {row.primaryTitle?.trim() || 'Untitled row'}
             </span>
@@ -760,7 +942,12 @@ function ImportRowShell({
           >
             {savePending ? 'Saving...' : 'Revalidate row'}
           </button>
-          <button className={buttonVariants.destructive} disabled={busy} type="button" onClick={onDelete}>
+          <button
+            className={buttonVariants.destructive}
+            disabled={busy}
+            type="button"
+            onClick={onDelete}
+          >
             <Trash2 className="h-4 w-4" />
             {deletePending ? 'Removing...' : 'Remove row'}
           </button>
@@ -768,7 +955,9 @@ function ImportRowShell({
       </div>
 
       <Surface as="div" className="grid gap-2 p-3 text-sm" tone="danger">
-        {row.errors.map((error) => <p key={error}>{error}</p>)}
+        {row.errors.map((error) => (
+          <p key={error}>{error}</p>
+        ))}
       </Surface>
 
       {children}
@@ -776,7 +965,11 @@ function ImportRowShell({
   )
 }
 
-function useDeleteImportRowMutation(sessionId: string, row: BookImportRowDto, onSessionChange: (session: BookImportSessionDto) => void) {
+function useDeleteImportRowMutation(
+  sessionId: string,
+  row: BookImportRowDto,
+  onSessionChange: (session: BookImportSessionDto) => void,
+) {
   return useMutation({
     mutationFn: () => api.deleteBookImportRow(sessionId, row.rowId),
     onSuccess: (session) => {
@@ -784,18 +977,30 @@ function useDeleteImportRowMutation(sessionId: string, row: BookImportRowDto, on
       toast.success(`Line ${row.lineNumber} removed.`)
     },
     onError: (error) => {
-      toast.error(error instanceof HttpError ? error.apiError.detail : 'Could not remove import row.')
+      toast.error(
+        error instanceof HttpError ? error.apiError.detail : 'Could not remove import row.',
+      )
     },
   })
 }
 
-function SummaryCard({ label, value, tone = 'neutral' }: { label: string; value: string; tone?: 'neutral' | 'ok' | 'warn' }) {
+function SummaryCard({
+  label,
+  value,
+  tone = 'neutral',
+}: {
+  label: string
+  value: string
+  tone?: 'neutral' | 'ok' | 'warn'
+}) {
   const surfaceTone = tone === 'ok' ? 'success' : tone === 'warn' ? 'warning' : 'elevated'
 
   return (
     <Surface as="div" className="grid gap-0.5 px-3 py-1.5" tone={surfaceTone}>
       <div className="text-[0.68rem] font-semibold uppercase tracking-wide">{label}</div>
-      <div className="truncate text-sm font-semibold" title={value}>{value}</div>
+      <div className="truncate text-sm font-semibold" title={value}>
+        {value}
+      </div>
     </Surface>
   )
 }
@@ -823,11 +1028,16 @@ function LabeledInput({
   const inputRef = useRef<HTMLInputElement | null>(null)
   const [open, setOpen] = useState(false)
   const normalizedValue = value.trim().toLowerCase()
-  const matchingSuggestions = suggestions.filter((suggestion) => suggestion.toLowerCase().includes(normalizedValue))
-  const hasExactSuggestionMatch = suggestions.some((suggestion) => suggestion.toLowerCase() === normalizedValue)
-  const filteredSuggestions = normalizedValue.length > 0 && matchingSuggestions.length > 0 && !hasExactSuggestionMatch
-    ? matchingSuggestions
-    : suggestions
+  const matchingSuggestions = suggestions.filter((suggestion) =>
+    suggestion.toLowerCase().includes(normalizedValue),
+  )
+  const hasExactSuggestionMatch = suggestions.some(
+    (suggestion) => suggestion.toLowerCase() === normalizedValue,
+  )
+  const filteredSuggestions =
+    normalizedValue.length > 0 && matchingSuggestions.length > 0 && !hasExactSuggestionMatch
+      ? matchingSuggestions
+      : suggestions
 
   useEffect(() => {
     if (!suggestions.length || !open) {
@@ -871,7 +1081,7 @@ function LabeledInput({
           role={suggestions.length > 0 ? 'combobox' : undefined}
           value={value}
           onBlur={(event) => {
-            if (!containerRef.current?.contains(event.relatedTarget as Node | null)) {
+            if (!containerRef.current?.contains(event.relatedTarget)) {
               closeSuggestions()
             }
           }}
@@ -923,7 +1133,17 @@ function LabeledInput({
   )
 }
 
-function LabeledTextarea({ error = [], label, value, onChange }: { error?: string[]; label: string; value: string; onChange: (value: string) => void }) {
+function LabeledTextarea({
+  error = [],
+  label,
+  value,
+  onChange,
+}: {
+  error?: string[]
+  label: string
+  value: string
+  onChange: (value: string) => void
+}) {
   const errorMessage = error.join(' ')
 
   return (

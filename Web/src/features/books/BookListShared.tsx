@@ -1,4 +1,12 @@
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ArrowDown, ArrowUp } from 'lucide-react'
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  ArrowDown,
+  ArrowUp,
+} from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import type { SetURLSearchParams } from 'react-router-dom'
@@ -149,7 +157,8 @@ export function useBookListScrollShortcuts() {
 
   useEffect(() => {
     function updateScrollShortcutVisibility() {
-      const distanceFromBottom = document.documentElement.scrollHeight - (window.scrollY + window.innerHeight)
+      const distanceFromBottom =
+        document.documentElement.scrollHeight - (window.scrollY + window.innerHeight)
       setShowBackToTop(window.scrollY > 480)
       setShowGoDown(distanceFromBottom > 480)
     }
@@ -167,7 +176,8 @@ export function useBookListScrollShortcuts() {
     showBackToTop,
     showGoDown,
     scrollBackToTop: () => window.scrollTo({ top: 0, behavior: 'smooth' }),
-    scrollToPageBottom: () => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' }),
+    scrollToPageBottom: () =>
+      window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' }),
   }
 }
 
@@ -197,13 +207,15 @@ export function BookListFooter({
   skip: number
   total: number
   totalPages: number
-  visiblePages: Array<number | 'ellipsis'>
+  visiblePages: (number | 'ellipsis')[]
   onGoToPage: (page: number) => void
 }) {
   return (
     <div className="border-t border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <span>{total ? `${skip + 1}-${Math.min(skip + pageSize, total)} of ${total}` : '0 results'}</span>
+        <span>
+          {total ? `${skip + 1}-${Math.min(skip + pageSize, total)} of ${total}` : '0 results'}
+        </span>
         <div className="flex flex-wrap items-center justify-end gap-3">
           <label className="flex items-center gap-2">
             <span>Per page</span>
@@ -213,24 +225,38 @@ export function BookListFooter({
                 value={pageSize}
                 onChange={(event) => setPageSize(event.target.value)}
               >
-                {pageSizeOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+                {pageSizeOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
               </select>
               <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             </span>
           </label>
           <div className="flex flex-wrap items-center gap-1.5">
             {canGoBack ? (
-              <button aria-label="First page" className={paginationDirectionButtonClass} type="button" onClick={() => onGoToPage(1)}>
+              <button
+                aria-label="First page"
+                className={paginationDirectionButtonClass}
+                type="button"
+                onClick={() => onGoToPage(1)}
+              >
                 <ChevronsLeft className="h-4 w-4" />
               </button>
             ) : null}
             {canGoBack ? (
-              <button aria-label="Previous page" className={paginationDirectionButtonClass} type="button" onClick={() => onGoToPage(currentPage - 1)}>
+              <button
+                aria-label="Previous page"
+                className={paginationDirectionButtonClass}
+                type="button"
+                onClick={() => onGoToPage(currentPage - 1)}
+              >
                 <ChevronLeft className="h-4 w-4" />
               </button>
             ) : null}
-            {visiblePages.map((item, index) => item === 'ellipsis'
-              ? (
+            {visiblePages.map((item, index) =>
+              item === 'ellipsis' ? (
                 <PageGapJump
                   gapId={`ellipsis-${index}`}
                   isOpen={activePageGapId === `ellipsis-${index}`}
@@ -238,27 +264,45 @@ export function BookListFooter({
                   totalPages={totalPages}
                   onGoToPage={onGoToPage}
                   onOpen={() => setActivePageGapId(`ellipsis-${index}`)}
-                  onClose={() => setActivePageGapId((current) => current === `ellipsis-${index}` ? null : current)}
+                  onClose={() =>
+                    setActivePageGapId((current) =>
+                      current === `ellipsis-${index}` ? null : current,
+                    )
+                  }
                 />
-              )
-              : (
+              ) : (
                 <button
                   aria-current={item === currentPage ? 'page' : undefined}
-                  className={item === currentPage ? paginationActivePageButtonClass : paginationPageButtonClass}
+                  className={
+                    item === currentPage
+                      ? paginationActivePageButtonClass
+                      : paginationPageButtonClass
+                  }
                   key={item}
                   type="button"
                   onClick={() => onGoToPage(item)}
                 >
                   {item}
                 </button>
-              ))}
+              ),
+            )}
             {canGoForward ? (
-              <button aria-label="Next page" className={paginationDirectionButtonClass} type="button" onClick={() => onGoToPage(currentPage + 1)}>
+              <button
+                aria-label="Next page"
+                className={paginationDirectionButtonClass}
+                type="button"
+                onClick={() => onGoToPage(currentPage + 1)}
+              >
                 <ChevronRight className="h-4 w-4" />
               </button>
             ) : null}
             {canGoForward ? (
-              <button aria-label="Last page" className={paginationDirectionButtonClass} type="button" onClick={() => onGoToPage(totalPages)}>
+              <button
+                aria-label="Last page"
+                className={paginationDirectionButtonClass}
+                type="button"
+                onClick={() => onGoToPage(totalPages)}
+              >
                 <ChevronsRight className="h-4 w-4" />
               </button>
             ) : null}
@@ -315,9 +359,12 @@ export function getNextSortDirection(
   currentSortBy: string,
   currentSortDirection: string,
 ) {
-  const defaultDirection = nextSortBy === 'lastModified' || nextSortBy === 'created' ? 'desc' : 'asc'
+  const defaultDirection =
+    nextSortBy === 'lastModified' || nextSortBy === 'created' ? 'desc' : 'asc'
   return currentSortBy === nextSortBy
-    ? currentSortDirection === 'asc' ? 'desc' : 'asc'
+    ? currentSortDirection === 'asc'
+      ? 'desc'
+      : 'asc'
     : defaultDirection
 }
 
@@ -428,11 +475,13 @@ function PageGapJump({
 
 function readBookListPageSize(searchParams: URLSearchParams, storageKey?: string) {
   const parameter = searchParams.get('take')
-  const value = Number(parameter ?? (storageKey ? window.localStorage.getItem(storageKey) : null) ?? 20)
+  const value = Number(
+    parameter ?? (storageKey ? window.localStorage.getItem(storageKey) : null) ?? 20,
+  )
   return Number.isInteger(value) && value >= 1 && value <= 1_000 ? value : 20
 }
 
-function getVisiblePageNumbers(currentPage: number, totalPages: number): Array<number | 'ellipsis'> {
+function getVisiblePageNumbers(currentPage: number, totalPages: number): (number | 'ellipsis')[] {
   if (totalPages <= 7) {
     return Array.from({ length: totalPages }, (_, index) => index + 1)
   }
@@ -442,7 +491,16 @@ function getVisiblePageNumbers(currentPage: number, totalPages: number): Array<n
   }
 
   if (currentPage >= totalPages - 3) {
-    return [1, 'ellipsis', totalPages - 5, totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages]
+    return [
+      1,
+      'ellipsis',
+      totalPages - 5,
+      totalPages - 4,
+      totalPages - 3,
+      totalPages - 2,
+      totalPages - 1,
+      totalPages,
+    ]
   }
 
   return [1, 'ellipsis', currentPage - 1, currentPage, currentPage + 1, 'ellipsis', totalPages]

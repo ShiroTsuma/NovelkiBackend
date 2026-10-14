@@ -29,9 +29,7 @@ export function renderWithProviders(
   function Wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={[route]}>
-          {children}
-        </MemoryRouter>
+        <MemoryRouter initialEntries={[route]}>{children}</MemoryRouter>
       </QueryClientProvider>
     )
   }

@@ -19,11 +19,18 @@ const missingFieldQueries: Record<string, string> = {
 }
 
 export function MetadataCompletenessChart({ data }: MetadataCompletenessChartProps) {
-  const items = [...(data?.quality.fieldCompleteness ?? [])].sort((left, right) => left.shareOfBooks - right.shareOfBooks || left.field.localeCompare(right.field))
+  const items = [...(data?.quality.fieldCompleteness ?? [])].sort(
+    (left, right) =>
+      left.shareOfBooks - right.shareOfBooks || left.field.localeCompare(right.field),
+  )
   const totalBooks = data?.overview.totalBooks ?? 0
 
   if (!items.length) {
-    return <div className="grid min-h-56 place-items-center text-sm text-slate-600">0 metadata fields reported for this scope.</div>
+    return (
+      <div className="grid min-h-56 place-items-center text-sm text-slate-600">
+        0 metadata fields reported for this scope.
+      </div>
+    )
   }
 
   return (
@@ -42,13 +49,22 @@ export function MetadataCompletenessChart({ data }: MetadataCompletenessChartPro
                 {formatCount(item.bookCount)} complete · {formatPercent(item.shareOfBooks)}
               </span>
             </div>
-            <div className="ui-progress-track" aria-label={`${formatFieldName(item.field)} completeness ${formatPercent(item.shareOfBooks)}`}>
-              <div className="ui-progress-fill" style={{ width: `${Math.min(100, Math.max(0, item.shareOfBooks))}%` }} />
+            <div
+              className="ui-progress-track"
+              aria-label={`${formatFieldName(item.field)} completeness ${formatPercent(item.shareOfBooks)}`}
+            >
+              <div
+                className="ui-progress-fill"
+                style={{ width: `${Math.min(100, Math.max(0, item.shareOfBooks))}%` }}
+              />
             </div>
             <div className="text-sm text-slate-600">
-              Complete {formatCount(item.bookCount)} of {formatCount(totalBooks)} books. Missing: {query && missingCount > 0 ? (
+              Complete {formatCount(item.bookCount)} of {formatCount(totalBooks)} books. Missing:{' '}
+              {query && missingCount > 0 ? (
                 <DrilldownLink query={query}>{formatCount(missingCount)} books</DrilldownLink>
-              ) : `${formatCount(missingCount)} books`}
+              ) : (
+                `${formatCount(missingCount)} books`
+              )}
             </div>
           </div>
         )
@@ -59,16 +75,19 @@ export function MetadataCompletenessChart({ data }: MetadataCompletenessChartPro
 
 export function metadataCompletenessRows(data?: BookAnalyticsDto) {
   const totalBooks = data?.overview.totalBooks ?? 0
-  return [...(data?.quality.fieldCompleteness ?? [])].sort((left, right) => left.shareOfBooks - right.shareOfBooks || left.field.localeCompare(right.field)).map((item) => [
-    formatFieldName(item.field),
-    formatCount(item.bookCount),
-    formatPercent(item.shareOfBooks),
-    formatCount(Math.max(0, totalBooks - item.bookCount)),
-  ])
+  return [...(data?.quality.fieldCompleteness ?? [])]
+    .sort(
+      (left, right) =>
+        left.shareOfBooks - right.shareOfBooks || left.field.localeCompare(right.field),
+    )
+    .map((item) => [
+      formatFieldName(item.field),
+      formatCount(item.bookCount),
+      formatPercent(item.shareOfBooks),
+      formatCount(Math.max(0, totalBooks - item.bookCount)),
+    ])
 }
 
 export function formatFieldName(field: string) {
-  return field
-    .replace(/([a-z])([A-Z])/g, '$1 $2')
-    .replace(/^./, (first) => first.toUpperCase())
+  return field.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, (first) => first.toUpperCase())
 }

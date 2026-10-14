@@ -1,7 +1,18 @@
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { BookAnalyticsDto } from '@/api/types'
 import { Surface } from '@/components/app/DesignSystem'
-import { analyticsTooltipProps, chartColors, DrilldownLink, fieldQuery, formatCount, formatPercent, getActiveChartLabel, normalizedPercent, percent, useBooksDrilldown } from './chartUtils'
+import {
+  analyticsTooltipProps,
+  chartColors,
+  DrilldownLink,
+  fieldQuery,
+  formatCount,
+  formatPercent,
+  getActiveChartLabel,
+  normalizedPercent,
+  percent,
+  useBooksDrilldown,
+} from './chartUtils'
 
 type StatusByTypeChartProps = {
   data: BookAnalyticsDto | undefined
@@ -23,11 +34,18 @@ type StatusByTypeTooltipProps = {
 export function StatusByTypeChart({ data }: StatusByTypeChartProps) {
   const items = data?.composition.statusByType ?? []
   const openBooks = useBooksDrilldown()
-  const statuses = Array.from(new Set(items.flatMap((item) => item.statuses.map((status) => status.status))))
+  const statuses = Array.from(
+    new Set(items.flatMap((item) => item.statuses.map((status) => status.status))),
+  )
   const chartData = items.map((item) => {
     const row: Record<string, number | string> = { type: item.type, totalBooks: item.totalBooks }
-    const countsByStatus = Object.fromEntries(item.statuses.map((status) => [status.status, status.bookCount]))
-    const displayPercents = distributeStackedPercents(statuses.map((status) => countsByStatus[status] ?? 0), item.totalBooks)
+    const countsByStatus = Object.fromEntries(
+      item.statuses.map((status) => [status.status, status.bookCount]),
+    )
+    const displayPercents = distributeStackedPercents(
+      statuses.map((status) => countsByStatus[status] ?? 0),
+      item.totalBooks,
+    )
     for (const status of statuses) {
       const statusIndex = statuses.indexOf(status)
       const count = countsByStatus[status] ?? 0
@@ -40,12 +58,19 @@ export function StatusByTypeChart({ data }: StatusByTypeChartProps) {
   })
 
   if (!items.length) {
-    return <div className="grid min-h-56 place-items-center text-sm text-slate-500">No status/type data for this analytics scope.</div>
+    return (
+      <div className="grid min-h-56 place-items-center text-sm text-slate-500">
+        No status/type data for this analytics scope.
+      </div>
+    )
   }
 
   return (
     <div className="grid gap-4">
-      <div className="analytics-drilldown-chart h-72 w-full min-w-0" data-testid="status-by-type-chart">
+      <div
+        className="analytics-drilldown-chart h-72 w-full min-w-0"
+        data-testid="status-by-type-chart"
+      >
         <ResponsiveContainer>
           <BarChart
             data={chartData}
@@ -58,12 +83,13 @@ export function StatusByTypeChart({ data }: StatusByTypeChartProps) {
               }
             }}
           >
-            <XAxis domain={[0, 100]} tickFormatter={(value) => formatPercent(Number(value))} type="number" />
-            <YAxis dataKey="type" tickLine={false} type="category" width={96} />
-            <Tooltip
-              {...analyticsTooltipProps}
-              content={<StatusByTypeTooltip />}
+            <XAxis
+              domain={[0, 100]}
+              tickFormatter={(value) => formatPercent(Number(value))}
+              type="number"
             />
+            <YAxis dataKey="type" tickLine={false} type="category" width={96} />
+            <Tooltip {...analyticsTooltipProps} content={<StatusByTypeTooltip />} />
             {statuses.map((status, index) => (
               <Bar
                 className="analytics-drilldown-shape"
@@ -90,16 +116,25 @@ export function StatusByTypeChart({ data }: StatusByTypeChartProps) {
               Open {item.type} books
             </DrilldownLink>
           ))}
-          {items.flatMap((item) => item.statuses.map((status) => (
-            <DrilldownLink key={`${item.type}-${status.status}`} query={`${fieldQuery('type', item.type)} ${fieldQuery('status', status.status)}`}>
-              Open {item.type} {status.status} books
-            </DrilldownLink>
-          )))}
+          {items.flatMap((item) =>
+            item.statuses.map((status) => (
+              <DrilldownLink
+                key={`${item.type}-${status.status}`}
+                query={`${fieldQuery('type', item.type)} ${fieldQuery('status', status.status)}`}
+              >
+                Open {item.type} {status.status} books
+              </DrilldownLink>
+            )),
+          )}
         </div>
       </div>
       <div className="grid gap-2">
         {items.map((item) => (
-          <Surface as="div" className="flex flex-wrap items-center justify-between gap-3 px-3 py-2 text-sm" key={item.type}>
+          <Surface
+            as="div"
+            className="flex flex-wrap items-center justify-between gap-3 px-3 py-2 text-sm"
+            key={item.type}
+          >
             <span className="font-semibold text-slate-950">{item.type}</span>
             <span className="text-slate-500">{formatCount(item.totalBooks)} books</span>
           </Surface>
@@ -123,8 +158,14 @@ function StatusByTypeTooltip({ active, label, payload }: StatusByTypeTooltipProp
         {rows.map((row) => (
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3" key={row.status}>
             <span className="flex min-w-0 items-center gap-2">
-              <span aria-hidden="true" className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: row.color }} />
-              <span className="min-w-0 whitespace-normal break-words text-slate-200">{row.status}</span>
+              <span
+                aria-hidden="true"
+                className="h-2.5 w-2.5 shrink-0 rounded-full"
+                style={{ backgroundColor: row.color }}
+              />
+              <span className="min-w-0 whitespace-normal break-words text-slate-200">
+                {row.status}
+              </span>
             </span>
             <span className="whitespace-nowrap font-semibold text-slate-50">
               {formatPercent(row.percent)} ({formatCount(row.count)} books)
@@ -137,14 +178,24 @@ function StatusByTypeTooltip({ active, label, payload }: StatusByTypeTooltipProp
 }
 
 function getChartPayload(entry: unknown): Record<string, unknown> {
-  if (entry && typeof entry === 'object' && 'payload' in entry && entry.payload && typeof entry.payload === 'object') {
+  if (
+    entry &&
+    typeof entry === 'object' &&
+    'payload' in entry &&
+    entry.payload &&
+    typeof entry.payload === 'object'
+  ) {
     return entry.payload as Record<string, unknown>
   }
 
   return {}
 }
 
-export function distributeStackedPercents(counts: number[], total: number, minimumPositivePercent = 3) {
+export function distributeStackedPercents(
+  counts: number[],
+  total: number,
+  minimumPositivePercent = 3,
+) {
   if (total <= 0) {
     return counts.map(() => 0)
   }
@@ -157,15 +208,16 @@ export function distributeStackedPercents(counts: number[], total: number, minim
     return rawPercents
   }
 
-  const minimum = positiveIndexes.length * minimumPositivePercent >= 100
-    ? 100 / positiveIndexes.length
-    : minimumPositivePercent
+  const minimum =
+    positiveIndexes.length * minimumPositivePercent >= 100
+      ? 100 / positiveIndexes.length
+      : minimumPositivePercent
   const small = positiveIndexes.filter((item) => item.value < minimum)
   const large = positiveIndexes.filter((item) => item.value >= minimum)
   const fixedSmallTotal = small.length * minimum
   const largeRawTotal = large.reduce((sum, item) => sum + item.value, 0)
   const remainingForLarge = Math.max(0, 100 - fixedSmallTotal)
-  const result = rawPercents.map((value) => value > 0 ? value : 0)
+  const result = rawPercents.map((value) => (value > 0 ? value : 0))
 
   for (const item of small) {
     result[item.index] = minimum
@@ -200,16 +252,22 @@ export function statusByTypeTooltipRows(payload: readonly StatusByTypeTooltipEnt
       }
     })
     .filter((row) => row.status && row.count > 0)
-    .sort((first, second) =>
-      second.percent - first.percent
-      || second.count - first.count
-      || first.status.localeCompare(second.status),
+    .sort(
+      (first, second) =>
+        second.percent - first.percent ||
+        second.count - first.count ||
+        first.status.localeCompare(second.status),
     )
 }
 
 export function statusByTypeRows(data?: BookAnalyticsDto) {
   return (data?.composition.statusByType ?? []).flatMap((item) =>
-    item.statuses.map((status) => [item.type, status.status, formatCount(status.bookCount), formatPercent(percent(status.bookCount, item.totalBooks))]),
+    item.statuses.map((status) => [
+      item.type,
+      status.status,
+      formatCount(status.bookCount),
+      formatPercent(percent(status.bookCount, item.totalBooks)),
+    ]),
   )
 }
 

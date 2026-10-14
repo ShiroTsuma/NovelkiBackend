@@ -26,7 +26,10 @@ const requiredCurrentChapterString = z
 
 export const bookFormSchema = z
   .object({
-    primaryTitle: z.string().refine((value) => value.trim().length > 0, 'Title is required.').refine((value) => value.trim().length <= 500, 'Title must be 500 characters or fewer.'),
+    primaryTitle: z
+      .string()
+      .refine((value) => value.trim().length > 0, 'Title is required.')
+      .refine((value) => value.trim().length <= 500, 'Title must be 500 characters or fewer.'),
     authorId: z.string().optional(),
     authorName: z.string().max(300).optional(),
     contentTypeId: z.string().min(1, 'Type is required.'),
@@ -37,8 +40,14 @@ export const bookFormSchema = z
     totalChapters: optionalPositiveNumberString,
     currentChapterNumber: requiredCurrentChapterString,
     currentChapterLabel: z.string().max(100).optional(),
-    rating: optionalIntegerString.refine((value) => !value.trim() || (Number(value) >= 1 && Number(value) <= 10), 'Rating must be between 1 and 10.'),
-    priority: optionalIntegerString.refine((value) => !value.trim() || (Number(value) >= 1 && Number(value) <= 5), 'Priority must be between 1 and 5.'),
+    rating: optionalIntegerString.refine(
+      (value) => !value.trim() || (Number(value) >= 1 && Number(value) <= 10),
+      'Rating must be between 1 and 10.',
+    ),
+    priority: optionalIntegerString.refine(
+      (value) => !value.trim() || (Number(value) >= 1 && Number(value) <= 5),
+      'Priority must be between 1 and 5.',
+    ),
     description: z.string().max(4000).optional(),
     notes: z.string().max(4000).optional(),
     linksText: z.string(),
@@ -98,7 +107,8 @@ export function defaultBookFormValues(book?: BookDto): BookFormValues {
     genreIds: [],
     alternativeTitlesText: book?.alternativeTitles.join('\n') ?? '',
     tagsText: book?.tags.join(', ') ?? '',
-    totalChapters: book?.totalChapters != null && book.totalChapters > 0 ? book.totalChapters.toString() : '',
+    totalChapters:
+      book?.totalChapters != null && book.totalChapters > 0 ? book.totalChapters.toString() : '',
     currentChapterNumber: book?.currentChapterNumber?.toString() ?? '',
     currentChapterLabel: book?.currentChapterLabel ?? '',
     rating: book?.rating?.toString() ?? '',

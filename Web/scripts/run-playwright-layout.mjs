@@ -18,15 +18,11 @@ try {
 
   const cliPath = resolve(root, 'node_modules', '@playwright', 'test', 'cli.js')
   const exitCode = await new Promise((resolveExitCode) => {
-    const child = spawn(
-      process.execPath,
-      [cliPath, 'test', ...process.argv.slice(2)],
-      {
-        cwd: root,
-        env: process.env,
-        stdio: 'inherit',
-      },
-    )
+    const child = spawn(process.execPath, [cliPath, 'test', ...process.argv.slice(2)], {
+      cwd: root,
+      env: process.env,
+      stdio: 'inherit',
+    })
 
     child.on('exit', (code) => resolveExitCode(code ?? 1))
     child.on('error', () => resolveExitCode(1))

@@ -5,6 +5,7 @@
     "lib": ["ES2023", "DOM"],
     "types": ["node"],
     "skipLibCheck": true,
+    "allowJs": true,
 
     /* Bundler mode */
     "module": "nodenext",
@@ -14,10 +15,16 @@
     "noEmit": true,
 
     /* Linting */
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitReturns": true,
+    "noImplicitOverride": true,
+    "exactOptionalPropertyTypes": true,
+    "forceConsistentCasingInFileNames": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["vite.config.ts", "playwright.config.ts", "tests/**/*.ts"]
+  "include": ["vite.config.ts", "playwright.config.ts", "eslint.config.js", "tests/**/*.ts"]
 }

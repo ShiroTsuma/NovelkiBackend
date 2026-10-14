@@ -13,22 +13,123 @@ export type BookSearchFilterDefinition = {
 }
 
 export const bookSearchFilters: BookSearchFilterDefinition[] = [
-  { canonical: 'title', aliases: [], description: 'Search primary and alternative titles', kind: 'text', displayValueHint: '#' },
-  { canonical: 'author', aliases: [], description: 'Filter by author or author alias', kind: 'text', remote: true, supportsNone: true },
-  { canonical: 'description', aliases: [], description: 'Search book descriptions', kind: 'text', supportsNone: true, displayValueHint: '#' },
-  { canonical: 'tag', aliases: ['tags'], description: 'Filter by tag', kind: 'text', remote: true, supportsNone: true },
-  { canonical: 'genre', aliases: ['genres'], description: 'Filter by genre', kind: 'text', remote: true, supportsNone: true },
-  { canonical: 'status', aliases: [], description: 'Filter by reading status', kind: 'text', remote: true },
-  { canonical: 'type', aliases: ['contentType'], description: 'Filter by content type', kind: 'text', remote: true },
-  { canonical: 'rating', aliases: [], description: 'Compare rating', kind: 'number', supportsNone: true },
-  { canonical: 'priority', aliases: [], description: 'Compare priority', kind: 'number', supportsNone: true },
-  { canonical: 'progress', aliases: ['current', 'currentChapter'], description: 'Compare current chapter', kind: 'number', supportsNone: true },
-  { canonical: 'chapters', aliases: ['chapter', 'total', 'total-chapters', 'totalChapters'], description: 'Compare total chapters', kind: 'number', supportsNone: true },
-  { canonical: 'created', aliases: ['createDate', 'createdDate'], description: 'Compare creation date', kind: 'date' },
-  { canonical: 'updated', aliases: ['updateDate', 'updatedDate', 'lastModified'], description: 'Compare last update date', kind: 'date' },
-  { canonical: 'alternativeTitle', aliases: ['alternateTitle'], description: 'Books without an alternative title', kind: 'missing', suggestible: false, fixedValue: 'none' },
-  { canonical: 'cover', aliases: [], description: 'Books without a usable cover', kind: 'missing', suggestible: false, fixedValue: 'none' },
-  { canonical: 'links', aliases: ['link'], description: 'Books without links', kind: 'missing', suggestible: false, fixedValue: 'none' },
+  {
+    canonical: 'title',
+    aliases: [],
+    description: 'Search primary and alternative titles',
+    kind: 'text',
+    displayValueHint: '#',
+  },
+  {
+    canonical: 'author',
+    aliases: [],
+    description: 'Filter by author or author alias',
+    kind: 'text',
+    remote: true,
+    supportsNone: true,
+  },
+  {
+    canonical: 'description',
+    aliases: [],
+    description: 'Search book descriptions',
+    kind: 'text',
+    supportsNone: true,
+    displayValueHint: '#',
+  },
+  {
+    canonical: 'tag',
+    aliases: ['tags'],
+    description: 'Filter by tag',
+    kind: 'text',
+    remote: true,
+    supportsNone: true,
+  },
+  {
+    canonical: 'genre',
+    aliases: ['genres'],
+    description: 'Filter by genre',
+    kind: 'text',
+    remote: true,
+    supportsNone: true,
+  },
+  {
+    canonical: 'status',
+    aliases: [],
+    description: 'Filter by reading status',
+    kind: 'text',
+    remote: true,
+  },
+  {
+    canonical: 'type',
+    aliases: ['contentType'],
+    description: 'Filter by content type',
+    kind: 'text',
+    remote: true,
+  },
+  {
+    canonical: 'rating',
+    aliases: [],
+    description: 'Compare rating',
+    kind: 'number',
+    supportsNone: true,
+  },
+  {
+    canonical: 'priority',
+    aliases: [],
+    description: 'Compare priority',
+    kind: 'number',
+    supportsNone: true,
+  },
+  {
+    canonical: 'progress',
+    aliases: ['current', 'currentChapter'],
+    description: 'Compare current chapter',
+    kind: 'number',
+    supportsNone: true,
+  },
+  {
+    canonical: 'chapters',
+    aliases: ['chapter', 'total', 'total-chapters', 'totalChapters'],
+    description: 'Compare total chapters',
+    kind: 'number',
+    supportsNone: true,
+  },
+  {
+    canonical: 'created',
+    aliases: ['createDate', 'createdDate'],
+    description: 'Compare creation date',
+    kind: 'date',
+  },
+  {
+    canonical: 'updated',
+    aliases: ['updateDate', 'updatedDate', 'lastModified'],
+    description: 'Compare last update date',
+    kind: 'date',
+  },
+  {
+    canonical: 'alternativeTitle',
+    aliases: ['alternateTitle'],
+    description: 'Books without an alternative title',
+    kind: 'missing',
+    suggestible: false,
+    fixedValue: 'none',
+  },
+  {
+    canonical: 'cover',
+    aliases: [],
+    description: 'Books without a usable cover',
+    kind: 'missing',
+    suggestible: false,
+    fixedValue: 'none',
+  },
+  {
+    canonical: 'links',
+    aliases: ['link'],
+    description: 'Books without links',
+    kind: 'missing',
+    suggestible: false,
+    fixedValue: 'none',
+  },
 ]
 
 const definitionsByAlias = new Map<string, BookSearchFilterDefinition>()
@@ -66,9 +167,8 @@ export type BookSearchSuggestionItem = {
 export function analyzeBookSearch(value: string, requestedCaret: number): BookSearchTokenContext {
   const caret = Math.max(0, Math.min(requestedCaret, value.length))
   const tokens = tokenize(value)
-  const token = tokens.find((candidate) =>
-    caret > candidate.start && caret <= candidate.end ||
-    caret === candidate.start,
+  const token = tokens.find(
+    (candidate) => (caret > candidate.start && caret <= candidate.end) || caret === candidate.start,
   ) ?? { start: caret, end: caret }
   const text = value.slice(token.start, token.end)
   const excluded = text.startsWith('-') && text.length > 1
@@ -108,14 +208,15 @@ export function getLocalBookSearchSuggestions(
   if (!context.hasColon || !context.definition) {
     const search = context.fieldText.toLocaleLowerCase()
     return bookSearchFilters
-      .filter((definition) =>
-        definition.suggestible !== false &&
-        isAllowed(definition) &&
-        (!search || [
-          definition.canonical,
-          ...definition.aliases,
-          definition.description,
-        ].some((candidate) => candidate.toLocaleLowerCase().includes(search))))
+      .filter(
+        (definition) =>
+          definition.suggestible !== false &&
+          isAllowed(definition) &&
+          (!search ||
+            [definition.canonical, ...definition.aliases, definition.description].some(
+              (candidate) => candidate.toLocaleLowerCase().includes(search),
+            )),
+      )
       .map((definition) => ({
         id: `filter:${definition.canonical}`,
         kind: 'filter',
@@ -147,7 +248,10 @@ export function getLocalBookSearchSuggestions(
     })
   }
 
-  if ((definition.kind === 'number' || definition.kind === 'date') && /^[<>=]*$/.test(normalizedValue)) {
+  if (
+    (definition.kind === 'number' || definition.kind === 'date') &&
+    /^[<>=]*$/.test(normalizedValue)
+  ) {
     for (const operator of ['>=', '<=', '>', '<', '=']) {
       if (!normalizedValue || operator.startsWith(normalizedValue)) {
         items.push({
@@ -175,9 +279,14 @@ export function applyBookSearchSuggestion(
 
   if (suggestion.kind === 'exclude' || suggestion.kind === 'include') {
     const token = query.slice(context.start, context.end)
-    const replacement = suggestion.kind === 'exclude'
-      ? token.startsWith('-') ? token : `-${token}`
-      : token.startsWith('-') ? token.slice(1) : token
+    const replacement =
+      suggestion.kind === 'exclude'
+        ? token.startsWith('-')
+          ? token
+          : `-${token}`
+        : token.startsWith('-')
+          ? token.slice(1)
+          : token
     return replaceRange(query, context.start, context.end, replacement)
   }
 
@@ -224,11 +333,7 @@ export function applyBookSearchSuggestion(
   }
 
   if (suggestion.kind === 'value' && suggestion.value != null) {
-    return replaceValueAndAdvance(
-      query,
-      context,
-      `"${sanitizeQuotedValue(suggestion.value)}"`,
-    )
+    return replaceValueAndAdvance(query, context, `"${sanitizeQuotedValue(suggestion.value)}"`)
   }
 
   return { value: query, caret: context.end }
@@ -278,8 +383,9 @@ export function isBookSearchValueAlreadyApplied(
       return false
     }
 
-    return splitFilterValues(text.slice(colon + 1)).some((candidate) =>
-      normalizeSearchValue(candidate) === normalizedValue)
+    return splitFilterValues(text.slice(colon + 1)).some(
+      (candidate) => normalizeSearchValue(candidate) === normalizedValue,
+    )
   })
 }
 
@@ -305,7 +411,7 @@ function getTokenActions(context: BookSearchTokenContext): BookSearchSuggestionI
 }
 
 function tokenize(value: string) {
-  const tokens: Array<{ start: number; end: number }> = []
+  const tokens: { start: number; end: number }[] = []
   let start: number | null = null
   let quote: '"' | "'" | null = null
 
@@ -418,8 +524,10 @@ function removeToken(query: string, start: number, end: number) {
 
 function unquote(value: string) {
   const trimmed = value.trim()
-  if ((trimmed.startsWith('"') && trimmed.endsWith('"')) ||
-      (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
     return trimmed.slice(1, -1)
   }
   return trimmed.replace(/^["']/, '')
@@ -468,18 +576,22 @@ function isCompleteFilterValue(definition: BookSearchFilterDefinition, value: st
     return /^(?:>=|<=|>|<|=)?-?\d+(?:\.\d+)?$/.test(normalized)
   }
   if (definition.kind === 'date') {
-    return /^(?:>=|<=|>|<|=)(?:\d{4}(?:-\d{1,2}(?:-\d{1,2})?)?|\d{1,2}[./]\d{1,2}[./]\d{4})$/.test(normalized)
+    return /^(?:>=|<=|>|<|=)(?:\d{4}(?:-\d{1,2}(?:-\d{1,2})?)?|\d{1,2}[./]\d{1,2}[./]\d{4})$/.test(
+      normalized,
+    )
   }
   return true
 }
 
 function operatorDescription(operator: string, kind: 'number' | 'date') {
   const noun = kind === 'date' ? 'date' : 'value'
-  return ({
-    '>': `More than the entered ${noun}`,
-    '>=': `At least the entered ${noun}`,
-    '<': `Less than the entered ${noun}`,
-    '<=': `At most the entered ${noun}`,
-    '=': `Exactly the entered ${noun}`,
-  } as Record<string, string>)[operator]
+  return (
+    {
+      '>': `More than the entered ${noun}`,
+      '>=': `At least the entered ${noun}`,
+      '<': `Less than the entered ${noun}`,
+      '<=': `At most the entered ${noun}`,
+      '=': `Exactly the entered ${noun}`,
+    } as Record<string, string>
+  )[operator]
 }

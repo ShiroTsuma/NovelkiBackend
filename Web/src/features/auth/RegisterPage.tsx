@@ -26,7 +26,11 @@ const passwordRules = [
   { id: 'uppercase', label: 'One uppercase letter', isMet: (value: string) => /[A-Z]/.test(value) },
   { id: 'lowercase', label: 'One lowercase letter', isMet: (value: string) => /[a-z]/.test(value) },
   { id: 'number', label: 'One number', isMet: (value: string) => /[0-9]/.test(value) },
-  { id: 'symbol', label: 'One non-alphanumeric character', isMet: (value: string) => /[^a-zA-Z0-9]/.test(value) },
+  {
+    id: 'symbol',
+    label: 'One non-alphanumeric character',
+    isMet: (value: string) => /[^a-zA-Z0-9]/.test(value),
+  },
 ] as const
 
 export function RegisterPage() {
@@ -123,7 +127,11 @@ export function RegisterPage() {
             {passwordRules.map((rule) => {
               const met = rule.isMet(values.password)
               return (
-                <li aria-label={`${met ? 'Met' : 'Missing'}: ${rule.label}`} className={met ? 'text-emerald-500' : 'text-slate-500'} key={rule.id}>
+                <li
+                  aria-label={`${met ? 'Met' : 'Missing'}: ${rule.label}`}
+                  className={met ? 'text-emerald-500' : 'text-slate-500'}
+                  key={rule.id}
+                >
                   {met ? '[x]' : '[ ]'} {rule.label}
                 </li>
               )
@@ -131,7 +139,12 @@ export function RegisterPage() {
           </ul>
         ) : null}
         {errors.form ? <p className="text-sm text-red-600">{errors.form}</p> : null}
-        <button className={buttonClass} disabled={mutation.isPending} type="submit" onMouseDown={(event) => event.preventDefault()}>
+        <button
+          className={buttonClass}
+          disabled={mutation.isPending}
+          type="submit"
+          onMouseDown={(event) => event.preventDefault()}
+        >
           Register
         </button>
       </form>

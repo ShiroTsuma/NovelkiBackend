@@ -8,17 +8,18 @@ export function BookStatusPill({
   variant?: 'card' | 'detail'
 }) {
   const normalized = status.trim().toLowerCase()
-  const tone = normalized === 'reading'
-    ? 'reading'
-    : normalized === 'completed'
-      ? 'completed'
-      : normalized === 'plan to read'
-        ? 'planned'
-        : normalized === 'on hold'
-          ? 'paused'
-          : normalized === 'dropped'
-            ? 'dropped'
-            : 'neutral'
+  const tone =
+    normalized === 'reading'
+      ? 'reading'
+      : normalized === 'completed'
+        ? 'completed'
+        : normalized === 'plan to read'
+          ? 'planned'
+          : normalized === 'on hold'
+            ? 'paused'
+            : normalized === 'dropped'
+              ? 'dropped'
+              : 'neutral'
 
   return (
     <span
@@ -28,11 +29,17 @@ export function BookStatusPill({
         `book-details-status--${tone}`,
         variant === 'card' ? 'book-details-status--card' : 'self-start',
         className,
-      ].filter(Boolean).join(' ')}
+      ]
+        .filter(Boolean)
+        .join(' ')}
     >
       <span aria-hidden="true" className="book-details-status__dot" />
-      <span aria-hidden="true" className="book-details-status__label">Status</span>
-      <span className="book-details-status__value" title={variant === 'card' ? status : undefined}>{status}</span>
+      <span aria-hidden="true" className="book-details-status__label">
+        Status
+      </span>
+      <span className="book-details-status__value" title={variant === 'card' ? status : undefined}>
+        {status}
+      </span>
     </span>
   )
 }

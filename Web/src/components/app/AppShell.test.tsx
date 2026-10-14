@@ -23,8 +23,14 @@ describe('AppShell', () => {
     expect(screen.getByRole('main')).toBeInTheDocument()
     expect(screen.getByText('Novelki')).toBeInTheDocument()
     expect(screen.getByText('Personal library system')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /skip to content/i })).toHaveAttribute('href', '#main-content')
-    expect(screen.getByRole('button', { name: /enable nsfw content/i })).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.getByRole('link', { name: /skip to content/i })).toHaveAttribute(
+      'href',
+      '#main-content',
+    )
+    expect(screen.getByRole('button', { name: /enable nsfw content/i })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
     expect(screen.getByRole('button', { name: /log out/i })).toBeInTheDocument()
   })
 
@@ -36,7 +42,10 @@ describe('AppShell', () => {
     await user.click(screen.getByRole('button', { name: /enable nsfw content/i }))
 
     expect(window.localStorage.getItem(nsfwPreferenceStorageKey)).toBe('true')
-    expect(screen.getByRole('button', { name: /disable nsfw content/i })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /disable nsfw content/i })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
     expect(invalidateQueries).toHaveBeenCalled()
   })
 

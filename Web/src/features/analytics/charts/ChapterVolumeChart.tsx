@@ -1,7 +1,14 @@
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { BookAnalyticsDto } from '@/api/types'
 import { formatChapterCount } from '@/features/books/BooksPage'
-import { analyticsTooltipProps, DrilldownLink, fieldQuery, formatCount, getActiveChartLabel, useBooksDrilldown } from './chartUtils'
+import {
+  analyticsTooltipProps,
+  DrilldownLink,
+  fieldQuery,
+  formatCount,
+  getActiveChartLabel,
+  useBooksDrilldown,
+} from './chartUtils'
 
 type ChapterVolumeChartProps = {
   data: BookAnalyticsDto | undefined
@@ -12,7 +19,11 @@ export function ChapterVolumeChart({ data }: ChapterVolumeChartProps) {
   const openBooks = useBooksDrilldown()
 
   if (!items.length) {
-    return <div className="grid min-h-56 place-items-center text-sm text-slate-500">No chapter volume data for this analytics scope.</div>
+    return (
+      <div className="grid min-h-56 place-items-center text-sm text-slate-500">
+        No chapter volume data for this analytics scope.
+      </div>
+    )
   }
 
   return (
@@ -32,13 +43,11 @@ export function ChapterVolumeChart({ data }: ChapterVolumeChartProps) {
             >
               <XAxis dataKey="type" tickLine={false} />
               <YAxis allowDecimals={false} tickLine={false} />
-              <Tooltip {...analyticsTooltipProps} formatter={(value) => [`${formatCount(Number(value))} books`, 'Books']} />
-              <Bar
-                dataKey="bookCount"
-                fill="#8b92d8"
-                name="Books"
-                radius={[6, 6, 0, 0]}
+              <Tooltip
+                {...analyticsTooltipProps}
+                formatter={(value) => [`${formatCount(Number(value))} books`, 'Books']}
               />
+              <Bar dataKey="bookCount" fill="#8b92d8" name="Books" radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
           <div className="sr-only">
@@ -65,7 +74,13 @@ export function ChapterVolumeChart({ data }: ChapterVolumeChartProps) {
             >
               <XAxis dataKey="type" tickLine={false} />
               <YAxis tickLine={false} />
-              <Tooltip {...analyticsTooltipProps} formatter={(value) => [`${formatChapterCount(Number(value))} chapters`, 'Current chapters']} />
+              <Tooltip
+                {...analyticsTooltipProps}
+                formatter={(value) => [
+                  `${formatChapterCount(Number(value))} chapters`,
+                  'Current chapters',
+                ]}
+              />
               <Bar
                 dataKey="currentChapters"
                 fill="#75b69c"

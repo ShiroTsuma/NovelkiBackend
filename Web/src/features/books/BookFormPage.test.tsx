@@ -125,19 +125,25 @@ describe('BookFormPage', () => {
     await screen.findByText('Add book')
     await user.click(screen.getByRole('button', { name: 'Parse HTML' }))
     const dialog = screen.getByRole('dialog', { name: 'Parse page HTML' })
-    fireEvent.change(within(dialog).getByLabelText('Full page HTML'), { target: { value: '<html>source</html>' } })
+    fireEvent.change(within(dialog).getByLabelText('Full page HTML'), {
+      target: { value: '<html>source</html>' },
+    })
     await user.click(within(dialog).getByRole('button', { name: 'Parse HTML' }))
 
     expect(await within(dialog).findByText('NovelUpdates')).toBeInTheDocument()
     expect(within(dialog).getByText(/Unmapped Genre/)).toBeInTheDocument()
-    within(dialog).getAllByRole('checkbox').forEach((checkbox) => expect(checkbox).toBeChecked())
+    within(dialog)
+      .getAllByRole('checkbox')
+      .forEach((checkbox) => expect(checkbox).toBeChecked())
     await user.click(within(dialog).getByRole('button', { name: 'Apply selected' }))
 
     expect(screen.getByLabelText('Primary title')).toHaveValue('Parsed Novel')
     expect(screen.getByLabelText('Author')).toHaveValue('Primary Author')
     expect(screen.getByLabelText('Description')).toHaveValue('Parsed description.')
     expect(screen.getByLabelText('Alternative titles')).toHaveValue('Alternate Name')
-    expect(screen.getByLabelText('Links')).toHaveValue('https://www.novelupdates.com/series/parsed-novel/')
+    expect(screen.getByLabelText('Links')).toHaveValue(
+      'https://www.novelupdates.com/series/parsed-novel/',
+    )
 
     await user.type(screen.getByLabelText('Current chapter'), '0')
     await user.click(screen.getByRole('button', { name: 'Save' }))
@@ -153,7 +159,9 @@ describe('BookFormPage', () => {
       description: 'Parsed description.',
     })
     expect(request.alternativeTitles.map((title) => title.title)).toEqual(['Alternate Name'])
-    expect(request.links.map((link) => link.url)).toContain('https://www.novelupdates.com/series/parsed-novel/')
+    expect(request.links.map((link) => link.url)).toContain(
+      'https://www.novelupdates.com/series/parsed-novel/',
+    )
     expect(request.initialCoverUrl).toBe('https://cdn.example.com/parsed-cover.jpg')
     expect(api.setBookCoverFromUrl).not.toHaveBeenCalled()
   })
@@ -175,9 +183,13 @@ describe('BookFormPage', () => {
 
     await waitFor(() => expect(api.createBook).toHaveBeenCalled())
     expect(stagePendingCoverUpload).toHaveBeenCalledWith(file)
-    expect(vi.mocked(api.createBook).mock.calls[0][0].initialCoverUploadToken)
-      .toBe('11111111-1111-1111-1111-111111111111')
-    expect(bindPendingCoverUpload).toHaveBeenCalledWith('11111111-1111-1111-1111-111111111111', 'book-1')
+    expect(vi.mocked(api.createBook).mock.calls[0][0].initialCoverUploadToken).toBe(
+      '11111111-1111-1111-1111-111111111111',
+    )
+    expect(bindPendingCoverUpload).toHaveBeenCalledWith(
+      '11111111-1111-1111-1111-111111111111',
+      'book-1',
+    )
     expect(api.uploadBookCover).not.toHaveBeenCalled()
   })
 
@@ -202,7 +214,9 @@ describe('BookFormPage', () => {
     await user.type(screen.getByLabelText('Primary title'), 'Manual title')
     await user.click(screen.getByRole('button', { name: 'Parse HTML' }))
     const dialog = screen.getByRole('dialog', { name: 'Parse page HTML' })
-    fireEvent.change(within(dialog).getByLabelText('Full page HTML'), { target: { value: '<html>source</html>' } })
+    fireEvent.change(within(dialog).getByLabelText('Full page HTML'), {
+      target: { value: '<html>source</html>' },
+    })
     await user.click(within(dialog).getByRole('button', { name: 'Parse HTML' }))
     await within(dialog).findByText('Resolved title')
 
@@ -213,31 +227,36 @@ describe('BookFormPage', () => {
     expect(screen.getByLabelText('Description')).toHaveValue('Resolved description.')
   })
 
-  it.each(['RoyalRoad', 'ScribbleHub', 'WebNovel'])('shows the detected %s resolver source', async (source) => {
-    vi.mocked(api.parseBookHtml).mockResolvedValue({
-      source,
-      primaryTitle: 'Resolved title',
-      authorName: null,
-      contentType: null,
-      alternativeTitles: [],
-      genres: [],
-      tags: [],
-      description: null,
-      canonicalUrl: null,
-      coverUrl: null,
-      warnings: [],
-    })
-    const user = userEvent.setup()
-    renderWithProviders(<BookFormPage mode="create" />, { route: '/books/new' })
+  it.each(['RoyalRoad', 'ScribbleHub', 'WebNovel'])(
+    'shows the detected %s resolver source',
+    async (source) => {
+      vi.mocked(api.parseBookHtml).mockResolvedValue({
+        source,
+        primaryTitle: 'Resolved title',
+        authorName: null,
+        contentType: null,
+        alternativeTitles: [],
+        genres: [],
+        tags: [],
+        description: null,
+        canonicalUrl: null,
+        coverUrl: null,
+        warnings: [],
+      })
+      const user = userEvent.setup()
+      renderWithProviders(<BookFormPage mode="create" />, { route: '/books/new' })
 
-    await screen.findByText('Add book')
-    await user.click(screen.getByRole('button', { name: 'Parse HTML' }))
-    const dialog = screen.getByRole('dialog', { name: 'Parse page HTML' })
-    fireEvent.change(within(dialog).getByLabelText('Full page HTML'), { target: { value: '<html>source</html>' } })
-    await user.click(within(dialog).getByRole('button', { name: 'Parse HTML' }))
+      await screen.findByText('Add book')
+      await user.click(screen.getByRole('button', { name: 'Parse HTML' }))
+      const dialog = screen.getByRole('dialog', { name: 'Parse page HTML' })
+      fireEvent.change(within(dialog).getByLabelText('Full page HTML'), {
+        target: { value: '<html>source</html>' },
+      })
+      await user.click(within(dialog).getByRole('button', { name: 'Parse HTML' }))
 
-    expect(await within(dialog).findByText(source)).toBeInTheDocument()
-  })
+      expect(await within(dialog).findByText(source)).toBeInTheDocument()
+    },
+  )
 
   it('does not treat a title substring search result as an exact duplicate', async () => {
     vi.mocked(api.getBooks).mockResolvedValue({
@@ -325,7 +344,10 @@ describe('BookFormPage', () => {
     const statusOptions = statusSelect.querySelectorAll('option')
 
     expect(Array.from(typeOptions).map((option) => option.textContent)).toEqual(['Novel', 'Manga'])
-    expect(Array.from(statusOptions).map((option) => option.textContent)).toEqual(['Reading', 'Completed'])
+    expect(Array.from(statusOptions).map((option) => option.textContent)).toEqual([
+      'Reading',
+      'Completed',
+    ])
   })
 
   it('orders the editor around identity, cover, reading state, and optional details', async () => {
@@ -339,24 +361,30 @@ describe('BookFormPage', () => {
     expect(identity.compareDocumentPosition(cover) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(cover.compareDocumentPosition(reading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(reading.compareDocumentPosition(details) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(screen.getByTestId('book-form-rail')).toContainElement(screen.getByRole('button', { name: 'Save' }))
+    expect(screen.getByTestId('book-form-rail')).toContainElement(
+      screen.getByRole('button', { name: 'Save' }),
+    )
   })
 
   it('shows the matched alias but submits the primary author identity', async () => {
     const user = userEvent.setup()
-    vi.mocked(api.searchAuthors).mockResolvedValue([{
-      id: 'author-1',
-      primaryName: 'Er Gen',
-      otherNames: ['Ergen'],
-      isPublic: true,
-      isOwned: false,
-    }])
+    vi.mocked(api.searchAuthors).mockResolvedValue([
+      {
+        id: 'author-1',
+        primaryName: 'Er Gen',
+        otherNames: ['Ergen'],
+        isPublic: true,
+        isOwned: false,
+      },
+    ])
     renderWithProviders(<BookFormPage mode="create" />, { route: '/books/new' })
 
     await screen.findByText('Add book')
     await user.type(screen.getByLabelText('Primary title'), 'Renegade Immortal')
     await user.type(screen.getByLabelText('Author'), 'Ergen')
-    expect(await screen.findByRole('button', { name: /Er Gen \(Ergen\).*Public/i })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('button', { name: /Er Gen \(Ergen\).*Public/i }),
+    ).toBeInTheDocument()
     await user.click(screen.getByLabelText('Current chapter'))
 
     expect(screen.getByLabelText('Author')).toHaveValue('Er Gen (Ergen)')
@@ -387,19 +415,23 @@ describe('BookFormPage', () => {
       { route: '/books/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/edit' },
     )
 
-    expect(await screen.findByText(
-      'A cover was found, but the image could not be downloaded. Try searching again or upload a cover manually.',
-    )).toBeInTheDocument()
+    expect(
+      await screen.findByText(
+        'A cover was found, but the image could not be downloaded. Try searching again or upload a cover manually.',
+      ),
+    ).toBeInTheDocument()
     expect(screen.queryByText(/301 \(Moved Permanently\)/)).not.toBeInTheDocument()
   })
 
   it('shows tag descriptions in the suggestion list', async () => {
-    vi.mocked(api.searchTags).mockResolvedValue([{
-      id: 'tag-1',
-      name: 'cultivation',
-      description: 'Progression through spiritual realms and techniques.',
-      isGlobal: true,
-    }])
+    vi.mocked(api.searchTags).mockResolvedValue([
+      {
+        id: 'tag-1',
+        name: 'cultivation',
+        description: 'Progression through spiritual realms and techniques.',
+        isGlobal: true,
+      },
+    ])
 
     const user = userEvent.setup()
     renderWithProviders(<BookFormPage mode="create" />, { route: '/books/new' })
@@ -407,7 +439,9 @@ describe('BookFormPage', () => {
     await screen.findByText('Add book')
     await user.type(screen.getByPlaceholderText('Start typing a tag'), 'cult')
 
-    expect(await screen.findByText('Progression through spiritual realms and techniques.')).toBeInTheDocument()
+    expect(
+      await screen.findByText('Progression through spiritual realms and techniques.'),
+    ).toBeInTheDocument()
   })
 
   it('debounces author and tag suggestion requests while typing', async () => {
@@ -429,12 +463,14 @@ describe('BookFormPage', () => {
   })
 
   it('accepts active genre and tag suggestions with Tab without losing focus', async () => {
-    vi.mocked(api.searchTags).mockResolvedValue([{
-      id: 'tag-1',
-      name: 'cultivation',
-      description: 'Progression fantasy',
-      isGlobal: true,
-    }])
+    vi.mocked(api.searchTags).mockResolvedValue([
+      {
+        id: 'tag-1',
+        name: 'cultivation',
+        description: 'Progression fantasy',
+        isGlobal: true,
+      },
+    ])
     const user = userEvent.setup()
     renderWithProviders(<BookFormPage mode="create" />, { route: '/books/new' })
 

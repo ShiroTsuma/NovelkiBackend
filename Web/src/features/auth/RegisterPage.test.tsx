@@ -27,18 +27,26 @@ describe('RegisterPage', () => {
 
     const passwordInput = screen.getByPlaceholderText('Password')
 
-    expect(screen.queryByRole('listitem', { name: 'Missing: At least 8 characters' })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('listitem', { name: 'Missing: At least 8 characters' }),
+    ).not.toBeInTheDocument()
 
     await user.click(passwordInput)
     await user.type(passwordInput, 'weak')
 
-    expect(screen.getByRole('listitem', { name: 'Missing: At least 8 characters' })).toBeInTheDocument()
-    expect(screen.getByRole('listitem', { name: 'Missing: One uppercase letter' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('listitem', { name: 'Missing: At least 8 characters' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('listitem', { name: 'Missing: One uppercase letter' }),
+    ).toBeInTheDocument()
     expect(screen.getByRole('listitem', { name: 'Missing: One number' })).toBeInTheDocument()
 
     await user.tab()
 
-    expect(screen.queryByRole('listitem', { name: 'Missing: At least 8 characters' })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('listitem', { name: 'Missing: At least 8 characters' }),
+    ).not.toBeInTheDocument()
   })
 
   it('shows local field errors and keeps password requirements out of the inline error slot', async () => {
@@ -51,8 +59,14 @@ describe('RegisterPage', () => {
     await user.click(screen.getByRole('button', { name: /register/i }))
 
     expect(screen.getByPlaceholderText('Password')).toHaveFocus()
-    expect(screen.getByRole('listitem', { name: 'Missing: At least 8 characters' })).toBeInTheDocument()
-    expect(screen.queryByText('At least 8 characters; One uppercase letter; One number; One non-alphanumeric character')).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('listitem', { name: 'Missing: At least 8 characters' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        'At least 8 characters; One uppercase letter; One number; One non-alphanumeric character',
+      ),
+    ).not.toBeInTheDocument()
     expect(api.register).not.toHaveBeenCalled()
   })
 
@@ -66,7 +80,9 @@ describe('RegisterPage', () => {
     await user.click(screen.getByRole('button', { name: /register/i }))
 
     expect(passwordInput).toHaveFocus()
-    expect(screen.getByRole('listitem', { name: 'Missing: At least 8 characters' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('listitem', { name: 'Missing: At least 8 characters' }),
+    ).toBeInTheDocument()
     expect(screen.getByText('Username is required.')).toBeInTheDocument()
     expect(screen.getByText('Email address is required.')).toBeInTheDocument()
     expect(api.register).not.toHaveBeenCalled()
@@ -96,17 +112,19 @@ describe('RegisterPage', () => {
   })
 
   it('maps backend field errors to registration fields', async () => {
-    vi.mocked(api.register).mockRejectedValue(new HttpError({
-      type: 'Validation',
-      title: 'Validation failed',
-      status: 400,
-      detail: 'One or more validation errors occurred.',
-      instance: '/account/register',
-      errors: {
-        Email: ['Email is invalid.'],
-        Password: ['Password must contain at least one uppercase letter.'],
-      },
-    }))
+    vi.mocked(api.register).mockRejectedValue(
+      new HttpError({
+        type: 'Validation',
+        title: 'Validation failed',
+        status: 400,
+        detail: 'One or more validation errors occurred.',
+        instance: '/account/register',
+        errors: {
+          Email: ['Email is invalid.'],
+          Password: ['Password must contain at least one uppercase letter.'],
+        },
+      }),
+    )
     const user = userEvent.setup()
     renderWithProviders(<RegisterPage />, { route: '/register' })
 
@@ -117,21 +135,25 @@ describe('RegisterPage', () => {
 
     expect(await screen.findByText('Email is invalid.')).toBeInTheDocument()
     expect(screen.getByPlaceholderText('Password')).toHaveAttribute('aria-invalid', 'true')
-    expect(screen.queryByText('Password must contain at least one uppercase letter.')).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('Password must contain at least one uppercase letter.'),
+    ).not.toBeInTheDocument()
     expect(toast.error).toHaveBeenCalledWith('One or more validation errors occurred.')
   })
 
   it('maps username conflict to the username field', async () => {
-    vi.mocked(api.register).mockRejectedValue(new HttpError({
-      type: 'UsernameTakenException',
-      title: 'Conflict',
-      status: 409,
-      detail: "Account with username 'reader' already exists.",
-      instance: '/account/register',
-      errors: {
-        Username: ["Account with username 'reader' already exists."],
-      },
-    }))
+    vi.mocked(api.register).mockRejectedValue(
+      new HttpError({
+        type: 'UsernameTakenException',
+        title: 'Conflict',
+        status: 409,
+        detail: "Account with username 'reader' already exists.",
+        instance: '/account/register',
+        errors: {
+          Username: ["Account with username 'reader' already exists."],
+        },
+      }),
+    )
     const user = userEvent.setup()
     renderWithProviders(<RegisterPage />, { route: '/register' })
 
@@ -140,6 +162,8 @@ describe('RegisterPage', () => {
     await user.type(screen.getByPlaceholderText('Password'), 'Password123!')
     await user.click(screen.getByRole('button', { name: /register/i }))
 
-    expect(await screen.findByText("Account with username 'reader' already exists.")).toBeInTheDocument()
+    expect(
+      await screen.findByText("Account with username 'reader' already exists."),
+    ).toBeInTheDocument()
   })
 })

@@ -1,8 +1,7 @@
 import type { ApiError } from './types'
 import type { TokenResponse } from './types'
 
-export const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ?? '/api/v1'
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api/v1'
 
 export const sessionStorageKey = 'novelki.session'
 
@@ -27,11 +26,13 @@ type RequestOptions = Omit<RequestInit, 'body'> & {
   token?: string | null
 }
 
-export async function apiRequest<T>(
-  path: string,
-  options: RequestOptions = {},
-): Promise<T> {
-  return requestWithBody<T>(path, options, options.body === undefined ? undefined : JSON.stringify(options.body), true)
+export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  return requestWithBody<T>(
+    path,
+    options,
+    options.body === undefined ? undefined : JSON.stringify(options.body),
+    true,
+  )
 }
 
 export async function apiFormRequest<T>(
@@ -76,8 +77,13 @@ export async function apiBlobRequest(
 }
 
 // XHR provides upload progress without buffering the file or reading it into JS memory.
-export async function apiUploadRequest<T>(path: string, form: FormData,
-  onProgress: (percent: number) => void, signal: AbortSignal, allowRefresh = true): Promise<T> {
+export async function apiUploadRequest<T>(
+  path: string,
+  form: FormData,
+  onProgress: (percent: number) => void,
+  signal: AbortSignal,
+  allowRefresh = true,
+): Promise<T> {
   if (signal.aborted) throw new DOMException('Upload cancelled.', 'AbortError')
   const response = await new Promise<{ status: number; text: string }>((resolve, reject) => {
     const xhr = new XMLHttpRequest()
@@ -87,17 +93,29 @@ export async function apiUploadRequest<T>(path: string, form: FormData,
     xhr.withCredentials = true
     const token = getStoredSession()?.accessToken
     if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`)
-    xhr.upload.onprogress = event => { if (event.lengthComputable) onProgress(Math.round(event.loaded / event.total * 100)) }
-    xhr.onload = () => { cleanup(); resolve({ status: xhr.status, text: xhr.responseText }) }
-    xhr.onerror = () => { cleanup(); reject(new Error('Upload failed. Check your connection and retry.')) }
-    xhr.onabort = () => { cleanup(); reject(new DOMException('Upload cancelled.', 'AbortError')) }
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) onProgress(Math.round((event.loaded / event.total) * 100))
+    }
+    xhr.onload = () => {
+      cleanup()
+      resolve({ status: xhr.status, text: xhr.responseText })
+    }
+    xhr.onerror = () => {
+      cleanup()
+      reject(new Error('Upload failed. Check your connection and retry.'))
+    }
+    xhr.onabort = () => {
+      cleanup()
+      reject(new DOMException('Upload cancelled.', 'AbortError'))
+    }
     signal.addEventListener('abort', abort, { once: true })
     xhr.send(form)
   })
-  if (response.status === 401 && allowRefresh && await refreshSession())
+  if (response.status === 401 && allowRefresh && (await refreshSession()))
     return apiUploadRequest(path, form, onProgress, signal, false)
   const data = parseResponseData(response.text)
-  if (response.status < 200 || response.status >= 300) throw new HttpError(normalizeApiError(data, response.status, path))
+  if (response.status < 200 || response.status >= 300)
+    throw new HttpError(normalizeApiError(data, response.status, path))
   return data as T
 }
 
@@ -258,7 +276,7 @@ async function performRefresh() {
       return null
     }
 
-    const refreshedSession = await response.json() as StoredSession
+    const refreshedSession = (await response.json()) as StoredSession
     setStoredSession(refreshedSession)
     return refreshedSession.accessToken
   } catch {
@@ -273,8 +291,10 @@ function notifyUnauthorized() {
 }
 
 function shouldTryRefresh(path: string) {
-  return !path.startsWith('/account/login') &&
+  return (
+    !path.startsWith('/account/login') &&
     !path.startsWith('/account/register') &&
     !path.startsWith('/account/refresh') &&
     !path.startsWith('/account/logout')
+  )
 }

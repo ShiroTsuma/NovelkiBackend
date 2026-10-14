@@ -5,15 +5,22 @@ describe('book API NSFW filtering', () => {
   const fetchMock = vi.fn()
 
   beforeEach(() => {
-    fetchMock.mockImplementation(() => Promise.resolve(new Response(JSON.stringify({
-      data: [],
-      skip: 0,
-      take: 20,
-      total: 0,
-    }), {
-      headers: { 'Content-Type': 'application/json' },
-      status: 200,
-    })))
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            data: [],
+            skip: 0,
+            take: 20,
+            total: 0,
+          }),
+          {
+            headers: { 'Content-Type': 'application/json' },
+            status: 200,
+          },
+        ),
+      ),
+    )
     vi.stubGlobal('fetch', fetchMock)
   })
 

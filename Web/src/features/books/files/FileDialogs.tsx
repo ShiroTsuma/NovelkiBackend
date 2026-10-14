@@ -7,18 +7,39 @@ import { HttpError } from '@/api/http'
 import { buttonVariants, DialogPanel, useBodyScrollLock } from '@/components/app/DesignSystem'
 
 export function fileError(error: unknown) {
-  return error instanceof HttpError ? error.apiError.detail : error instanceof Error ? error.message : 'The EPUB operation failed. Please try again.'
+  return error instanceof HttpError
+    ? error.apiError.detail
+    : error instanceof Error
+      ? error.message
+      : 'The EPUB operation failed. Please try again.'
 }
-export const isJobWorking = (job?: FileJob | null) => Boolean(job && ['Uploading', 'Queued', 'Processing', 'CommitQueued', 'Committing'].includes(job.status))
+export const isJobWorking = (job?: FileJob | null) =>
+  Boolean(
+    job && ['Uploading', 'Queued', 'Processing', 'CommitQueued', 'Committing'].includes(job.status),
+  )
 
 export function useFileJob(id: string | undefined, initial?: FileJob | null) {
-  return useQuery({ queryKey: ['epub-job', id], queryFn: () => bookFilesApi.job(id!), enabled: Boolean(id),
-    initialData: initial ?? undefined, refetchInterval: query => isJobWorking(query.state.data) ? 1000 : false,
-    refetchOnWindowFocus: true, retry: false })
+  return useQuery({
+    queryKey: ['epub-job', id],
+    queryFn: () => bookFilesApi.job(id!),
+    enabled: Boolean(id),
+    initialData: initial ?? undefined,
+    refetchInterval: (query) => (isJobWorking(query.state.data) ? 1000 : false),
+    refetchOnWindowFocus: true,
+    retry: false,
+  })
 }
 
-export function FileModal({ title, children, footer, onClose }: {
-  title: string; children: ReactNode; footer?: ReactNode; onClose: () => void
+export function FileModal({
+  title,
+  children,
+  footer,
+  onClose,
+}: {
+  title: string
+  children: ReactNode
+  footer?: ReactNode
+  onClose: () => void
 }) {
   const titleId = useId()
   const panel = useRef<HTMLElement>(null)
@@ -31,37 +52,112 @@ export function FileModal({ title, children, footer, onClose }: {
     node.focus()
     const keydown = (event: KeyboardEvent) => {
       if (Array.from(document.querySelectorAll('[role="dialog"]')).at(-1) !== node) return
-      if (event.key === 'Escape') { event.preventDefault(); close.current(); return }
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        close.current()
+        return
+      }
       if (event.key !== 'Tab') return
-      const targets = Array.from(node.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), a[href], [tabindex="0"]'))
-        .filter(element => element.getClientRects().length > 0)
-      const first = targets[0]; const last = targets.at(-1)
-      if (!first) { event.preventDefault(); node.focus() }
-      else if (event.shiftKey && (document.activeElement === first || document.activeElement === node)) { event.preventDefault(); last!.focus() }
-      else if (!event.shiftKey && (document.activeElement === last || document.activeElement === node)) { event.preventDefault(); first.focus() }
+      const targets = Array.from(
+        node.querySelectorAll<HTMLElement>(
+          'button:not(:disabled), input:not(:disabled), select:not(:disabled), a[href], [tabindex="0"]',
+        ),
+      ).filter((element) => element.getClientRects().length > 0)
+      const first = targets[0]
+      const last = targets.at(-1)
+      if (!first) {
+        event.preventDefault()
+        node.focus()
+      } else if (
+        event.shiftKey &&
+        (document.activeElement === first || document.activeElement === node)
+      ) {
+        event.preventDefault()
+        last!.focus()
+      } else if (
+        !event.shiftKey &&
+        (document.activeElement === last || document.activeElement === node)
+      ) {
+        event.preventDefault()
+        first.focus()
+      }
     }
     document.addEventListener('keydown', keydown)
-    return () => { document.removeEventListener('keydown', keydown); previous?.focus() }
+    return () => {
+      document.removeEventListener('keydown', keydown)
+      previous?.focus()
+    }
   }, [])
-  return <div className="file-modal-backdrop">
-    <DialogPanel className="file-modal" role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} ref={panel}>
-      <div className="file-modal__header">
-        <h2 id={titleId} className="text-lg font-semibold">{title}</h2>
-        <button type="button" className={buttonVariants.ghost} aria-label="Close file dialog" onClick={onClose}><X size={18} /></button>
-      </div>
-      <div className="file-modal__body">{children}</div>
-      {footer && <div className="file-modal__footer">{footer}</div>}
-    </DialogPanel>
-  </div>
+  return (
+    <div className="file-modal-backdrop">
+      <DialogPanel
+        className="file-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        ref={panel}
+      >
+        <div className="file-modal__header">
+          <h2 id={titleId} className="text-lg font-semibold">
+            {title}
+          </h2>
+          <button
+            type="button"
+            className={buttonVariants.ghost}
+            aria-label="Close file dialog"
+            onClick={onClose}
+          >
+            <X size={18} />
+          </button>
+        </div>
+        <div className="file-modal__body">{children}</div>
+        {footer && <div className="file-modal__footer">{footer}</div>}
+      </DialogPanel>
+    </div>
+  )
 }
 
 export function FileJobProgress({ job }: { job: FileJob }) {
-  const label = ({ Queued: 'Waiting to process', Processing: job.kind.endsWith('Export') ? 'Creating EPUB archive' : 'Checking EPUB files', CommitQueued: 'Waiting to save', Committing: 'Saving EPUB files',
-    Ready: job.kind.endsWith('Export') ? 'Archive ready' : 'Review before importing', Completed: 'Import complete', Failed: 'Operation failed', Cancelled: 'Operation cancelled' } as Record<string, string>)[job.status] ?? job.status
-  return <div className="file-job-progress" aria-live="polite">
-    <div className="flex flex-wrap justify-between gap-2"><strong>{label}</strong><span>{job.processedFiles} / {job.totalFiles || '…'} files</span></div>
-    {isJobWorking(job) && <progress aria-label={label} max={Math.max(job.totalFiles, job.processedFiles, 1)} value={job.processedFiles} />}
-    {job.error && <p role="alert" className="file-error">{job.error}</p>}
-    {(job.status === 'Completed' || (job.status === 'Failed' && job.importedCount > 0)) && <p>{job.importedCount} imported · {job.skippedCount} identical files skipped. Imported EPUBs are private.</p>}
-  </div>
+  const label =
+    (
+      {
+        Queued: 'Waiting to process',
+        Processing: job.kind.endsWith('Export') ? 'Creating EPUB archive' : 'Checking EPUB files',
+        CommitQueued: 'Waiting to save',
+        Committing: 'Saving EPUB files',
+        Ready: job.kind.endsWith('Export') ? 'Archive ready' : 'Review before importing',
+        Completed: 'Import complete',
+        Failed: 'Operation failed',
+        Cancelled: 'Operation cancelled',
+      } as Record<string, string>
+    )[job.status] ?? job.status
+  return (
+    <div className="file-job-progress" aria-live="polite">
+      <div className="flex flex-wrap justify-between gap-2">
+        <strong>{label}</strong>
+        <span>
+          {job.processedFiles} / {job.totalFiles || '…'} files
+        </span>
+      </div>
+      {isJobWorking(job) && (
+        <progress
+          aria-label={label}
+          max={Math.max(job.totalFiles, job.processedFiles, 1)}
+          value={job.processedFiles}
+        />
+      )}
+      {job.error && (
+        <p role="alert" className="file-error">
+          {job.error}
+        </p>
+      )}
+      {(job.status === 'Completed' || (job.status === 'Failed' && job.importedCount > 0)) && (
+        <p>
+          {job.importedCount} imported · {job.skippedCount} identical files skipped. Imported EPUBs
+          are private.
+        </p>
+      )}
+    </div>
+  )
 }

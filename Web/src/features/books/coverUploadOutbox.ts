@@ -83,7 +83,9 @@ export function isPendingCoverUploadNotCreated(error: unknown) {
 
 function openDatabase() {
   if (!('indexedDB' in window)) {
-    return Promise.reject(new Error('This browser cannot keep a cover upload ready in the background.'))
+    return Promise.reject(
+      new Error('This browser cannot keep a cover upload ready in the background.'),
+    )
   }
 
   return new Promise<IDBDatabase>((resolve, reject) => {
@@ -94,7 +96,8 @@ function openDatabase() {
       }
     }
     request.onsuccess = () => resolve(request.result)
-    request.onerror = () => reject(request.error ?? new Error('Could not open the local cover upload queue.'))
+    request.onerror = () =>
+      reject(request.error ?? new Error('Could not open the local cover upload queue.'))
   })
 }
 
@@ -149,14 +152,19 @@ async function deleteUpload(token: string) {
 function requestResult<T>(request: IDBRequest<T>) {
   return new Promise<T>((resolve, reject) => {
     request.onsuccess = () => resolve(request.result)
-    request.onerror = () => reject(request.error ?? new Error('The local cover upload queue request failed.'))
+    request.onerror = () =>
+      reject(request.error ?? new Error('The local cover upload queue request failed.'))
   })
 }
 
 function complete(transaction: IDBTransaction) {
   return new Promise<void>((resolve, reject) => {
     transaction.oncomplete = () => resolve()
-    transaction.onabort = () => reject(transaction.error ?? new Error('The local cover upload queue transaction was aborted.'))
-    transaction.onerror = () => reject(transaction.error ?? new Error('The local cover upload queue transaction failed.'))
+    transaction.onabort = () =>
+      reject(
+        transaction.error ?? new Error('The local cover upload queue transaction was aborted.'),
+      )
+    transaction.onerror = () =>
+      reject(transaction.error ?? new Error('The local cover upload queue transaction failed.'))
   })
 }

@@ -25,9 +25,7 @@ describe('BookStatusPill', () => {
       </>,
     )
 
-    expect(screen.getByLabelText('Book status: On Hold')).toHaveClass(
-      'book-details-status--paused',
-    )
+    expect(screen.getByLabelText('Book status: On Hold')).toHaveClass('book-details-status--paused')
     expect(screen.getByLabelText('Book status: On Hold')).not.toHaveClass(
       'book-details-status--completed',
     )

@@ -29,19 +29,28 @@ describe('BookCoverSection', () => {
     vi.useFakeTimers()
     cacheEntries.clear()
     cacheNames.length = 0
-    vi.stubGlobal('fetch', vi.fn().mockImplementation(async () => new Response(new Blob(['cover']), { status: 200 })))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(async () => new Response(new Blob(['cover']), { status: 200 })),
+    )
     vi.stubGlobal('caches', {
       open: vi.fn(async (cacheName: string) => {
         cacheNames.push(cacheName)
         return {
           add: vi.fn(async () => undefined),
           addAll: vi.fn(async () => undefined),
-          match: vi.fn(async (request: Request) => cacheEntries.get(request.url)?.clone() ?? undefined),
+          match: vi.fn(
+            async (request: Request) => cacheEntries.get(request.url)?.clone() ?? undefined,
+          ),
           matchAll: vi.fn(async () => []),
           put: vi.fn(async (request: Request, response: Response) => {
             cacheEntries.set(request.url, response.clone())
           }),
-          keys: vi.fn(async () => Array.from(cacheEntries.keys()).map((url) => new Request(new URL(url, window.location.origin).toString()))),
+          keys: vi.fn(async () =>
+            Array.from(cacheEntries.keys()).map(
+              (url) => new Request(new URL(url, window.location.origin).toString()),
+            ),
+          ),
           delete: vi.fn(async (request: Request) => {
             const normalizedUrl = new URL(request.url)
             const relativeUrl = `${normalizedUrl.pathname}${normalizedUrl.search}`
@@ -106,7 +115,10 @@ describe('BookCoverSection', () => {
     expect(fetch).toHaveBeenCalledTimes(1)
     expect(disconnect).toHaveBeenCalled()
     expect(screen.getByRole('img', { name: 'Lazy book cover' })).toHaveAttribute('loading', 'lazy')
-    expect(screen.getByRole('img', { name: 'Lazy book cover' })).toHaveAttribute('decoding', 'async')
+    expect(screen.getByRole('img', { name: 'Lazy book cover' })).toHaveAttribute(
+      'decoding',
+      'async',
+    )
   })
 
   it('reuses the cached blob url when the same cover is mounted again', async () => {
@@ -153,7 +165,10 @@ describe('BookCoverSection', () => {
 
     expect(fetch).toHaveBeenCalledTimes(1)
     expect(cacheNames).toContain('novelki.covers.v1::user-123')
-    expect(screen.getByRole('img', { name: 'Book cover' })).toHaveAttribute('src', 'blob:cover-from-cache')
+    expect(screen.getByRole('img', { name: 'Book cover' })).toHaveAttribute(
+      'src',
+      'blob:cover-from-cache',
+    )
     secondRender.unmount()
   })
 
@@ -202,7 +217,9 @@ describe('BookCoverSection', () => {
     })
     expect(fetch).toHaveBeenCalledTimes(2)
     expect(screen.getByRole('img', { name: 'Book cover' })).toHaveAttribute('src', 'blob:cover-2')
-    expect(Array.from(cacheEntries.keys())).toEqual(['https://api.example.com/api/v1/book/book-1/cover/file?v=2026-07-12T10%3A05%3A00Z'])
+    expect(Array.from(cacheEntries.keys())).toEqual([
+      'https://api.example.com/api/v1/book/book-1/cover/file?v=2026-07-12T10%3A05%3A00Z',
+    ])
   })
 
   it('uses the thumbnail url when thumbnail variant is requested', async () => {
@@ -213,7 +230,9 @@ describe('BookCoverSection', () => {
       await Promise.resolve()
     })
 
-    expect(fetch).toHaveBeenCalledWith('https://api.example.com/api/v1/book/book-1/cover/thumbnail?v=2026-07-12T10%3A00%3A00Z')
+    expect(fetch).toHaveBeenCalledWith(
+      'https://api.example.com/api/v1/book/book-1/cover/thumbnail?v=2026-07-12T10%3A00%3A00Z',
+    )
     expect(screen.getByRole('img', { name: 'Book cover' })).toHaveAttribute('src', 'blob:cover-1')
   })
 
@@ -240,7 +259,10 @@ describe('BookCoverSection', () => {
   })
 
   it('prunes older cached variants even when existing cache keys are relative urls', async () => {
-    cacheEntries.set('/api/v1/book/book-1/cover/file?v=old', new Response(new Blob(['old']), { status: 200 }))
+    cacheEntries.set(
+      '/api/v1/book/book-1/cover/file?v=old',
+      new Response(new Blob(['old']), { status: 200 }),
+    )
 
     render(<BookCoverArtwork cover={baseCover} title="Book cover" />)
 
@@ -249,7 +271,9 @@ describe('BookCoverSection', () => {
       await Promise.resolve()
     })
 
-    expect(Array.from(cacheEntries.keys())).toEqual(['https://api.example.com/api/v1/book/book-1/cover/file?v=2026-07-12T10%3A00%3A00Z'])
+    expect(Array.from(cacheEntries.keys())).toEqual([
+      'https://api.example.com/api/v1/book/book-1/cover/file?v=2026-07-12T10%3A00%3A00Z',
+    ])
   })
 
   it('loads covers when API_BASE_URL is relative', async () => {
@@ -273,7 +297,9 @@ describe('BookCoverSection', () => {
       await Promise.resolve()
     })
 
-    expect(fetch).toHaveBeenCalledWith(`${window.location.origin}/api/v1/book/book-1/cover/file?v=2026-07-12T10%3A00%3A00Z`)
+    expect(fetch).toHaveBeenCalledWith(
+      `${window.location.origin}/api/v1/book/book-1/cover/file?v=2026-07-12T10%3A00%3A00Z`,
+    )
     expect(screen.getByRole('img', { name: 'Book cover' })).toHaveAttribute('src', 'blob:cover-1')
   })
 })

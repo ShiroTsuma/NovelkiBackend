@@ -1,7 +1,13 @@
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { BookAnalyticsActivityPointDto, BookAnalyticsDto } from '@/api/types'
 import { Surface } from '@/components/app/DesignSystem'
-import { analyticsTooltipProps, dateRangeForBucket, focusedValueDomain, formatCount, formatDateRange } from './chartUtils'
+import {
+  analyticsTooltipProps,
+  dateRangeForBucket,
+  focusedValueDomain,
+  formatCount,
+  formatDateRange,
+} from './chartUtils'
 
 type ReadingActivityChartProps = {
   data: BookAnalyticsDto | undefined
@@ -17,7 +23,11 @@ export function ReadingActivityChart({ data }: ReadingActivityChartProps) {
   const newestDisplayPoints = [...displayPoints].reverse()
 
   if (!points.length) {
-    return <div className="grid min-h-56 place-items-center text-sm text-slate-600">No reading activity in this time range.</div>
+    return (
+      <div className="grid min-h-56 place-items-center text-sm text-slate-600">
+        No reading activity in this time range.
+      </div>
+    )
   }
 
   return (
@@ -27,14 +37,34 @@ export function ReadingActivityChart({ data }: ReadingActivityChartProps) {
           <LineChart data={chartPoints}>
             <XAxis dataKey="date" tickLine={false} />
             <YAxis allowDecimals={false} tickLine={false} yAxisId="daily" />
-            <YAxis allowDecimals={false} domain={cumulativeDomain} orientation="right" tickLine={false} yAxisId="cumulative" />
+            <YAxis
+              allowDecimals={false}
+              domain={cumulativeDomain}
+              orientation="right"
+              tickLine={false}
+              yAxisId="cumulative"
+            />
             <Tooltip
               {...analyticsTooltipProps}
-              formatter={(value, name) => [`${formatCount(Number(value))}`, activityLabel(name)]}
+              formatter={(value, name) => [formatCount(Number(value)), activityLabel(name)]}
               labelFormatter={(label) => `Bucket ${label}`}
             />
-            <Line dataKey="dailyChapters" name="dailyChapters" stroke="#75b69c" strokeWidth={2} yAxisId="daily" dot={{ r: 3 }} />
-            <Line dataKey="cumulativeChapters" name="cumulativeChapters" stroke="#8b92d8" strokeWidth={2} yAxisId="cumulative" dot={{ r: 3 }} />
+            <Line
+              dataKey="dailyChapters"
+              name="dailyChapters"
+              stroke="#75b69c"
+              strokeWidth={2}
+              yAxisId="daily"
+              dot={{ r: 3 }}
+            />
+            <Line
+              dataKey="cumulativeChapters"
+              name="cumulativeChapters"
+              stroke="#8b92d8"
+              strokeWidth={2}
+              yAxisId="cumulative"
+              dot={{ r: 3 }}
+            />
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -44,11 +74,13 @@ export function ReadingActivityChart({ data }: ReadingActivityChartProps) {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <span className="font-semibold text-slate-950">{point.label}</span>
               <span className="text-slate-700">
-                {formatCount(point.progressEvents)} events · {formatCount(point.booksTouched)} books touched
+                {formatCount(point.progressEvents)} events · {formatCount(point.booksTouched)} books
+                touched
               </span>
             </div>
             <div className="mt-1 text-slate-600">
-              Daily: {formatCount(point.dailyChapters)} chapters. Cumulative: {formatCount(point.cumulativeChapters)} chapters.
+              Daily: {formatCount(point.dailyChapters)} chapters. Cumulative:{' '}
+              {formatCount(point.cumulativeChapters)} chapters.
             </div>
           </Surface>
         ))}
@@ -91,16 +123,29 @@ export function readingActivityChartPoints(
   })
 }
 
-function compactActivityPoints(points: BookAnalyticsActivityPointDto[], bucket: string, baselineChapters = 0) {
-  return readingActivityChartPoints(points, bucket, baselineChapters).reduce<Array<BookAnalyticsActivityPointDto & {
-    dailyChapters: number
-    cumulativeChapters: number
-    label: string
-    endExclusive: string
-  }>>((rows, point) => {
-    const isEmpty = point.progressEvents === 0 && point.booksTouched === 0 && point.dailyChapters === 0
+function compactActivityPoints(
+  points: BookAnalyticsActivityPointDto[],
+  bucket: string,
+  baselineChapters = 0,
+) {
+  return readingActivityChartPoints(points, bucket, baselineChapters).reduce<
+    (BookAnalyticsActivityPointDto & {
+      dailyChapters: number
+      cumulativeChapters: number
+      label: string
+      endExclusive: string
+    })[]
+  >((rows, point) => {
+    const isEmpty =
+      point.progressEvents === 0 && point.booksTouched === 0 && point.dailyChapters === 0
     const previous = rows.at(-1)
-    if (isEmpty && previous && previous.progressEvents === 0 && previous.booksTouched === 0 && previous.dailyChapters === 0) {
+    if (
+      isEmpty &&
+      previous &&
+      previous.progressEvents === 0 &&
+      previous.booksTouched === 0 &&
+      previous.dailyChapters === 0
+    ) {
       previous.endExclusive = point.endExclusive
       previous.label = formatDateRange(previous.date, previous.endExclusive)
       previous.cumulativeChapters = point.cumulativeChapters

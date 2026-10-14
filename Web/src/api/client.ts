@@ -64,8 +64,14 @@ export const api = {
   getReadingTimeSettings: () =>
     apiRequest<ReadingTimeSettingDto[]>('/account/reading-time-settings'),
   updateReadingTimeSettings: (request: UpdateReadingTimeSettingsRequest) =>
-    apiRequest<ReadingTimeSettingDto[]>('/account/reading-time-settings', { method: 'PUT', body: request }),
-  getBooks: ({ signal, ...params }: {
+    apiRequest<ReadingTimeSettingDto[]>('/account/reading-time-settings', {
+      method: 'PUT',
+      body: request,
+    }),
+  getBooks: ({
+    signal,
+    ...params
+  }: {
     skip?: number
     take?: number
     query?: string
@@ -74,24 +80,43 @@ export const api = {
     advanceCycle?: boolean
     signal?: AbortSignal
   }) =>
-    apiRequest<PaginatedResult<BookListItemDto>>(`/book${toQueryString(withFilteredQuery(params))}`, { signal }),
+    apiRequest<PaginatedResult<BookListItemDto>>(
+      `/book${toQueryString(withFilteredQuery(params))}`,
+      { signal },
+    ),
   getManagedBooks: (params: { skip?: number; take?: number; query?: string }) =>
-    apiRequest<PaginatedResult<ManagedBookListItemDto>>(`/book/manage${toQueryString(withFilteredQuery(params))}`),
+    apiRequest<PaginatedResult<ManagedBookListItemDto>>(
+      `/book/manage${toQueryString(withFilteredQuery(params))}`,
+    ),
   getBooksSummary: (params: { query?: string }) =>
     apiRequest<BookSummaryDto>(`/book/summary${toQueryString(withFilteredQuery(params))}`),
-  getBookSearchSuggestions: ({ signal, ...params }: {
+  getBookSearchSuggestions: ({
+    signal,
+    ...params
+  }: {
     field: string
     search?: string
     query?: string
     take?: number
     signal?: AbortSignal
   }) =>
-    apiRequest<BookSearchSuggestionDto[]>(`/book/search-suggestions${toQueryString(withFilteredQuery(params))}`, { signal }),
+    apiRequest<BookSearchSuggestionDto[]>(
+      `/book/search-suggestions${toQueryString(withFilteredQuery(params))}`,
+      { signal },
+    ),
   getBookAnalytics: (params: { query?: string; from?: string; to?: string; bucket?: string }) =>
     apiRequest<BookAnalyticsDto>(`/book/analytics${toQueryString(withFilteredQuery(params))}`),
   getBook: (id: string) => apiRequest<BookDto>(`/book/${id}`),
-  getAdminBooks: (params: { skip?: number; take?: number; query?: string; sortBy?: string; sortDirection?: string }) =>
-    apiRequest<PaginatedResult<AdminBookListItemDto>>(`/admin/books${toQueryString(withFilteredQuery(params))}`),
+  getAdminBooks: (params: {
+    skip?: number
+    take?: number
+    query?: string
+    sortBy?: string
+    sortDirection?: string
+  }) =>
+    apiRequest<PaginatedResult<AdminBookListItemDto>>(
+      `/admin/books${toQueryString(withFilteredQuery(params))}`,
+    ),
   getAdminBook: (id: string) => apiRequest<AdminBookDto>(`/admin/books/${id}`),
   createBook: (request: BookMutationRequest) =>
     apiRequest<{ id: string }>('/book', { method: 'POST', body: request }),
@@ -102,15 +127,18 @@ export const api = {
   createBookImportSession: (file: File) => {
     const formData = new FormData()
     formData.set('file', file)
-    return apiFormRequest<BookImportSessionDto>('/book/import/sessions', formData, { method: 'POST' })
+    return apiFormRequest<BookImportSessionDto>('/book/import/sessions', formData, {
+      method: 'POST',
+    })
   },
   createFullBookImportSession: (file: File) => {
     const formData = new FormData()
     formData.set('file', file)
-    return apiFormRequest<BookImportSessionDto>('/book/import/full/sessions', formData, { method: 'POST' })
+    return apiFormRequest<BookImportSessionDto>('/book/import/full/sessions', formData, {
+      method: 'POST',
+    })
   },
-  downloadBookImportTemplate: () =>
-    apiBlobRequest('/book/import/template'),
+  downloadBookImportTemplate: () => apiBlobRequest('/book/import/template'),
   downloadBooksExport: (params: { query?: string; sortBy?: string; sortDirection?: string }) =>
     apiBlobRequest(`/book/export${toQueryString(withFilteredQuery(params))}`),
   downloadBooksFullExport: (params: { query?: string; sortBy?: string; sortDirection?: string }) =>
@@ -118,13 +146,22 @@ export const api = {
   getBookImportSession: (sessionId: string) =>
     apiRequest<BookImportSessionDto>(`/book/import/sessions/${sessionId}`),
   updateBookImportRow: (sessionId: string, rowId: string, request: BookImportRowUpdateRequest) =>
-    apiRequest<BookImportSessionDto>(`/book/import/sessions/${sessionId}/rows/${rowId}`, { method: 'PUT', body: request }),
+    apiRequest<BookImportSessionDto>(`/book/import/sessions/${sessionId}/rows/${rowId}`, {
+      method: 'PUT',
+      body: request,
+    }),
   deleteBookImportRow: (sessionId: string, rowId: string) =>
-    apiRequest<BookImportSessionDto>(`/book/import/sessions/${sessionId}/rows/${rowId}`, { method: 'DELETE' }),
+    apiRequest<BookImportSessionDto>(`/book/import/sessions/${sessionId}/rows/${rowId}`, {
+      method: 'DELETE',
+    }),
   deleteInvalidBookImportRows: (sessionId: string) =>
-    apiRequest<BookImportSessionDto>(`/book/import/sessions/${sessionId}/rows/invalid`, { method: 'DELETE' }),
+    apiRequest<BookImportSessionDto>(`/book/import/sessions/${sessionId}/rows/invalid`, {
+      method: 'DELETE',
+    }),
   finalizeBookImport: (sessionId: string) =>
-    apiRequest<BookImportFinalizeResult>(`/book/import/sessions/${sessionId}/finalize`, { method: 'POST' }),
+    apiRequest<BookImportFinalizeResult>(`/book/import/sessions/${sessionId}/finalize`, {
+      method: 'POST',
+    }),
   cancelBookImport: (sessionId: string) =>
     apiRequest<void>(`/book/import/sessions/${sessionId}`, { method: 'DELETE' }),
   updateAdminBook: (id: string, request: BookMutationRequest) =>
@@ -142,15 +179,20 @@ export const api = {
     apiRequest<{ bookId: string }>(`/book/cover/uploads/${token}`),
   refreshBookCover: (id: string) =>
     apiRequest<BookCoverDto>(`/book/${id}/cover/refresh`, { method: 'POST' }),
-  deleteBookCover: (id: string) =>
-    apiRequest<void>(`/book/${id}/cover`, { method: 'DELETE' }),
-  deleteBook: (id: string) =>
-    apiRequest<void>(`/book/${id}`, { method: 'DELETE' }),
-  searchPublicBooks: (params: { search?: string; skip?: number; take?: number; mineOnly?: boolean }) =>
-    apiRequest<PaginatedResult<PublicBookSnapshotDto>>(`/public-book${toQueryString({
-      ...params,
-      search: withNsfwBookFilter(params.search),
-    })}`),
+  deleteBookCover: (id: string) => apiRequest<void>(`/book/${id}/cover`, { method: 'DELETE' }),
+  deleteBook: (id: string) => apiRequest<void>(`/book/${id}`, { method: 'DELETE' }),
+  searchPublicBooks: (params: {
+    search?: string
+    skip?: number
+    take?: number
+    mineOnly?: boolean
+  }) =>
+    apiRequest<PaginatedResult<PublicBookSnapshotDto>>(
+      `/public-book${toQueryString({
+        ...params,
+        search: withNsfwBookFilter(params.search),
+      })}`,
+    ),
   publishBook: (bookId: string) =>
     apiRequest<PublicBookSnapshotDto>(`/public-book/source/${bookId}`, { method: 'POST' }),
   refreshPublishedBook: (snapshotId: string) =>
@@ -169,28 +211,20 @@ export const api = {
     apiRequest<AuthorDto>(`/author/${id}`, { method: 'PUT', body: request }),
   updateAuthorVisibility: (id: string, isPublic: boolean) =>
     apiRequest<AuthorDto>(`/author/${id}/visibility`, { method: 'PUT', body: { isPublic } }),
-  deleteAuthor: (id: string) =>
-    apiRequest<void>(`/author/${id}`, { method: 'DELETE' }),
+  deleteAuthor: (id: string) => apiRequest<void>(`/author/${id}`, { method: 'DELETE' }),
   searchTags: (search: string, take = 10) =>
     apiRequest<TagDto[]>(`/tag${toQueryString({ search, take })}`),
   createTag: (request: CreateTagRequest) =>
     apiRequest<TagDto>('/tag', { method: 'POST', body: request }),
   updateTag: (id: string, request: UpdateTagRequest) =>
     apiRequest<TagDto>(`/tag/${id}`, { method: 'PUT', body: request }),
-  deleteTag: (id: string) =>
-    apiRequest<void>(`/tag/${id}`, { method: 'DELETE' }),
+  deleteTag: (id: string) => apiRequest<void>(`/tag/${id}`, { method: 'DELETE' }),
   getTypes: () =>
-    apiRequest<PaginatedResult<DictionaryDto>>(
-      `/type${toQueryString({ skip: 0, take: 100 })}`,
-    ),
+    apiRequest<PaginatedResult<DictionaryDto>>(`/type${toQueryString({ skip: 0, take: 100 })}`),
   getStatuses: () =>
-    apiRequest<PaginatedResult<DictionaryDto>>(
-      `/status${toQueryString({ skip: 0, take: 100 })}`,
-    ),
+    apiRequest<PaginatedResult<DictionaryDto>>(`/status${toQueryString({ skip: 0, take: 100 })}`),
   getGenres: () =>
-    apiRequest<PaginatedResult<DictionaryDto>>(
-      `/genre${toQueryString({ skip: 0, take: 100 })}`,
-    ),
+    apiRequest<PaginatedResult<DictionaryDto>>(`/genre${toQueryString({ skip: 0, take: 100 })}`),
   createAdminStatus: (request: DictionaryMutationRequest) =>
     apiRequest<DictionaryDto>('/admin/statuses', { method: 'POST', body: request }),
   createAdminType: (request: DictionaryMutationRequest) =>

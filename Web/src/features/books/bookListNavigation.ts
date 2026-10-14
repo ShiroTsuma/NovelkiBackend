@@ -27,7 +27,5 @@ export function getBookListReturnTo(state: unknown) {
   }
 
   const returnTo = (state as BookListNavigationState).bookListReturnTo
-  return typeof returnTo === 'string' && returnTo.startsWith('/books')
-    ? returnTo
-    : '/books'
+  return typeof returnTo === 'string' && returnTo.startsWith('/books') ? returnTo : '/books'
 }

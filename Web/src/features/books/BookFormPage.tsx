@@ -8,11 +8,27 @@ import { toast } from 'sonner'
 import { api } from '@/api/client'
 import { HttpError } from '@/api/http'
 import type { AuthorDto, BookCoverDto, BookHtmlParseResult, BookMutationRequest } from '@/api/types'
-import { buttonVariants, DialogPanel, PageHeader, Surface, useBodyScrollLock } from '@/components/app/DesignSystem'
-import { FormField, buttonClass, inputClass, secondaryButtonClass } from '@/components/app/FormField'
+import {
+  buttonVariants,
+  DialogPanel,
+  PageHeader,
+  Surface,
+  useBodyScrollLock,
+} from '@/components/app/DesignSystem'
+import {
+  FormField,
+  buttonClass,
+  inputClass,
+  secondaryButtonClass,
+} from '@/components/app/FormField'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
 import { BookCoverArtwork, CoverLightbox, useResolvedCoverImage } from './BookCoverSection'
-import { bookFormSchema, defaultBookFormValues, toBookMutationRequest, type BookFormValues } from './bookFormSchema'
+import {
+  bookFormSchema,
+  defaultBookFormValues,
+  toBookMutationRequest,
+  type BookFormValues,
+} from './bookFormSchema'
 import { getDisplayCoverFailure, getDisplayCoverStatus } from './coverFailure'
 import { BookHtmlParseDialog, type BookHtmlParseField } from './BookHtmlParseDialog'
 import { getBookListReturnTo } from './bookListNavigation'
@@ -49,9 +65,7 @@ type CoverInfoItem = {
   truncate?: boolean
 }
 
-type ExistingCoverChange =
-  | { kind: 'keep' }
-  | { kind: 'remove' }
+type ExistingCoverChange = { kind: 'keep' } | { kind: 'remove' }
 
 const allowedCoverMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp'])
 const allowedCoverExtensions = new Set(['.jpg', '.jpeg', '.png', '.webp'])
@@ -65,22 +79,30 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
   const queryClient = useQueryClient()
   const initializedBookIdRef = useRef<string | null>(null)
   const [authorSuggestionsOpen, setAuthorSuggestionsOpen] = useState(false)
-  const [selectedAuthorDisplay, setSelectedAuthorDisplay] = useState<SelectedAuthorDisplay | null>(null)
+  const [selectedAuthorDisplay, setSelectedAuthorDisplay] = useState<SelectedAuthorDisplay | null>(
+    null,
+  )
   const [coverDialogOpen, setCoverDialogOpen] = useState(false)
   const [coverDialogView, setCoverDialogView] = useState<'choice' | 'url'>('choice')
   const [coverUrlInput, setCoverUrlInput] = useState('')
   const [coverPreviewOpen, setCoverPreviewOpen] = useState(false)
   const [htmlParseDialogOpen, setHtmlParseDialogOpen] = useState(false)
   const [draftCover, setDraftCover] = useState<DraftCoverState>(null)
-  const [existingCoverChange, setExistingCoverChange] = useState<ExistingCoverChange>({ kind: 'keep' })
+  const [existingCoverChange, setExistingCoverChange] = useState<ExistingCoverChange>({
+    kind: 'keep',
+  })
   const bookQueryKey = [admin ? 'adminBook' : 'book', id] as const
   const bookQuery = useQuery({
     queryKey: bookQueryKey,
-    queryFn: () => admin ? api.getAdminBook(id!) : api.getBook(id!),
+    queryFn: () => (admin ? api.getAdminBook(id!) : api.getBook(id!)),
     enabled: mode === 'edit' && Boolean(id),
   })
   const typesQuery = useQuery({ queryKey: ['types'], queryFn: api.getTypes, staleTime: 300_000 })
-  const statusesQuery = useQuery({ queryKey: ['statuses'], queryFn: api.getStatuses, staleTime: 300_000 })
+  const statusesQuery = useQuery({
+    queryKey: ['statuses'],
+    queryFn: api.getStatuses,
+    staleTime: 300_000,
+  })
   const genresQuery = useQuery({ queryKey: ['genres'], queryFn: api.getGenres, staleTime: 300_000 })
 
   const form = useForm<BookFormValues>({
@@ -101,7 +123,9 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
   const selectedGenreIds = form.watch('genreIds')
   const selectedTags = splitComma(form.watch('tagsText'))
   const selectedType = typesQuery.data?.data.find((type) => type.id === form.watch('contentTypeId'))
-  const selectedStatus = statusesQuery.data?.data.find((status) => status.id === form.watch('statusId'))
+  const selectedStatus = statusesQuery.data?.data.find(
+    (status) => status.id === form.watch('statusId'),
+  )
   const resolvedCoverUrl = useResolvedCoverImage(bookQuery.data?.cover)
   const authorSuggestionsQuery = useQuery({
     queryKey: ['authorSuggestions', debouncedAuthorSearch],
@@ -110,7 +134,8 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
     placeholderData: keepPreviousData,
     staleTime: 30_000,
   })
-  const authorSearchPending = trimmedAuthorName !== debouncedAuthorSearch || authorSuggestionsQuery.isFetching
+  const authorSearchPending =
+    trimmedAuthorName !== debouncedAuthorSearch || authorSuggestionsQuery.isFetching
 
   useEffect(() => {
     initializedBookIdRef.current = null
@@ -127,9 +152,20 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
   }, [draftCover])
 
   useEffect(() => {
-    if (mode === 'edit' && bookQuery.data && typesQuery.data && statusesQuery.data && genresQuery.data && initializedBookIdRef.current !== bookQuery.data.id) {
-      const matchingType = typesQuery.data.data.find((item) => item.name === bookQuery.data.contentType)
-      const matchingStatus = statusesQuery.data.data.find((item) => item.name === bookQuery.data.status)
+    if (
+      mode === 'edit' &&
+      bookQuery.data &&
+      typesQuery.data &&
+      statusesQuery.data &&
+      genresQuery.data &&
+      initializedBookIdRef.current !== bookQuery.data.id
+    ) {
+      const matchingType = typesQuery.data.data.find(
+        (item) => item.name === bookQuery.data.contentType,
+      )
+      const matchingStatus = statusesQuery.data.data.find(
+        (item) => item.name === bookQuery.data.status,
+      )
       const matchingGenres = genresQuery.data.data
         .filter((item) => bookQuery.data.genres.includes(item.name))
         .map((item) => item.id)
@@ -139,9 +175,11 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
         statusId: matchingStatus?.id ?? '',
         genreIds: matchingGenres,
       })
-      setSelectedAuthorDisplay(bookQuery.data.authorId && bookQuery.data.author
-        ? { id: bookQuery.data.authorId, primaryName: bookQuery.data.author }
-        : null)
+      setSelectedAuthorDisplay(
+        bookQuery.data.authorId && bookQuery.data.author
+          ? { id: bookQuery.data.authorId, primaryName: bookQuery.data.author }
+          : null,
+      )
       initializedBookIdRef.current = bookQuery.data.id
     }
   }, [bookQuery.data, form, genresQuery.data, mode, statusesQuery.data, typesQuery.data])
@@ -171,7 +209,11 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
     return exactAuthor
       ? (() => {
           const matchedAlias = findMatchingAlias(exactAuthor, name)
-          setSelectedAuthorDisplay({ id: exactAuthor.id, primaryName: exactAuthor.primaryName, matchedAlias })
+          setSelectedAuthorDisplay({
+            id: exactAuthor.id,
+            primaryName: exactAuthor.primaryName,
+            matchedAlias,
+          })
           return { ...values, authorId: exactAuthor.id, authorName: exactAuthor.primaryName }
         })()
       : values
@@ -199,7 +241,9 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
       return
     }
 
-    await (admin ? api.updateAdminBook(bookId, requestWithCoverSource) : api.updateBook(bookId, requestWithCoverSource))
+    await (admin
+      ? api.updateAdminBook(bookId, requestWithCoverSource)
+      : api.updateBook(bookId, requestWithCoverSource))
   }
 
   function replaceDraftCover(next: DraftCoverState) {
@@ -221,9 +265,11 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
 
   function handleAuthorBlur() {
     const normalizedName = normalizeAuthorName(authorName)
-    const exactAuthor = authorSuggestionsQuery.data?.find((author) =>
-      normalizeAuthorName(author.primaryName) === normalizedName ||
-      author.otherNames.some((otherName) => normalizeAuthorName(otherName) === normalizedName))
+    const exactAuthor = authorSuggestionsQuery.data?.find(
+      (author) =>
+        normalizeAuthorName(author.primaryName) === normalizedName ||
+        author.otherNames.some((otherName) => normalizeAuthorName(otherName) === normalizedName),
+    )
     if (exactAuthor) {
       selectAuthor(exactAuthor)
       return
@@ -240,18 +286,18 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
     form.setValue('tagsText', value.join(', '), { shouldDirty: true, shouldValidate: true })
   }
 
-  function setNumericFieldValue(
-    field: 'totalChapters',
-    rawValue: string,
-  ) {
-    form.setValue(field, sanitizeDecimalInput(rawValue), { shouldDirty: true, shouldValidate: true })
+  function setNumericFieldValue(field: 'totalChapters', rawValue: string) {
+    form.setValue(field, sanitizeDecimalInput(rawValue), {
+      shouldDirty: true,
+      shouldValidate: true,
+    })
   }
 
-  function setIntegerFieldValue(
-    field: 'currentChapterNumber' | 'priority',
-    rawValue: string,
-  ) {
-    form.setValue(field, sanitizeIntegerInput(rawValue), { shouldDirty: true, shouldValidate: true })
+  function setIntegerFieldValue(field: 'currentChapterNumber' | 'priority', rawValue: string) {
+    form.setValue(field, sanitizeIntegerInput(rawValue), {
+      shouldDirty: true,
+      shouldValidate: true,
+    })
   }
 
   function openCoverDialog() {
@@ -287,7 +333,10 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
 
   function applyParsedHtml(result: BookHtmlParseResult, selected: ReadonlySet<BookHtmlParseField>) {
     if (selected.has('primaryTitle') && result.primaryTitle) {
-      form.setValue('primaryTitle', result.primaryTitle, { shouldDirty: true, shouldValidate: true })
+      form.setValue('primaryTitle', result.primaryTitle, {
+        shouldDirty: true,
+        shouldValidate: true,
+      })
     }
     if (selected.has('authorName') && result.authorName) {
       form.setValue('authorName', result.authorName, { shouldDirty: true, shouldValidate: true })
@@ -295,7 +344,10 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
       setSelectedAuthorDisplay(null)
     }
     if (selected.has('contentType') && result.contentType?.id) {
-      form.setValue('contentTypeId', result.contentType.id, { shouldDirty: true, shouldValidate: true })
+      form.setValue('contentTypeId', result.contentType.id, {
+        shouldDirty: true,
+        shouldValidate: true,
+      })
     }
     if (selected.has('alternativeTitles')) {
       form.setValue(
@@ -307,7 +359,10 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
     if (selected.has('genres')) {
       form.setValue(
         'genreIds',
-        mergeValues(form.getValues('genreIds'), result.genres.flatMap((genre) => genre.id ? [genre.id] : [])),
+        mergeValues(
+          form.getValues('genreIds'),
+          result.genres.flatMap((genre) => (genre.id ? [genre.id] : [])),
+        ),
         { shouldDirty: true, shouldValidate: true },
       )
     }
@@ -322,11 +377,10 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
       form.setValue('description', result.description, { shouldDirty: true, shouldValidate: true })
     }
     if (selected.has('canonicalUrl') && result.canonicalUrl) {
-      form.setValue(
-        'linksText',
-        mergeLines(form.getValues('linksText'), [result.canonicalUrl]),
-        { shouldDirty: true, shouldValidate: true },
-      )
+      form.setValue('linksText', mergeLines(form.getValues('linksText'), [result.canonicalUrl]), {
+        shouldDirty: true,
+        shouldValidate: true,
+      })
     }
     if (selected.has('coverUrl') && result.coverUrl) {
       setExistingCoverChange({ kind: 'keep' })
@@ -341,16 +395,16 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
       const request = toBookMutationRequest(resolvedValues)
 
       if (mode === 'create') {
-        const pendingCoverUploadToken = draftCover?.kind === 'file'
-          ? await stagePendingCoverUpload(draftCover.file)
-          : null
+        const pendingCoverUploadToken =
+          draftCover?.kind === 'file' ? await stagePendingCoverUpload(draftCover.file) : null
         let created: { id: string }
         try {
-          const createRequest = draftCover?.kind === 'url'
-            ? { ...request, initialCoverUrl: draftCover.imageUrl }
-            : pendingCoverUploadToken
-              ? { ...request, initialCoverUploadToken: pendingCoverUploadToken }
-              : request
+          const createRequest =
+            draftCover?.kind === 'url'
+              ? { ...request, initialCoverUrl: draftCover.imageUrl }
+              : pendingCoverUploadToken
+                ? { ...request, initialCoverUploadToken: pendingCoverUploadToken }
+                : request
           created = await api.createBook(createRequest)
         } catch (error) {
           if (pendingCoverUploadToken) {
@@ -382,7 +436,12 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
           await api.deleteBookCover(id!)
         }
       } catch (error) {
-        coverError = error instanceof HttpError ? error.apiError.detail : error instanceof Error ? error.message : 'Failed to save cover.'
+        coverError =
+          error instanceof HttpError
+            ? error.apiError.detail
+            : error instanceof Error
+              ? error.message
+              : 'Failed to save cover.'
       }
 
       return { id: id!, coverError }
@@ -427,46 +486,60 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
   })
 
   const errors = form.formState.errors
-  const isLoadingDictionaries = typesQuery.isLoading || statusesQuery.isLoading || genresQuery.isLoading
+  const isLoadingDictionaries =
+    typesQuery.isLoading || statusesQuery.isLoading || genresQuery.isLoading
   const isLoadingBook = mode === 'edit' && bookQuery.isLoading
   const currentCover = bookQuery.data?.cover
-  const visibleCoverUrl = mode === 'create'
-    ? draftCover?.previewUrl ?? null
-    : draftCover?.previewUrl ?? (existingCoverChange.kind === 'remove'
-      ? null
-      : resolvedCoverUrl)
-  const effectiveCurrentCover = mode === 'edit' && (existingCoverChange.kind === 'remove' || draftCover)
-    ? null
-    : currentCover
+  const visibleCoverUrl =
+    mode === 'create'
+      ? (draftCover?.previewUrl ?? null)
+      : (draftCover?.previewUrl ??
+        (existingCoverChange.kind === 'remove' ? null : resolvedCoverUrl))
+  const effectiveCurrentCover =
+    mode === 'edit' && (existingCoverChange.kind === 'remove' || draftCover) ? null : currentCover
   const displayCoverFailure = getDisplayCoverFailure(effectiveCurrentCover?.failureReason)
-  const coverInfo: CoverInfoItem[] = mode === 'create'
-    ? [
-      draftCover ? { text: 'Status: Ready to save' } : { text: 'Status: Missing' },
-      draftCover?.kind === 'file' ? { text: 'Source: Upload' } : draftCover?.kind === 'url' ? { text: 'Source: URL' } : null,
-      draftCover?.kind === 'url' ? { text: draftCover.imageUrl, truncate: true } : null,
-    ].filter(isCoverInfoItem)
-    : draftCover
+  const coverInfo: CoverInfoItem[] =
+    mode === 'create'
       ? [
-        { text: 'Status: Will replace on save' },
-        draftCover.kind === 'file' ? { text: 'Source: Upload' } : { text: 'Source: URL' },
-        draftCover.kind === 'url' ? { text: draftCover.imageUrl, truncate: true } : null,
-      ].filter(isCoverInfoItem)
-    : effectiveCurrentCover
-      ? [
-        { text: `Status: ${getDisplayCoverStatus(effectiveCurrentCover.status, effectiveCurrentCover.failureReason)}` },
-        effectiveCurrentCover.source ? { text: `Source: ${effectiveCurrentCover.source}` } : null,
-        displayCoverFailure ? { text: displayCoverFailure } : null,
-      ].filter(isCoverInfoItem)
-      : existingCoverChange.kind === 'remove'
-        ? [{ text: 'Status: Will be removed on save' }]
-        : [{ text: 'Status: Missing' }]
+          draftCover ? { text: 'Status: Ready to save' } : { text: 'Status: Missing' },
+          draftCover?.kind === 'file'
+            ? { text: 'Source: Upload' }
+            : draftCover?.kind === 'url'
+              ? { text: 'Source: URL' }
+              : null,
+          draftCover?.kind === 'url' ? { text: draftCover.imageUrl, truncate: true } : null,
+        ].filter(isCoverInfoItem)
+      : draftCover
+        ? [
+            { text: 'Status: Will replace on save' },
+            draftCover.kind === 'file' ? { text: 'Source: Upload' } : { text: 'Source: URL' },
+            draftCover.kind === 'url' ? { text: draftCover.imageUrl, truncate: true } : null,
+          ].filter(isCoverInfoItem)
+        : effectiveCurrentCover
+          ? [
+              {
+                text: `Status: ${getDisplayCoverStatus(effectiveCurrentCover.status, effectiveCurrentCover.failureReason)}`,
+              },
+              effectiveCurrentCover.source
+                ? { text: `Source: ${effectiveCurrentCover.source}` }
+                : null,
+              displayCoverFailure ? { text: displayCoverFailure } : null,
+            ].filter(isCoverInfoItem)
+          : existingCoverChange.kind === 'remove'
+            ? [{ text: 'Status: Will be removed on save' }]
+            : [{ text: 'Status: Missing' }]
   const backHref = admin ? '/admin' : mode === 'edit' && id ? `/books/${id}` : '/books'
-  const pageDescription = mode === 'create'
-    ? 'Start with the book identity and reading state. Optional library context can be added below.'
-    : 'Update metadata, reading state, artwork, and private library context in one workspace.'
+  const pageDescription =
+    mode === 'create'
+      ? 'Start with the book identity and reading state. Optional library context can be added below.'
+      : 'Update metadata, reading state, artwork, and private library context in one workspace.'
 
   if (isLoadingDictionaries || isLoadingBook) {
-    return <Surface className="p-6 text-slate-500" tone="muted">Loading form...</Surface>
+    return (
+      <Surface className="p-6 text-slate-500" tone="muted">
+        Loading form...
+      </Surface>
+    )
   }
 
   return (
@@ -478,12 +551,18 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
         onSubmit={form.handleSubmit((values) => mutation.mutate(values))}
       >
         <PageHeader
-          actions={mode === 'create' && !admin ? (
-            <button className={secondaryButtonClass} type="button" onClick={() => setHtmlParseDialogOpen(true)}>
-              <FileCode2 className="h-4 w-4" />
-              Parse HTML
-            </button>
-          ) : undefined}
+          actions={
+            mode === 'create' && !admin ? (
+              <button
+                className={secondaryButtonClass}
+                type="button"
+                onClick={() => setHtmlParseDialogOpen(true)}
+              >
+                <FileCode2 className="h-4 w-4" />
+                Parse HTML
+              </button>
+            ) : undefined
+          }
           description={pageDescription}
           eyebrow={admin ? 'Administration' : 'Library editor'}
           title={admin ? 'Admin edit' : mode === 'create' ? 'Add book' : 'Edit book'}
@@ -498,7 +577,12 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
             />
             <div className="grid items-start gap-4 md:grid-cols-2">
               <FormField error={errors.primaryTitle?.message} label="Primary title *">
-                <input aria-label="Primary title" autoFocus className={inputClass} {...form.register('primaryTitle')} />
+                <input
+                  aria-label="Primary title"
+                  autoFocus
+                  className={inputClass}
+                  {...form.register('primaryTitle')}
+                />
               </FormField>
               <FormField error={errors.authorName?.message} label="Author">
                 <div className="relative">
@@ -510,7 +594,10 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
                     value={authorInputValue}
                     onBlur={handleAuthorBlur}
                     onChange={(event) => {
-                      form.setValue('authorName', event.target.value, { shouldDirty: true, shouldValidate: true })
+                      form.setValue('authorName', event.target.value, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      })
                       form.setValue('authorId', '', { shouldDirty: true, shouldValidate: true })
                       setSelectedAuthorDisplay(null)
                       setAuthorSuggestionsOpen(true)
@@ -528,27 +615,31 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
                       {authorSuggestionsQuery.data?.map((author) => {
                         const matchedAlias = findMatchingAlias(author, authorName)
                         return (
-                        <button
-                          className="grid w-full gap-0.5 px-3 py-2 text-left text-sm text-slate-100 hover:bg-slate-800"
-                          key={author.id}
-                          type="button"
-                          onMouseDown={(event) => event.preventDefault()}
-                          onClick={() => selectAuthor(author)}
-                        >
-                          <span className="flex items-center justify-between gap-2 font-medium">
-                            <span>{formatAuthorDisplay(author.primaryName, matchedAlias)}</span>
-                            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-                              {author.isPublic ? 'Public' : 'Private'}
+                          <button
+                            className="grid w-full gap-0.5 px-3 py-2 text-left text-sm text-slate-100 hover:bg-slate-800"
+                            key={author.id}
+                            type="button"
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => selectAuthor(author)}
+                          >
+                            <span className="flex items-center justify-between gap-2 font-medium">
+                              <span>{formatAuthorDisplay(author.primaryName, matchedAlias)}</span>
+                              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                                {author.isPublic ? 'Public' : 'Private'}
+                              </span>
                             </span>
-                          </span>
-                          {author.otherNames.length ? (
-                            <span className="text-xs text-slate-400">{author.otherNames.slice(0, 3).join(', ')}</span>
-                          ) : null}
-                        </button>
+                            {author.otherNames.length ? (
+                              <span className="text-xs text-slate-400">
+                                {author.otherNames.slice(0, 3).join(', ')}
+                              </span>
+                            ) : null}
+                          </button>
                         )
                       })}
                       {!authorSearchPending && authorSuggestionsQuery.data?.length === 0 ? (
-                        <div className="px-3 py-2 text-sm text-slate-400">No author found. A new one will be created.</div>
+                        <div className="px-3 py-2 text-sm text-slate-400">
+                          No author found. A new one will be created.
+                        </div>
                       ) : null}
                     </div>
                   ) : null}
@@ -556,13 +647,21 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
               </FormField>
               <FormField error={errors.contentTypeId?.message} label="Type *">
                 <select className={inputClass} {...form.register('contentTypeId')}>
-                  {typesQuery.data?.data.map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}
+                  {typesQuery.data?.data.map((type) => (
+                    <option key={type.id} value={type.id}>
+                      {type.name}
+                    </option>
+                  ))}
                 </select>
                 <DescriptionHelp value={selectedType?.description} />
               </FormField>
               <FormField error={errors.statusId?.message} label="Status *">
                 <select className={inputClass} {...form.register('statusId')}>
-                  {statusesQuery.data?.data.map((status) => <option key={status.id} value={status.id}>{status.name}</option>)}
+                  {statusesQuery.data?.data.map((status) => (
+                    <option key={status.id} value={status.id}>
+                      {status.name}
+                    </option>
+                  ))}
                 </select>
                 <DescriptionHelp value={selectedStatus?.description} />
               </FormField>
@@ -575,7 +674,11 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
                 className="book-form-cover-artwork"
                 cover={mode === 'edit' ? effectiveCurrentCover : null}
                 emptyLabel="Add cover"
-                hint={mode === 'create' ? 'Upload or paste an image URL.' : 'Upload or replace from a URL.'}
+                hint={
+                  mode === 'create'
+                    ? 'Upload or paste an image URL.'
+                    : 'Upload or replace from a URL.'
+                }
                 imageUrl={visibleCoverUrl}
                 interactive
                 removeLabel="Remove cover"
@@ -625,7 +728,11 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
                 </div>
               </div>
               <div className="book-form-action-buttons">
-                <Link className={secondaryButtonClass} state={admin ? undefined : { bookListReturnTo }} to={backHref}>
+                <Link
+                  className={secondaryButtonClass}
+                  state={admin ? undefined : { bookListReturnTo }}
+                  to={backHref}
+                >
                   <ArrowLeft className="h-4 w-4" />
                   Back
                 </Link>
@@ -657,7 +764,9 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
                       inputMode="numeric"
                       name="currentChapterNumber"
                       value={currentChapterNumber}
-                      onChange={(event) => setIntegerFieldValue('currentChapterNumber', event.target.value)}
+                      onChange={(event) =>
+                        setIntegerFieldValue('currentChapterNumber', event.target.value)
+                      }
                     />
                   </FormField>
                   <FormField error={errors.currentChapterLabel?.message} label="Chapter label">
@@ -672,7 +781,9 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
                       name="totalChapters"
                       value={totalChapters}
                       onBlur={() => void form.trigger('totalChapters')}
-                      onChange={(event) => setNumericFieldValue('totalChapters', event.target.value)}
+                      onChange={(event) =>
+                        setNumericFieldValue('totalChapters', event.target.value)
+                      }
                     />
                   </FormField>
                 </div>
@@ -698,7 +809,9 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
                   <FormField error={errors.rating?.message} label="Rating">
                     <RatingStars
                       value={form.watch('rating') ?? ''}
-                      onChange={(value) => form.setValue('rating', value, { shouldDirty: true, shouldValidate: true })}
+                      onChange={(value) =>
+                        form.setValue('rating', value, { shouldDirty: true, shouldValidate: true })
+                      }
                     />
                   </FormField>
                 </div>
@@ -728,7 +841,11 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="md:col-span-2">
                 <FormField error={errors.description?.message} label="Description">
-                  <textarea aria-label="Description" className={`${inputClass} book-form-textarea--description resize-y`} {...form.register('description')} />
+                  <textarea
+                    aria-label="Description"
+                    className={`${inputClass} book-form-textarea--description resize-y`}
+                    {...form.register('description')}
+                  />
                 </FormField>
               </div>
               <FormField error={errors.alternativeTitlesText?.message} label="Alternative titles">
@@ -749,7 +866,10 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
               </FormField>
               <div className="md:col-span-2">
                 <FormField error={errors.notes?.message} label="Private notes">
-                  <textarea className={`${inputClass} book-form-textarea--notes resize-y`} {...form.register('notes')} />
+                  <textarea
+                    className={`${inputClass} book-form-textarea--notes resize-y`}
+                    {...form.register('notes')}
+                  />
                 </FormField>
               </div>
             </div>
@@ -836,7 +956,9 @@ function sanitizeIntegerInput(value: string) {
 
 function isAllowedCoverFile(file: File) {
   const lowerName = file.name.toLocaleLowerCase()
-  const extensionAllowed = Array.from(allowedCoverExtensions).some((extension) => lowerName.endsWith(extension))
+  const extensionAllowed = Array.from(allowedCoverExtensions).some((extension) =>
+    lowerName.endsWith(extension),
+  )
   return allowedCoverMimeTypes.has(file.type) && extensionAllowed
 }
 
@@ -870,7 +992,11 @@ function GenreChipSelect({
       input={input}
       placeholder="Start typing a genre"
       selected={selected.map((option) => ({ key: option.id, label: option.name }))}
-      suggestions={suggestions.map((option) => ({ key: option.id, label: option.name, description: option.description }))}
+      suggestions={suggestions.map((option) => ({
+        key: option.id,
+        label: option.name,
+        description: option.description,
+      }))}
       onCreate={undefined}
       onInputChange={setInput}
       onPick={addGenre}
@@ -1024,7 +1150,9 @@ function ChipBox({
           </span>
         ))}
         <input
-          aria-activedescendant={trimmed && choiceCount > 0 ? `${listboxId}-option-${activeIndex}` : undefined}
+          aria-activedescendant={
+            trimmed && choiceCount > 0 ? `${listboxId}-option-${activeIndex}` : undefined
+          }
           aria-autocomplete="list"
           aria-controls={trimmed ? listboxId : undefined}
           aria-expanded={Boolean(trimmed)}
@@ -1055,7 +1183,9 @@ function ChipBox({
               onClick={() => onPick(item.key)}
             >
               <span className="font-medium">{item.label}</span>
-              {item.description ? <span className="mt-0.5 block text-xs text-slate-400">{item.description}</span> : null}
+              {item.description ? (
+                <span className="mt-0.5 block text-xs text-slate-400">{item.description}</span>
+              ) : null}
             </button>
           ))}
           {canCreate ? (
@@ -1117,9 +1247,10 @@ function CoverSourceDialog({
   }
 
   const urlButtonLabel = mode === 'create' ? 'Use URL' : 'Save URL'
-  const introText = mode === 'create'
-    ? 'Pick the cover now. It will be uploaded automatically after the book is created.'
-    : 'Choose whether the cover comes from a local file or a direct image link.'
+  const introText =
+    mode === 'create'
+      ? 'Pick the cover now. It will be uploaded automatically after the book is created.'
+      : 'Choose whether the cover comes from a local file or a direct image link.'
 
   return (
     <div
@@ -1134,7 +1265,12 @@ function CoverSourceDialog({
             <h2 className="text-lg font-semibold text-white">Add cover</h2>
             <p className="text-sm text-slate-400">{introText}</p>
           </div>
-          <button aria-label="Close cover dialog" className={`${buttonVariants.ghost} ui-icon-button`} type="button" onClick={onClose}>
+          <button
+            aria-label="Close cover dialog"
+            className={`${buttonVariants.ghost} ui-icon-button`}
+            type="button"
+            onClick={onClose}
+          >
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -1161,16 +1297,14 @@ function CoverSourceDialog({
                 }}
               />
             </label>
-            <button
-              className="ui-choice-card"
-              type="button"
-              onClick={onOpenUrl}
-            >
+            <button className="ui-choice-card" type="button" onClick={onOpenUrl}>
               <div className="inline-flex h-10 w-10 items-center justify-center rounded-[var(--qs-control-radius)] bg-[#262b4e] text-[var(--qs-accent-strong)]">
                 <Link2 className="h-4 w-4" />
               </div>
               <div className="text-base font-semibold">Paste image URL</div>
-              <div className="text-sm text-slate-400">The original URL is also added to book links.</div>
+              <div className="text-sm text-slate-400">
+                The original URL is also added to book links.
+              </div>
             </button>
           </div>
         ) : (
@@ -1182,7 +1316,12 @@ function CoverSourceDialog({
               onChange={(event) => onUrlChange(event.target.value)}
             />
             <div className="flex flex-wrap gap-2">
-              <button className={buttonClass} disabled={mode === 'edit' && setUrlPending || !urlInput.trim()} type="button" onClick={onUrlSubmit}>
+              <button
+                className={buttonClass}
+                disabled={(mode === 'edit' && setUrlPending) || !urlInput.trim()}
+                type="button"
+                onClick={onUrlSubmit}
+              >
                 {urlButtonLabel}
               </button>
               <button className={secondaryButtonClass} type="button" onClick={onBackToChoice}>
@@ -1206,7 +1345,11 @@ function appendUniqueLine(value: string, nextLine: string) {
     .split('\n')
     .map((item) => item.trim())
     .filter(Boolean)
-  if (lines.some((line) => line.localeCompare(trimmedLine, undefined, { sensitivity: 'accent' }) === 0)) {
+  if (
+    lines.some(
+      (line) => line.localeCompare(trimmedLine, undefined, { sensitivity: 'accent' }) === 0,
+    )
+  ) {
     return value
   }
 
@@ -1215,7 +1358,10 @@ function appendUniqueLine(value: string, nextLine: string) {
 
 function mergeLines(existing: string, incoming: readonly string[]) {
   return mergeValues(
-    existing.split('\n').map((item) => item.trim()).filter(Boolean),
+    existing
+      .split('\n')
+      .map((item) => item.trim())
+      .filter(Boolean),
     incoming,
   ).join('\n')
 }
@@ -1240,10 +1386,7 @@ function appendCoverSourceLink(request: BookMutationRequest, cover?: BookCoverDt
     return request
   }
 
-  const nextLinks = appendUniqueLine(
-    request.links.map((link) => link.url).join('\n'),
-    sourceUrl,
-  )
+  const nextLinks = appendUniqueLine(request.links.map((link) => link.url).join('\n'), sourceUrl)
     .split('\n')
     .map((url) => url.trim())
     .filter(Boolean)
@@ -1277,8 +1420,10 @@ function findMatchingAlias(author: AuthorDto, input: string) {
     return undefined
   }
 
-  return author.otherNames.find((name) => normalizeAuthorName(name) === normalizedInput)
-    ?? author.otherNames.find((name) => normalizeAuthorName(name).includes(normalizedInput))
+  return (
+    author.otherNames.find((name) => normalizeAuthorName(name) === normalizedInput) ??
+    author.otherNames.find((name) => normalizeAuthorName(name).includes(normalizedInput))
+  )
 }
 
 function formatAuthorDisplay(primaryName: string, matchedAlias?: string) {
@@ -1293,13 +1438,7 @@ function DescriptionHelp({ value }: { value?: string | null }) {
   return <p className="text-xs font-normal text-slate-500">{value}</p>
 }
 
-function RatingStars({
-  value,
-  onChange,
-}: {
-  value: string
-  onChange: (value: string) => void
-}) {
+function RatingStars({ value, onChange }: { value: string; onChange: (value: string) => void }) {
   const numericValue = Number(value)
   const normalizedValue = Number.isFinite(numericValue) && numericValue > 0 ? numericValue : 0
   const [previewValue, setPreviewValue] = useState(0)
@@ -1315,7 +1454,10 @@ function RatingStars({
         className="book-form-rating-scale"
         role="group"
         onBlur={(event) => {
-          if (!(event.relatedTarget instanceof Node) || !event.currentTarget.contains(event.relatedTarget)) {
+          if (
+            !(event.relatedTarget instanceof Node) ||
+            !event.currentTarget.contains(event.relatedTarget)
+          ) {
             setPreviewValue(0)
           }
         }}
@@ -1341,7 +1483,9 @@ function RatingStars({
                 }
               }}
             >
-              <Star className={`h-5 w-5 ${active ? 'fill-amber-400 text-amber-400' : 'text-[var(--qs-subtle)]'}`} />
+              <Star
+                className={`h-5 w-5 ${active ? 'fill-amber-400 text-amber-400' : 'text-[var(--qs-subtle)]'}`}
+              />
             </button>
           )
         })}

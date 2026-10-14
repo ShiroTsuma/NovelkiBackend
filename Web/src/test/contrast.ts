@@ -76,9 +76,7 @@ function contrastRatio(foreground: string, background: string) {
 function relativeLuminance([red, green, blue]: [number, number, number]) {
   const [r, g, b] = [red, green, blue].map((value) => {
     const normalized = value / 255
-    return normalized <= 0.03928
-      ? normalized / 12.92
-      : ((normalized + 0.055) / 1.055) ** 2.4
+    return normalized <= 0.03928 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4
   })
 
   return 0.2126 * r + 0.7152 * g + 0.0722 * b

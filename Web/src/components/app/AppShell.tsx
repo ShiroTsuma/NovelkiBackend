@@ -1,5 +1,15 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { BarChart3, BookOpen, Compass, LogOut, Plus, Search, Settings2, Shield, TriangleAlert } from 'lucide-react'
+import {
+  BarChart3,
+  BookOpen,
+  Compass,
+  LogOut,
+  Plus,
+  Search,
+  Settings2,
+  Shield,
+  TriangleAlert,
+} from 'lucide-react'
 import { useState } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/features/auth/AuthProvider'
@@ -8,12 +18,7 @@ import { cn } from '@/lib/utils'
 import { isNsfwEnabled, setNsfwEnabled } from '@/lib/nsfwPreference'
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
-  cn(
-    'app-nav-link',
-    isActive
-      ? 'app-nav-link--active'
-      : 'app-nav-link--idle',
-  )
+  cn('app-nav-link', isActive ? 'app-nav-link--active' : 'app-nav-link--idle')
 
 export function AppShell() {
   const { isAdmin, logout } = useAuth()
@@ -34,7 +39,9 @@ export function AppShell() {
 
   return (
     <div className="app-frame">
-      <a className="skip-link" href="#main-content">Skip to content</a>
+      <a className="skip-link" href="#main-content">
+        Skip to content
+      </a>
       <header className="app-header">
         <div className="app-header__inner">
           <div className="app-brand">
@@ -78,7 +85,11 @@ export function AppShell() {
             <button
               aria-label={nsfwEnabled ? 'Disable NSFW content' : 'Enable NSFW content'}
               aria-pressed={nsfwEnabled}
-              className={cn(buttonVariants.ghost, 'app-nsfw-toggle', nsfwEnabled && 'app-nsfw-toggle--enabled')}
+              className={cn(
+                buttonVariants.ghost,
+                'app-nsfw-toggle',
+                nsfwEnabled && 'app-nsfw-toggle--enabled',
+              )}
               type="button"
               onClick={handleNsfwToggle}
             >

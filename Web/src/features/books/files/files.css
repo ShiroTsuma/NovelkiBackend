@@ -1,58 +1,286 @@
-.book-files-panel { min-width: 0; display: grid; gap: 16px; }
-.epub-summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-width: 0; align-self: start; }
-.epub-summary .ui-button { min-height: 44px; min-width: 64px; }
-.epub-browser-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding-block: 14px; border-bottom: 1px solid var(--qs-border); }
-.epub-browser-row > .min-w-0 { flex: 1 1 260px; }
-.epub-manage-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
-.file-contents { font-size: 14px; color: var(--qs-muted); overflow-wrap: anywhere; margin-top: 4px; }
-.book-files-header, .file-export-book__header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
-.file-hint { color: var(--qs-muted); font-size: 13px; line-height: 1.6; }
-.file-error { color: var(--qs-danger, #fb7185); font-size: 14px; overflow-wrap: anywhere; }
-.file-empty { padding: 20px 0; color: var(--qs-muted); }
-.file-selection-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; border-block: 1px solid var(--qs-border); padding: 10px 0; }
-.file-check { display: inline-flex; gap: 10px; align-items: center; min-height: 44px; cursor: pointer; font-size: 14px; }
-.file-check input { flex: 0 0 auto; width: 20px; height: 20px; accent-color: var(--qs-accent); cursor: pointer; }
-.file-check--icon { width: 44px; justify-content: center; }
-.book-file-row { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding-block: 12px; border-bottom: 1px solid var(--qs-border); }
-.book-file-row:not(:has(.file-check--icon)) { grid-template-columns: minmax(0, 1fr) auto; }
-.book-file-info { min-width: 0; }
-.book-file-actions, .file-rename { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
-.file-rename input { flex: 1; min-width: 160px; }
-.book-files-panel .ui-button, .file-modal .ui-button { min-height: 44px; min-width: 44px; }
-.book-file-actions .ui-button { padding-inline: 10px; }
-.file-modal-backdrop { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 16px; background: rgb(2 6 23 / 80%); }
-.file-modal { width: min(960px, 100%); max-height: calc(100dvh - 32px); display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
-.file-modal__header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--qs-border); flex: 0 0 auto; }
-.file-modal__body { display: grid; gap: 16px; padding: 20px; overflow-y: auto; min-height: 0; overscroll-behavior: contain; }
-.file-modal__footer { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; padding: 12px 20px; border-top: 1px solid var(--qs-border); flex: 0 0 auto; }
-.file-modal .ui-control { width: 100%; min-width: 0; min-height: 44px; }
-.file-dropzone { display: grid; justify-items: start; gap: 12px; padding: 24px; border: 1px dashed var(--qs-border); }
-.file-dropzone--active { border-color: var(--qs-accent); background: var(--qs-surface-muted); }
-.file-job-progress { display: grid; gap: 10px; padding: 12px; background: var(--qs-surface-muted); }
-.file-modal progress { width: 100%; height: 8px; accent-color: var(--qs-accent); }
-.file-import-list, .file-export-books { display: grid; gap: 12px; }
-.file-import-row { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--qs-border); min-width: 0; }
-.file-import-fields { display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: 12px; }
-.file-import-fields label { min-width: 0; }
-.file-download-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--qs-border); padding: 12px 0; }
-.file-download-choice { width: 100%; padding-block: 12px; border-bottom: 1px solid var(--qs-border); align-items: flex-start; }
-.file-download-choice > input { margin-top: 4px; }
-.file-export-book { padding: 12px; border: 1px solid var(--qs-border); min-width: 0; }
-.file-export-book__header .file-check { flex: 1; }
-.file-export-book__files { display: grid; gap: 6px; padding: 12px 0 0 30px; }
+.book-files-panel {
+  min-width: 0;
+  display: grid;
+  gap: 16px;
+}
+.epub-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 0;
+  align-self: start;
+}
+.epub-summary .ui-button {
+  min-height: 44px;
+  min-width: 64px;
+}
+.epub-browser-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-block: 14px;
+  border-bottom: 1px solid var(--qs-border);
+}
+.epub-browser-row > .min-w-0 {
+  flex: 1 1 260px;
+}
+.epub-manage-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.file-contents {
+  font-size: 14px;
+  color: var(--qs-muted);
+  overflow-wrap: anywhere;
+  margin-top: 4px;
+}
+.book-files-header,
+.file-export-book__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.file-hint {
+  color: var(--qs-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.file-error {
+  color: var(--qs-danger, #fb7185);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.file-empty {
+  padding: 20px 0;
+  color: var(--qs-muted);
+}
+.file-selection-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  border-block: 1px solid var(--qs-border);
+  padding: 10px 0;
+}
+.file-check {
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+  min-height: 44px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.file-check input {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  accent-color: var(--qs-accent);
+  cursor: pointer;
+}
+.file-check--icon {
+  width: 44px;
+  justify-content: center;
+}
+.book-file-row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding-block: 12px;
+  border-bottom: 1px solid var(--qs-border);
+}
+.book-file-row:not(:has(.file-check--icon)) {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.book-file-info {
+  min-width: 0;
+}
+.book-file-actions,
+.file-rename {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.file-rename input {
+  flex: 1;
+  min-width: 160px;
+}
+.book-files-panel .ui-button,
+.file-modal .ui-button {
+  min-height: 44px;
+  min-width: 44px;
+}
+.book-file-actions .ui-button {
+  padding-inline: 10px;
+}
+.file-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgb(2 6 23 / 80%);
+}
+.file-modal {
+  width: min(960px, 100%);
+  max-height: calc(100dvh - 32px);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.file-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--qs-border);
+  flex: 0 0 auto;
+}
+.file-modal__body {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  overflow-y: auto;
+  min-height: 0;
+  overscroll-behavior: contain;
+}
+.file-modal__footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--qs-border);
+  flex: 0 0 auto;
+}
+.file-modal .ui-control {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+}
+.file-dropzone {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  padding: 24px;
+  border: 1px dashed var(--qs-border);
+}
+.file-dropzone--active {
+  border-color: var(--qs-accent);
+  background: var(--qs-surface-muted);
+}
+.file-job-progress {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  background: var(--qs-surface-muted);
+}
+.file-modal progress {
+  width: 100%;
+  height: 8px;
+  accent-color: var(--qs-accent);
+}
+.file-import-list,
+.file-export-books {
+  display: grid;
+  gap: 12px;
+}
+.file-import-row {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--qs-border);
+  min-width: 0;
+}
+.file-import-fields {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  gap: 12px;
+}
+.file-import-fields label {
+  min-width: 0;
+}
+.file-download-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--qs-border);
+  padding: 12px 0;
+}
+.file-download-choice {
+  width: 100%;
+  padding-block: 12px;
+  border-bottom: 1px solid var(--qs-border);
+  align-items: flex-start;
+}
+.file-download-choice > input {
+  margin-top: 4px;
+}
+.file-export-book {
+  padding: 12px;
+  border: 1px solid var(--qs-border);
+  min-width: 0;
+}
+.file-export-book__header .file-check {
+  flex: 1;
+}
+.file-export-book__files {
+  display: grid;
+  gap: 6px;
+  padding: 12px 0 0 30px;
+}
 @media (max-width: 1100px) {
-  .book-file-row { grid-template-columns: 44px minmax(0, 1fr); }
-  .book-file-actions { grid-column: 2; }
-  .book-file-row:not(:has(.file-check--icon)) { grid-template-columns: minmax(0, 1fr); }
-  .book-file-row:not(:has(.file-check--icon)) .book-file-actions { grid-column: 1; }
+  .book-file-row {
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
+  .book-file-actions {
+    grid-column: 2;
+  }
+  .book-file-row:not(:has(.file-check--icon)) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .book-file-row:not(:has(.file-check--icon)) .book-file-actions {
+    grid-column: 1;
+  }
 }
 @media (max-width: 600px) {
-  .file-modal-backdrop { padding: 8px; }
-  .file-modal { max-height: calc(100dvh - 16px); }
-  .file-modal__body, .file-modal__header, .file-modal__footer { padding: 12px; }
-  .file-modal__footer .ui-button { flex: 1; }
-  .file-dropzone { padding: 16px; }
-  .file-import-fields { grid-template-columns: minmax(0, 1fr); }
-  .file-export-book__header { align-items: flex-start; }
-  .file-export-book__header .file-check { flex-basis: 100%; }
+  .file-modal-backdrop {
+    padding: 8px;
+  }
+  .file-modal {
+    max-height: calc(100dvh - 16px);
+  }
+  .file-modal__body,
+  .file-modal__header,
+  .file-modal__footer {
+    padding: 12px;
+  }
+  .file-modal__footer .ui-button {
+    flex: 1;
+  }
+  .file-dropzone {
+    padding: 16px;
+  }
+  .file-import-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .file-export-book__header {
+    align-items: flex-start;
+  }
+  .file-export-book__header .file-check {
+    flex-basis: 100%;
+  }
 }

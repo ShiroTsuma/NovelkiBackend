@@ -85,11 +85,14 @@ const managedBooks = [
 
 const managedBookRows = managedBooks.map((book, index) => ({
   book,
-  listing: index === 0 ? {
-    id: publishedBook.id,
-    sourceBookId: book.id,
-    snapshotAt: publishedBook.snapshotAt,
-  } : null,
+  listing:
+    index === 0
+      ? {
+          id: publishedBook.id,
+          sourceBookId: book.id,
+          snapshotAt: publishedBook.snapshotAt,
+        }
+      : null,
 }))
 
 describe('ManagePage', () => {
@@ -119,9 +122,11 @@ describe('ManagePage', () => {
     await user.type(description, 'Worth rereading')
     await user.click(screen.getByRole('button', { name: 'Save changes' }))
 
-    await waitFor(() => expect(api.updateTag).toHaveBeenCalledWith(tag.id, {
-      description: 'Worth rereading',
-    }))
+    await waitFor(() =>
+      expect(api.updateTag).toHaveBeenCalledWith(tag.id, {
+        description: 'Worth rereading',
+      }),
+    )
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
 
@@ -140,9 +145,11 @@ describe('ManagePage', () => {
     await user.type(aliases, '耳根{enter}Ergen')
     await user.click(screen.getByRole('button', { name: 'Save changes' }))
 
-    await waitFor(() => expect(api.updateAuthor).toHaveBeenCalledWith(author.id, {
-      otherNames: ['耳根', 'Ergen'],
-    }))
+    await waitFor(() =>
+      expect(api.updateAuthor).toHaveBeenCalledWith(author.id, {
+        otherNames: ['耳根', 'Ergen'],
+      }),
+    )
   })
 
   it('requires a second click before deleting a tag', async () => {
@@ -165,24 +172,30 @@ describe('ManagePage', () => {
     await user.type(screen.getByLabelText('Tag name'), 'to review')
     await user.type(screen.getByLabelText('Description'), 'Needs another look')
     await user.click(screen.getByRole('button', { name: 'Create tag' }))
-    await waitFor(() => expect(api.createTag).toHaveBeenCalledWith({
-      name: 'to review',
-      description: 'Needs another look',
-    }))
+    await waitFor(() =>
+      expect(api.createTag).toHaveBeenCalledWith({
+        name: 'to review',
+        description: 'Needs another look',
+      }),
+    )
 
     await user.click(screen.getByRole('tab', { name: 'Authors' }))
     await user.click(await screen.findByRole('button', { name: 'Add author' }))
     await user.type(screen.getByLabelText('Primary name'), 'New Author')
     await user.type(screen.getByLabelText('Alternative names'), 'Pen Name')
     await user.click(screen.getByRole('button', { name: 'Create author' }))
-    await waitFor(() => expect(api.createAuthor).toHaveBeenCalledWith({
-      primaryName: 'New Author',
-      otherNames: ['Pen Name'],
-    }))
+    await waitFor(() =>
+      expect(api.createAuthor).toHaveBeenCalledWith({
+        primaryName: 'New Author',
+        otherNames: ['Pen Name'],
+      }),
+    )
   })
 
   it('shows global tags as read-only', async () => {
-    vi.mocked(api.searchTags).mockResolvedValue([{ ...tag, id: 'global-tag', name: 'official', isGlobal: true }])
+    vi.mocked(api.searchTags).mockResolvedValue([
+      { ...tag, id: 'global-tag', name: 'official', isGlobal: true },
+    ])
     renderWithProviders(<ManagePage />)
 
     expect(await screen.findByText('Global')).toBeInTheDocument()
@@ -203,7 +216,9 @@ describe('ManagePage', () => {
   })
 
   it('shows cloned global author identities as read-only known authors', async () => {
-    vi.mocked(api.searchAuthors).mockResolvedValue([{ ...author, id: 'global-author', isPublic: true, isOwned: false }])
+    vi.mocked(api.searchAuthors).mockResolvedValue([
+      { ...author, id: 'global-author', isPublic: true, isOwned: false },
+    ])
     const user = userEvent.setup()
     renderWithProviders(<ManagePage />)
 
@@ -231,10 +246,16 @@ describe('ManagePage', () => {
     renderWithProviders(<ManagePage />)
 
     await user.click(screen.getByRole('tab', { name: 'Books' }))
-    await user.click(await screen.findByRole('button', { name: `Refresh listing ${bookListItems[0].primaryTitle}` }))
+    await user.click(
+      await screen.findByRole('button', {
+        name: `Refresh listing ${bookListItems[0].primaryTitle}`,
+      }),
+    )
     await waitFor(() => expect(api.refreshPublishedBook).toHaveBeenCalledWith(publishedBook.id))
 
-    await user.click(screen.getByRole('button', { name: `Unlist ${bookListItems[0].primaryTitle}` }))
+    await user.click(
+      screen.getByRole('button', { name: `Unlist ${bookListItems[0].primaryTitle}` }),
+    )
     await waitFor(() => expect(api.unlistPublishedBook).toHaveBeenCalledWith(publishedBook.id))
 
     await user.click(screen.getByRole('button', { name: `List ${bookListItems[1].primaryTitle}` }))
@@ -248,9 +269,13 @@ describe('ManagePage', () => {
     await user.click(screen.getByRole('tab', { name: 'Books' }))
     await user.type(screen.getByPlaceholderText(/-tag:dropped/i), '-rating:8 -genre:romance')
 
-    await waitFor(() => expect(api.getManagedBooks).toHaveBeenLastCalledWith(expect.objectContaining({
-      query: '-rating:8 -genre:romance',
-    })))
+    await waitFor(() =>
+      expect(api.getManagedBooks).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          query: '-rating:8 -genre:romance',
+        }),
+      ),
+    )
   })
 
   it('renders the server order and blocks incomplete listings', async () => {
@@ -266,11 +291,9 @@ describe('ManagePage', () => {
       tagsCount: 0,
       cover: null,
     }
-    vi.mocked(api.getManagedBooks).mockResolvedValue(paginated([
-      managedBookRows[0],
-      { book: incomplete, listing: null },
-      managedBookRows[1],
-    ]))
+    vi.mocked(api.getManagedBooks).mockResolvedValue(
+      paginated([managedBookRows[0], { book: incomplete, listing: null }, managedBookRows[1]]),
+    )
     renderWithProviders(<ManagePage />)
 
     await userEvent.click(screen.getByRole('tab', { name: 'Books' }))
@@ -288,17 +311,36 @@ describe('ManagePage', () => {
     const privateB = { ...managedBooks[0], id: 'private-b', primaryTitle: 'B private' }
     const listedC = { ...managedBooks[0], id: 'listed-c', primaryTitle: 'C listed' }
     const listedZ = { ...managedBooks[0], id: 'listed-z', primaryTitle: 'Z listed' }
-    vi.mocked(api.getManagedBooks).mockResolvedValue(paginated([
-      { book: listedC, listing: { id: 'snapshot-c', sourceBookId: listedC.id, snapshotAt: publishedBook.snapshotAt } },
-      { book: listedZ, listing: { id: 'snapshot-z', sourceBookId: listedZ.id, snapshotAt: publishedBook.snapshotAt } },
-      { book: privateA, listing: null },
-      { book: privateB, listing: null },
-    ]))
+    vi.mocked(api.getManagedBooks).mockResolvedValue(
+      paginated([
+        {
+          book: listedC,
+          listing: {
+            id: 'snapshot-c',
+            sourceBookId: listedC.id,
+            snapshotAt: publishedBook.snapshotAt,
+          },
+        },
+        {
+          book: listedZ,
+          listing: {
+            id: 'snapshot-z',
+            sourceBookId: listedZ.id,
+            snapshotAt: publishedBook.snapshotAt,
+          },
+        },
+        { book: privateA, listing: null },
+        { book: privateB, listing: null },
+      ]),
+    )
     renderWithProviders(<ManagePage />)
 
     await userEvent.click(screen.getByRole('tab', { name: 'Books' }))
     const list = await screen.findByLabelText('Books')
-    const titles = Array.from(list.querySelectorAll('.manage-item__body strong'), (title) => title.textContent)
+    const titles = Array.from(
+      list.querySelectorAll('.manage-item__body strong'),
+      (title) => title.textContent,
+    )
 
     expect(titles).toEqual(['C listed', 'Z listed', 'A private', 'B private'])
   })
@@ -315,7 +357,9 @@ describe('ManagePage', () => {
         thumbnailImageUrl: '/api/book/legacy/cover/thumbnail',
       },
     }
-    vi.mocked(api.getManagedBooks).mockResolvedValue(paginated([{ book: legacyCoverBook, listing: null }]))
+    vi.mocked(api.getManagedBooks).mockResolvedValue(
+      paginated([{ book: legacyCoverBook, listing: null }]),
+    )
     const user = userEvent.setup()
     renderWithProviders(<ManagePage />)
 
@@ -341,22 +385,31 @@ describe('ManagePage', () => {
       skip: 50,
       take: 50,
       total: 51,
-      data: [{
-        book: laterBook,
-        listing: {
-          id: publishedBook.id,
-          sourceBookId: laterBook.id,
-          snapshotAt: publishedBook.snapshotAt,
+      data: [
+        {
+          book: laterBook,
+          listing: {
+            id: publishedBook.id,
+            sourceBookId: laterBook.id,
+            snapshotAt: publishedBook.snapshotAt,
+          },
         },
-      }],
+      ],
     }
     let resolveNextPage!: (result: typeof nextPageResult) => void
     const nextPage = new Promise<typeof nextPageResult>((resolve) => {
       resolveNextPage = resolve
     })
-    vi.mocked(api.getManagedBooks).mockImplementation(async ({ skip = 0 }) => skip === 0
-      ? { skip: 0, take: 50, total: 51, data: firstLibraryPage.map((book) => ({ book, listing: null })) }
-      : nextPage)
+    vi.mocked(api.getManagedBooks).mockImplementation(async ({ skip = 0 }) =>
+      skip === 0
+        ? {
+            skip: 0,
+            take: 50,
+            total: 51,
+            data: firstLibraryPage.map((book) => ({ book, listing: null })),
+          }
+        : nextPage,
+    )
     renderWithProviders(<ManagePage />)
 
     await userEvent.click(screen.getByRole('tab', { name: 'Books' }))
@@ -370,11 +423,13 @@ describe('ManagePage', () => {
     fireEvent.scroll(list)
     fireEvent.scroll(list)
 
-    await waitFor(() => expect(api.getManagedBooks).toHaveBeenCalledWith({
-      skip: 50,
-      take: 50,
-      query: undefined,
-    }))
+    await waitFor(() =>
+      expect(api.getManagedBooks).toHaveBeenCalledWith({
+        skip: 50,
+        take: 50,
+        query: undefined,
+      }),
+    )
     expect(api.getManagedBooks).toHaveBeenCalledTimes(2)
     resolveNextPage(nextPageResult)
     expect(await screen.findByText('A later listed book')).toBeInTheDocument()
@@ -382,9 +437,11 @@ describe('ManagePage', () => {
 
   it('does not render a book twice when adjacent pages overlap', async () => {
     const repeated = managedBookRows[0]
-    vi.mocked(api.getManagedBooks).mockImplementation(async ({ skip = 0 }) => skip === 0
-      ? { skip: 0, take: 1, total: 2, data: [repeated] }
-      : { skip: 1, take: 1, total: 2, data: [repeated] })
+    vi.mocked(api.getManagedBooks).mockImplementation(async ({ skip = 0 }) =>
+      skip === 0
+        ? { skip: 0, take: 1, total: 2, data: [repeated] }
+        : { skip: 1, take: 1, total: 2, data: [repeated] },
+    )
     renderWithProviders(<ManagePage />)
 
     await userEvent.click(screen.getByRole('tab', { name: 'Books' }))
@@ -396,11 +453,13 @@ describe('ManagePage', () => {
     })
     fireEvent.scroll(list)
 
-    await waitFor(() => expect(api.getManagedBooks).toHaveBeenCalledWith({
-      skip: 1,
-      take: 50,
-      query: undefined,
-    }))
+    await waitFor(() =>
+      expect(api.getManagedBooks).toHaveBeenCalledWith({
+        skip: 1,
+        take: 50,
+        query: undefined,
+      }),
+    )
     expect(screen.getAllByText(repeated.book.primaryTitle)).toHaveLength(1)
   })
 })

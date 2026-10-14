@@ -13,7 +13,12 @@ type EstimatedReadingTimeChartProps = {
   onSave: (settings: Record<string, number>) => Promise<unknown>
 }
 
-export function EstimatedReadingTimeChart({ data, settings, isSaving = false, onSave }: EstimatedReadingTimeChartProps) {
+export function EstimatedReadingTimeChart({
+  data,
+  settings,
+  isSaving = false,
+  onSave,
+}: EstimatedReadingTimeChartProps) {
   const items = data?.progress.typeVolumes ?? []
   const minutesPerType = useMemo(() => getMinutesByType(items, settings), [items, settings])
   const [draftMinutesPerType, setDraftMinutesPerType] = useState<Record<string, number>>({})
@@ -25,7 +30,11 @@ export function EstimatedReadingTimeChart({ data, settings, isSaving = false, on
   const totalHours = estimates.reduce((sum, item) => sum + item.hours, 0)
 
   if (!items.length) {
-    return <div className="grid min-h-56 place-items-center text-sm text-slate-500">No chapter data to estimate reading time.</div>
+    return (
+      <div className="grid min-h-56 place-items-center text-sm text-slate-500">
+        No chapter data to estimate reading time.
+      </div>
+    )
   }
 
   return (
@@ -34,7 +43,9 @@ export function EstimatedReadingTimeChart({ data, settings, isSaving = false, on
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="text-sm font-semibold text-slate-950">Estimated total</div>
-            <div className="mt-1 text-3xl font-semibold text-slate-950">{formatHours(totalHours)}</div>
+            <div className="mt-1 text-3xl font-semibold text-slate-950">
+              {formatHours(totalHours)}
+            </div>
           </div>
           <button
             aria-pressed={isEditing}
@@ -57,7 +68,8 @@ export function EstimatedReadingTimeChart({ data, settings, isSaving = false, on
           </button>
         </div>
         <div className="mt-2 text-sm text-slate-500">
-          {formatDays(totalHours)} · {formatMonths(totalHours)} · {formatYears(totalHours)} based on known current chapters.
+          {formatDays(totalHours)} · {formatMonths(totalHours)} · {formatYears(totalHours)} based on
+          known current chapters.
         </div>
       </Surface>
       <div className="grid gap-2">
@@ -65,7 +77,9 @@ export function EstimatedReadingTimeChart({ data, settings, isSaving = false, on
           <Surface as="div" className="grid gap-2 p-3" key={item.type}>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <span className="font-semibold text-slate-950">{item.type}</span>
-              <span className="text-sm text-slate-500">{formatChapterCount(item.currentChapters)} chapters · {formatHours(item.hours)}</span>
+              <span className="text-sm text-slate-500">
+                {formatChapterCount(item.currentChapters)} chapters · {formatHours(item.hours)}
+              </span>
             </div>
             {isEditing ? (
               <div className="flex flex-wrap items-center gap-3">
@@ -84,7 +98,9 @@ export function EstimatedReadingTimeChart({ data, settings, isSaving = false, on
                 <span className="text-sm text-slate-600">minutes per chapter</span>
               </div>
             ) : (
-              <div className="text-sm text-slate-600">{formatCount(item.minutesPerChapter)} minutes per chapter</div>
+              <div className="text-sm text-slate-600">
+                {formatCount(item.minutesPerChapter)} minutes per chapter
+              </div>
             )}
           </Surface>
         ))}
@@ -93,7 +109,10 @@ export function EstimatedReadingTimeChart({ data, settings, isSaving = false, on
   )
 }
 
-export function estimatedReadingTimeRows(data?: BookAnalyticsDto, settings: Record<string, number> = {}) {
+export function estimatedReadingTimeRows(
+  data?: BookAnalyticsDto,
+  settings: Record<string, number> = {},
+) {
   return getEstimatedReadingRows(data?.progress.typeVolumes ?? [], settings).map((item) => [
     item.type,
     formatChapterCount(item.currentChapters),
@@ -106,10 +125,15 @@ function getMinutesByType(
   items: NonNullable<BookAnalyticsDto['progress']>['typeVolumes'],
   settings: Record<string, number>,
 ) {
-  return Object.fromEntries(items.map((item) => [item.type, normalizeMinutes(settings[item.type] ?? 5)]))
+  return Object.fromEntries(
+    items.map((item) => [item.type, normalizeMinutes(settings[item.type] ?? 5)]),
+  )
 }
 
-function getEstimatedReadingRows(items: NonNullable<BookAnalyticsDto['progress']>['typeVolumes'], settings: Record<string, number>) {
+function getEstimatedReadingRows(
+  items: NonNullable<BookAnalyticsDto['progress']>['typeVolumes'],
+  settings: Record<string, number>,
+) {
   return items.map((item) => {
     const minutesPerChapter = normalizeMinutes(settings[item.type] ?? 5)
     return {

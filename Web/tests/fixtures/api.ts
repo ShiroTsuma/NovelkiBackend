@@ -31,7 +31,8 @@ export const layoutBooks = [
     id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
     created: '2026-01-02T10:00:00Z',
     lastModified: '2026-02-02T10:00:00Z',
-    primaryTitle: 'A Very Long Book Title That Should Stay Inside Its Card Container Without Pushing Actions Away',
+    primaryTitle:
+      'A Very Long Book Title That Should Stay Inside Its Card Container Without Pushing Actions Away',
     alternativeTitles: [],
     author: 'Toika',
     contentType: 'Novel',
@@ -63,13 +64,37 @@ const dictionaries = {
 }
 
 const managedTags = [
-  { id: '40000000-0000-0000-0000-000000000001', name: 'favorite', description: 'Worth rereading', color: null, isGlobal: false },
-  { id: '40000000-0000-0000-0000-000000000002', name: 'mystery', description: null, color: null, isGlobal: true },
+  {
+    id: '40000000-0000-0000-0000-000000000001',
+    name: 'favorite',
+    description: 'Worth rereading',
+    color: null,
+    isGlobal: false,
+  },
+  {
+    id: '40000000-0000-0000-0000-000000000002',
+    name: 'mystery',
+    description: null,
+    color: null,
+    isGlobal: true,
+  },
 ]
 
 const managedAuthors = [
-  { id: '50000000-0000-0000-0000-000000000001', primaryName: 'Cuttlefish', otherNames: ['Cuttlefish That Loves Diving'], isPublic: true, isOwned: false },
-  { id: '50000000-0000-0000-0000-000000000002', primaryName: 'Toika', otherNames: [], isPublic: false, isOwned: true },
+  {
+    id: '50000000-0000-0000-0000-000000000001',
+    primaryName: 'Cuttlefish',
+    otherNames: ['Cuttlefish That Loves Diving'],
+    isPublic: true,
+    isOwned: false,
+  },
+  {
+    id: '50000000-0000-0000-0000-000000000002',
+    primaryName: 'Toika',
+    otherNames: [],
+    isPublic: false,
+    isOwned: true,
+  },
 ]
 
 export const invalidImportSession = {
@@ -123,14 +148,16 @@ const analytics = {
     booksWithoutKnownCurrentChapter: 1,
   },
   composition: {
-    statusByType: [{
-      type: 'Novel',
-      totalBooks: 6,
-      statuses: [
-        { status: 'Reading', bookCount: 4 },
-        { status: 'Completed', bookCount: 2 },
-      ],
-    }],
+    statusByType: [
+      {
+        type: 'Novel',
+        totalBooks: 6,
+        statuses: [
+          { status: 'Reading', bookCount: 4 },
+          { status: 'Completed', bookCount: 2 },
+        ],
+      },
+    ],
     genres: [{ name: 'Fantasy', bookCount: 6, shareOfBooks: 60 }],
     tags: [{ name: 'favorite', bookCount: 4, shareOfBooks: 40 }],
   },
@@ -144,38 +171,49 @@ const analytics = {
     })),
   },
   planning: {
-    prioritiesByStatus: [{
-      status: 'Reading',
-      totalBooks: 6,
-      priorities: [
-        { priority: '1', bookCount: 2 },
-        { priority: 'Unset', bookCount: 4 },
-      ],
-    }],
+    prioritiesByStatus: [
+      {
+        status: 'Reading',
+        totalBooks: 6,
+        priorities: [
+          { priority: '1', bookCount: 2 },
+          { priority: 'Unset', bookCount: 4 },
+        ],
+      },
+    ],
   },
   progress: {
-    typeVolumes: [{
-      type: 'Novel',
-      bookCount: 6,
-      currentChapters: 468,
-      averageCurrentChapter: 78,
-      medianCurrentChapter: 64,
-    }],
+    typeVolumes: [
+      {
+        type: 'Novel',
+        bookCount: 6,
+        currentChapters: 468,
+        averageCurrentChapter: 78,
+        medianCurrentChapter: 64,
+      },
+    ],
   },
   activity: {
     baselineChapters: 0,
-    points: [{
-      date: '2026-01-05',
-      progressEvents: 3,
-      booksTouched: 2,
-      chaptersAdvanced: 18,
-    }],
+    points: [
+      {
+        date: '2026-01-05',
+        progressEvents: 3,
+        booksTouched: 2,
+        chaptersAdvanced: 18,
+      },
+    ],
   },
   libraryGrowth: {
     openingCount: 0,
     points: [
       { date: '2026-01-01', booksAdded: 0, cumulativeBooks: 4, byType: [] },
-      { date: '2026-01-08', booksAdded: 6, cumulativeBooks: 10, byType: [{ type: 'Novel', bookCount: 6 }] },
+      {
+        date: '2026-01-08',
+        booksAdded: 6,
+        cumulativeBooks: 10,
+        byType: [{ type: 'Novel', bookCount: 6 }],
+      },
     ],
   },
   quality: {
@@ -184,16 +222,12 @@ const analytics = {
       { field: 'genre', bookCount: 6, shareOfBooks: 60 },
       { field: 'usableCover', bookCount: 4, shareOfBooks: 40 },
     ],
-    linkSources: [
-      { source: 'NovelUpdates', linkCount: 8, bookCount: 6, shareOfBooks: 60 },
-    ],
+    linkSources: [{ source: 'NovelUpdates', linkCount: 8, bookCount: 6, shareOfBooks: 60 }],
     coverStatuses: [
       { status: 'Found', bookCount: 4, shareOfBooks: 40 },
       { status: 'Pending', bookCount: 2, shareOfBooks: 20 },
     ],
-    coverSources: [
-      { source: 'NovelUpdates', bookCount: 4, shareOfBooks: 40 },
-    ],
+    coverSources: [{ source: 'NovelUpdates', bookCount: 4, shareOfBooks: 40 }],
   },
 }
 
@@ -209,15 +243,36 @@ export async function installLayoutApiMocks(page: Page) {
     const path = url.pathname.replace('/api/v1/', '')
 
     if (path === 'book/files/limits') {
-      await route.fulfill({ json: { maxFileBytes: 104857600, maxUploadBytes: 314572800, maxFilesPerImport: 100, maxLibraryArchiveBytes: 12884901888, retentionDays: 30 } })
+      await route.fulfill({
+        json: {
+          maxFileBytes: 104857600,
+          maxUploadBytes: 314572800,
+          maxFilesPerImport: 100,
+          maxLibraryArchiveBytes: 12884901888,
+          retentionDays: 30,
+        },
+      })
       return
     }
-    if (path === 'book/files/sessions' || path === 'book/files/export/candidates' || /^public-book\/[^/]+\/files$/.test(path)) {
+    if (
+      path === 'book/files/sessions' ||
+      path === 'book/files/export/candidates' ||
+      /^public-book\/[^/]+\/files$/.test(path)
+    ) {
       await route.fulfill({ json: [] })
       return
     }
     if (/^book\/[^/]+\/files$/.test(path)) {
-      await route.fulfill({ json: { files: [], snapshotId: null, usedStorageBytes: 0, maxStorageBytes: 10737418240, maxFileBytes: 104857600, maxUploadBytes: 314572800 } })
+      await route.fulfill({
+        json: {
+          files: [],
+          snapshotId: null,
+          usedStorageBytes: 0,
+          maxStorageBytes: 10737418240,
+          maxFileBytes: 104857600,
+          maxUploadBytes: 314572800,
+        },
+      })
       return
     }
 
@@ -258,17 +313,22 @@ export async function installLayoutApiMocks(page: Page) {
             { id: null, name: 'Unmapped Genre With a Long Name' },
           ],
           tags: ['Chinese', 'Slow Romance', 'Long Form Adventure'],
-          description: 'A resolved description long enough to exercise the clamped preview without expanding the dialog beyond the viewport.',
+          description:
+            'A resolved description long enough to exercise the clamped preview without expanding the dialog beyond the viewport.',
           canonicalUrl: 'https://www.novelupdates.com/series/layout-test-novel/',
           coverUrl: 'https://cdn.example.com/layout-test-cover.jpg',
-          warnings: ["Genre 'Unmapped Genre With a Long Name' is not present in the library and will be skipped."],
+          warnings: [
+            "Genre 'Unmapped Genre With a Long Name' is not present in the library and will be skipped.",
+          ],
         },
       })
       return
     }
 
     if (path === 'book') {
-      await route.fulfill({ json: { skip: 0, take: 20, total: layoutBooks.length, data: layoutBooks } })
+      await route.fulfill({
+        json: { skip: 0, take: 20, total: layoutBooks.length, data: layoutBooks },
+      })
       return
     }
 
@@ -288,22 +348,34 @@ export async function installLayoutApiMocks(page: Page) {
           skip: 0,
           take: 40,
           total: 1,
-          data: [{
-            id: 'snapshot-layout',
-            sourceBookId: layoutBooks[0].id,
-            primaryTitle: 'Lord of Mysteries',
-            description: 'A shared mystery with enough metadata to exercise the card tooltips.',
-            alternativeTitles: ['LOTM'],
-            author: 'Cuttlefish',
-            authorOtherNames: [],
-            contentType: 'Novel',
-            totalChapters: 1432,
-            genres: [{ name: 'Fantasy', description: 'Magic, strange worlds, and supernatural stories.' }],
-            tags: [{ name: 'Mystery', description: 'Secrets and investigations that may extend beyond the card.' }],
-            coverUrl: null,
-            snapshotAt: '2026-07-18T12:00:00Z',
-            isOwner: false,
-          }],
+          data: [
+            {
+              id: 'snapshot-layout',
+              sourceBookId: layoutBooks[0].id,
+              primaryTitle: 'Lord of Mysteries',
+              description: 'A shared mystery with enough metadata to exercise the card tooltips.',
+              alternativeTitles: ['LOTM'],
+              author: 'Cuttlefish',
+              authorOtherNames: [],
+              contentType: 'Novel',
+              totalChapters: 1432,
+              genres: [
+                {
+                  name: 'Fantasy',
+                  description: 'Magic, strange worlds, and supernatural stories.',
+                },
+              ],
+              tags: [
+                {
+                  name: 'Mystery',
+                  description: 'Secrets and investigations that may extend beyond the card.',
+                },
+              ],
+              coverUrl: null,
+              snapshotAt: '2026-07-18T12:00:00Z',
+              isOwner: false,
+            },
+          ],
         },
       })
       return

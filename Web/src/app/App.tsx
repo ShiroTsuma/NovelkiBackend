@@ -40,8 +40,22 @@ export function App() {
               <Route path="/books/new" element={<BookFormPage mode="create" />} />
               <Route path="/books/:id" element={<BookDetailsPage />} />
               <Route path="/books/:id/edit" element={<BookFormPage mode="edit" />} />
-              <Route path="/admin" element={<AdminOnly><AdminPage /></AdminOnly>} />
-              <Route path="/admin/books/:id/edit" element={<AdminOnly><BookFormPage admin mode="edit" /></AdminOnly>} />
+              <Route
+                path="/admin"
+                element={
+                  <AdminOnly>
+                    <AdminPage />
+                  </AdminOnly>
+                }
+              />
+              <Route
+                path="/admin/books/:id/edit"
+                element={
+                  <AdminOnly>
+                    <BookFormPage admin mode="edit" />
+                  </AdminOnly>
+                }
+              />
               <Route path="/" element={<Navigate to="/books" replace />} />
             </Route>
             <Route path="*" element={<Navigate to="/books" replace />} />
@@ -74,8 +88,10 @@ function ProtectedLayout() {
     return <Navigate to="/login" replace />
   }
 
-  return <>
-    <CoverUploadOutbox />
-    <AppShell />
-  </>
+  return (
+    <>
+      <CoverUploadOutbox />
+      <AppShell />
+    </>
+  )
 }

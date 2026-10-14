@@ -34,7 +34,10 @@ test('app shell keeps stable page landmarks and primary structure', async ({ pag
 
   await expect(page.getByRole('navigation', { name: /primary/i })).toBeVisible()
   await expect(page.getByRole('link', { name: /books/i })).toHaveAttribute('aria-current', 'page')
-  await expect(page.getByRole('link', { name: /skip to content/i })).toHaveAttribute('href', '#main-content')
+  await expect(page.getByRole('link', { name: /skip to content/i })).toHaveAttribute(
+    'href',
+    '#main-content',
+  )
 
   await expectNoHorizontalOverflow(page)
 
@@ -50,7 +53,10 @@ test('quiet structure POC keeps its defining visual rules', async ({ page }) => 
 
   const title = page.getByRole('heading', { name: 'Books' })
   const addButton = page.getByRole('link', { name: /add book/i })
-  const mainSurface = page.locator('.ui-surface').filter({ has: page.getByRole('table') }).first()
+  const mainSurface = page
+    .locator('.ui-surface')
+    .filter({ has: page.getByRole('table') })
+    .first()
 
   await expect(title).toHaveCSS('font-family', /IBM Plex Sans/)
   await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(5, 7, 11)')
@@ -61,21 +67,29 @@ test('quiet structure POC keeps its defining visual rules', async ({ page }) => 
 
   await page.goto('/books/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
   await page.getByRole('button', { name: /progress/i }).click()
-  await expect(page.getByRole('dialog').locator('.ui-dialog-panel')).toHaveCSS('border-radius', '4px')
+  await expect(page.getByRole('dialog').locator('.ui-dialog-panel')).toHaveCSS(
+    'border-radius',
+    '4px',
+  )
 })
 
 test('mobile navigation and primary actions keep touch targets', async ({ page }) => {
   test.skip(page.viewportSize()!.width >= 768, 'Mobile-only touch target coverage')
   await page.goto('/books')
 
-  await expectMinHeight(page.getByRole('navigation', { name: /primary/i }).getByRole('link', { name: /books/i }), 44)
+  await expectMinHeight(
+    page.getByRole('navigation', { name: /primary/i }).getByRole('link', { name: /books/i }),
+    44,
+  )
   await expectMinHeight(page.getByRole('button', { name: /log out/i }), 44)
   await expectMinHeight(page.getByRole('button', { name: /summary/i }), 44)
   await expectMinHeight(page.getByRole('button', { name: /^import$/i }), 44)
   await expectMinHeight(page.getByRole('link', { name: /add book/i }), 44)
 })
 
-test('books table layout has no horizontal overflow and keeps controls in viewport', async ({ page }) => {
+test('books table layout has no horizontal overflow and keeps controls in viewport', async ({
+  page,
+}) => {
   await page.goto('/books')
   await expect(page.getByRole('table')).toBeVisible()
 
@@ -90,14 +104,15 @@ test('books table layout has no horizontal overflow and keeps controls in viewpo
   await page.reload()
   await expect(page.getByRole('table')).toBeVisible()
   const initialPopupPositions = await page.evaluate(async () => {
-    const button = Array.from(document.querySelectorAll('button'))
-      .find((element) => element.textContent?.trim() === 'Columns')
+    const button = Array.from(document.querySelectorAll('button')).find(
+      (element) => element.textContent?.trim() === 'Columns',
+    )
     if (!(button instanceof HTMLButtonElement)) {
       throw new Error('Expected the Columns button after refresh.')
     }
 
     button.click()
-    const positions: Array<{ left: number; top: number }> = []
+    const positions: { left: number; top: number }[] = []
     for (let frame = 0; frame < 3; frame += 1) {
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
       const popup = document.querySelector('[data-testid="column-settings-popup"]')
@@ -122,8 +137,12 @@ test('books table hover highlight reaches the sticky actions cell', async ({ pag
 
   await page.getByTestId('book-table-row-aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa').hover()
 
-  const titleBackground = await backgroundColor(page.getByTestId('book-table-cell-aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa-title'))
-  const actionsBackground = await backgroundColor(page.getByTestId('book-table-actions-cell-aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'))
+  const titleBackground = await backgroundColor(
+    page.getByTestId('book-table-cell-aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa-title'),
+  )
+  const actionsBackground = await backgroundColor(
+    page.getByTestId('book-table-actions-cell-aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
+  )
   const alternativeBadgeBackground = await backgroundColor(page.getByLabel('1 alternative title'))
 
   expect(actionsBackground).toBe(titleBackground)
@@ -133,7 +152,10 @@ test('books table hover highlight reaches the sticky actions cell', async ({ pag
 })
 
 test('quiet structure reference screens stay visually stable', async ({ page }, testInfo) => {
-  test.skip(isTabletProject(testInfo.project.name), 'Tablet baselines are covered by the dedicated Xiaomi Pad 6 suite')
+  test.skip(
+    isTabletProject(testInfo.project.name),
+    'Tablet baselines are covered by the dedicated Xiaomi Pad 6 suite',
+  )
   await page.emulateMedia({ reducedMotion: 'reduce' })
 
   await page.goto('/books')
@@ -180,12 +202,17 @@ test('quiet structure reference screens stay visually stable', async ({ page }, 
 async function waitForVisualReady(page: import('@playwright/test').Page) {
   await page.evaluate(async () => {
     await document.fonts.ready
-    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+    )
   })
 }
 
 test('cards layout constrains long titles and shows active toggle styles', async ({ page }) => {
-  test.skip(page.viewportSize()!.width < 1024, 'Dense card track coverage requires the desktop grid')
+  test.skip(
+    page.viewportSize()!.width < 1024,
+    'Dense card track coverage requires the desktop grid',
+  )
   await page.goto('/books')
   await page.getByRole('button', { name: /cards/i }).click()
   await page.getByLabel('Cards per row').selectOption('8')
@@ -201,7 +228,9 @@ test('cards layout constrains long titles and shows active toggle styles', async
   })
   const titleBox = await requiredBox(longTitle)
   const cardBox = await requiredBox(longTitle.locator('xpath=ancestor::article[1]'))
-  const coverBox = await requiredBox(longTitle.locator('xpath=ancestor::article[1]').locator('.book-card__cover'))
+  const coverBox = await requiredBox(
+    longTitle.locator('xpath=ancestor::article[1]').locator('.book-card__cover'),
+  )
 
   expect(titleBox.x).toBeGreaterThanOrEqual(cardBox.x)
   expect(titleBox.x + titleBox.width).toBeLessThanOrEqual(cardBox.x + cardBox.width + 1)
@@ -210,15 +239,17 @@ test('cards layout constrains long titles and shows active toggle styles', async
   expect(Math.abs(coverBox.y - cardBox.y)).toBeLessThanOrEqual(1)
   expect(Math.abs(coverBox.width - cardBox.width)).toBeLessThanOrEqual(2)
 
-  const cardBoxes = await page.locator('.book-card').evaluateAll((cards) => cards.map((card) => {
-    const cardRect = card.getBoundingClientRect()
-    const coverRect = card.querySelector('.book-card__cover')!.getBoundingClientRect()
-    return {
-      cardRight: cardRect.right,
-      cardWidth: cardRect.width,
-      coverWidth: coverRect.width,
-    }
-  }))
+  const cardBoxes = await page.locator('.book-card').evaluateAll((cards) =>
+    cards.map((card) => {
+      const cardRect = card.getBoundingClientRect()
+      const coverRect = card.querySelector('.book-card__cover')!.getBoundingClientRect()
+      return {
+        cardRight: cardRect.right,
+        cardWidth: cardRect.width,
+        coverWidth: coverRect.width,
+      }
+    }),
+  )
   const expectedWidth = cardBoxes[0].cardWidth
   cardBoxes.forEach(({ cardRight, cardWidth, coverWidth }) => {
     expect(Math.abs(cardWidth - expectedWidth)).toBeLessThanOrEqual(1)
@@ -235,7 +266,10 @@ test('cards layout constrains long titles and shows active toggle styles', async
 
   const lowRatingBadge = page.getByLabel('Rating 5 out of 10')
   await expect(lowRatingBadge).toHaveCSS('border-color', 'rgba(251, 113, 133, 0.72)')
-  await expect(lowRatingBadge.locator('.book-card-rating__star')).toHaveCSS('color', 'rgb(251, 113, 133)')
+  await expect(lowRatingBadge.locator('.book-card-rating__star')).toHaveCSS(
+    'color',
+    'rgb(251, 113, 133)',
+  )
 
   const cardStatus = page.getByLabel('Book status: Reading')
   await expect(cardStatus).toContainText('Status')
@@ -261,7 +295,9 @@ test('discover metadata tooltips can extend beyond their card', async ({ page })
   const mystery = page.getByText('Mystery', { exact: true })
 
   const viewportWidth = page.viewportSize()!.width
-  const columnCount = await grid.evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(' ').length)
+  const columnCount = await grid.evaluate(
+    (element) => getComputedStyle(element).gridTemplateColumns.split(' ').length,
+  )
   expect(columnCount).toBe(viewportWidth >= 1200 ? 3 : viewportWidth >= 768 ? 2 : 1)
   await expect(card).toBeVisible()
   await expect(card).toHaveCSS('overflow', 'visible')
@@ -304,12 +340,15 @@ test('search and compact selects reserve space for their icons', async ({ page }
 
   await page.getByRole('button', { name: /cards/i }).click()
   const cardsPerRow = page.getByLabel('Cards per row')
-  const expectedColumnCount = page.viewportSize()!.width >= 1024
-    ? 4
-    : page.viewportSize()!.width >= 640 ? 2 : 1
-  await expect.poll(() => page.locator('.book-card-grid').evaluate(
-    (element) => getComputedStyle(element).gridTemplateColumns.split(' ').length,
-  )).toBe(expectedColumnCount)
+  const expectedColumnCount =
+    page.viewportSize()!.width >= 1024 ? 4 : page.viewportSize()!.width >= 640 ? 2 : 1
+  await expect
+    .poll(() =>
+      page
+        .locator('.book-card-grid')
+        .evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(' ').length),
+    )
+    .toBe(expectedColumnCount)
   if (page.viewportSize()!.width >= 1024) {
     await expect(cardsPerRow).toHaveCSS('padding-right', '32px')
     const cardsPerRowBox = await requiredBox(cardsPerRow)
@@ -320,7 +359,9 @@ test('search and compact selects reserve space for their icons', async ({ page }
   }
 })
 
-test('advanced search suggestions stay usable inside desktop and mobile viewports', async ({ page }) => {
+test('advanced search suggestions stay usable inside desktop and mobile viewports', async ({
+  page,
+}) => {
   await page.goto('/books')
   const search = page.getByRole('combobox', { name: 'Search books' })
 
@@ -337,7 +378,9 @@ test('advanced search suggestions stay usable inside desktop and mobile viewport
   await expectNoHorizontalOverflow(page)
 })
 
-test('page numbers are round and borderless while direction controls remain structural', async ({ page }) => {
+test('page numbers are round and borderless while direction controls remain structural', async ({
+  page,
+}) => {
   await page.route('**/api/v1/book?**', async (route) => {
     await route.fulfill({
       json: {
@@ -370,9 +413,13 @@ test('analytics layout exposes chart structure without page overflow', async ({ 
   await page.goto('/analytics')
   await expect(page.getByRole('heading', { name: 'Analytics' })).toBeVisible()
   await expect(page.getByText('Status by type')).toBeVisible()
-  await expect(page.getByRole('columnheader', { name: 'Unset' })).toHaveCSS('color', 'rgb(154, 165, 180)')
-  await expect(page.getByTestId('priority-heatmap').getByRole('link', { name: '4', exact: true }))
-    .toHaveCSS('color', 'rgb(8, 10, 16)')
+  await expect(page.getByRole('columnheader', { name: 'Unset' })).toHaveCSS(
+    'color',
+    'rgb(154, 165, 180)',
+  )
+  await expect(
+    page.getByTestId('priority-heatmap').getByRole('link', { name: '4', exact: true }),
+  ).toHaveCSS('color', 'rgb(8, 10, 16)')
 
   await expectNoHorizontalOverflow(page)
   await expectFitsViewportWidth(page.locator('main'))
@@ -384,11 +431,15 @@ test('analytics layout exposes chart structure without page overflow', async ({ 
   await expectInViewport(page.getByRole('button', { name: /date range/i }))
 
   await page.getByRole('button', { name: /date range/i }).click()
-  const rangeMiddle = page.locator('.analytics-calendar-day--range-middle')
+  const rangeMiddle = page
+    .locator('.analytics-calendar-day--range-middle')
     .filter({ has: page.locator('.analytics-calendar-day-button') })
     .first()
   await expect(rangeMiddle).toHaveCSS('background-color', 'rgb(52, 58, 104)')
-  await expect(rangeMiddle.locator('.analytics-calendar-day-button')).toHaveCSS('color', 'rgb(238, 242, 247)')
+  await expect(rangeMiddle.locator('.analytics-calendar-day-button')).toHaveCSS(
+    'color',
+    'rgb(238, 242, 247)',
+  )
 })
 
 test('manage metadata workspace and editor fit desktop and mobile viewports', async ({ page }) => {
@@ -422,7 +473,9 @@ test('progress dialog exposes error state through DOM and stays centered', async
   await chapterInput.fill('1e9')
 
   await expect(chapterInput).toHaveAttribute('aria-invalid', 'true')
-  const errorMessage = page.getByText('Chapter number must be a non-negative number without exponent notation.')
+  const errorMessage = page.getByText(
+    'Chapter number must be a non-negative number without exponent notation.',
+  )
   await expect(errorMessage).toHaveClass(/text-red-600/)
   await expect(errorMessage).not.toHaveCSS('color', 'rgb(203, 213, 225)')
   await expect(page.getByRole('button', { name: 'Save' })).toBeDisabled()
@@ -433,10 +486,16 @@ test('book form create layout fits desktop and mobile viewports', async ({ page 
   await expect(page.getByRole('heading', { name: 'Add book' })).toBeVisible()
 
   await expectNoHorizontalOverflow(page)
-  const identity = page.getByRole('heading', { name: 'Book identity' }).locator('xpath=ancestor::section[1]')
+  const identity = page
+    .getByRole('heading', { name: 'Book identity' })
+    .locator('xpath=ancestor::section[1]')
   await expectFitsViewportWidth(identity)
-  await expectFitsViewportWidth(page.getByRole('heading', { name: 'Reading state' }).locator('xpath=ancestor::section[1]'))
-  await expectFitsViewportWidth(page.getByRole('heading', { name: 'Library details' }).locator('xpath=ancestor::section[1]'))
+  await expectFitsViewportWidth(
+    page.getByRole('heading', { name: 'Reading state' }).locator('xpath=ancestor::section[1]'),
+  )
+  await expectFitsViewportWidth(
+    page.getByRole('heading', { name: 'Library details' }).locator('xpath=ancestor::section[1]'),
+  )
 
   const cover = page.locator('.book-form-cover-artwork')
   const coverPanel = page.getByTestId('book-cover-editor')
@@ -449,10 +508,15 @@ test('book form create layout fits desktop and mobile viewports', async ({ page 
 
   await expect(ratingOption).toHaveCSS('border-top-width', '0px')
   await expect(ratingOption).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
-  await expectMinHeight(ratingOption, page.viewportSize()!.width < 768 || isTabletProject(testInfo.project.name) ? 44 : 32)
+  await expectMinHeight(
+    ratingOption,
+    page.viewportSize()!.width < 768 || isTabletProject(testInfo.project.name) ? 44 : 32,
+  )
 
   const descriptionBox = await requiredBox(page.locator('textarea[name="description"]'))
-  const alternativeTitlesBox = await requiredBox(page.locator('textarea[name="alternativeTitlesText"]'))
+  const alternativeTitlesBox = await requiredBox(
+    page.locator('textarea[name="alternativeTitlesText"]'),
+  )
   const linksBox = await requiredBox(page.locator('textarea[name="linksText"]'))
   const notesBox = await requiredBox(page.locator('textarea[name="notes"]'))
   expect(descriptionBox.height).toBeGreaterThanOrEqual(176)
@@ -470,11 +534,12 @@ test('book form create layout fits desktop and mobile viewports', async ({ page 
     expect(Math.abs(coverPanelBox.y - identityBox.y)).toBeLessThanOrEqual(1)
     expect(Math.abs(coverPanelBox.height - identityBox.height)).toBeLessThanOrEqual(1)
     expect(coverBox.width).toBeLessThanOrEqual(160)
-    const readingBox = await requiredBox(page.getByRole('heading', { name: 'Reading state' }).locator('xpath=ancestor::section[1]'))
-    expect(readingBox.y).toBeGreaterThanOrEqual(Math.max(
-      identityBox.y + identityBox.height,
-      coverPanelBox.y + coverPanelBox.height,
-    ))
+    const readingBox = await requiredBox(
+      page.getByRole('heading', { name: 'Reading state' }).locator('xpath=ancestor::section[1]'),
+    )
+    expect(readingBox.y).toBeGreaterThanOrEqual(
+      Math.max(identityBox.y + identityBox.height, coverPanelBox.y + coverPanelBox.height),
+    )
     await expect(actions).toHaveCSS('position', 'fixed')
     await expectMinHeight(saveButton, 44)
   } else {
@@ -504,11 +569,15 @@ test('book form create layout fits desktop and mobile viewports', async ({ page 
   await expect(parserDialog.getByText(/Unmapped Genre With a Long Name/)).toBeVisible()
   await expectFitsViewportWidth(parserDialog)
   const parserDialogBox = await requiredBox(parserDialog)
-  expect(parserDialogBox.y + parserDialogBox.height).toBeLessThanOrEqual(page.viewportSize()!.height + 8)
+  expect(parserDialogBox.y + parserDialogBox.height).toBeLessThanOrEqual(
+    page.viewportSize()!.height + 8,
+  )
   await expectNoHorizontalOverflow(page)
 })
 
-test('csv import invalid rows panel keeps usable height in the browser layout', async ({ page }) => {
+test('csv import invalid rows panel keeps usable height in the browser layout', async ({
+  page,
+}) => {
   await page.goto('/books')
   await page.getByRole('button', { name: /^import$/i }).click()
   await page.getByRole('menuitem', { name: /^csv/i }).click()
@@ -520,7 +589,8 @@ test('csv import invalid rows panel keeps usable height in the browser layout', 
 
   const invalidRowsPanel = page.getByTestId('import-invalid-rows-panel')
   await expect(invalidRowsPanel).toBeVisible()
-  const rowErrorSurface = page.getByText('Content type is required and must exist.')
+  const rowErrorSurface = page
+    .getByText('Content type is required and must exist.')
     .first()
     .locator('xpath=ancestor::*[contains(@class, "ui-surface")][1]')
   await expect(rowErrorSurface).toHaveClass(/ui-surface--danger/)
@@ -538,7 +608,10 @@ test('csv import invalid rows panel keeps usable height in the browser layout', 
   await expectNoVerticalDocumentOverflow(page)
 
   if (viewport!.width >= 1024) {
-    await page.getByRole('button', { name: /edit row/i }).first().click()
+    await page
+      .getByRole('button', { name: /edit row/i })
+      .first()
+      .click()
     await expectElementBottomVisible(invalidRowsPanel, page.getByLabel('Notes'))
 
     await page.getByRole('button', { name: /collapse/i }).click()
@@ -546,15 +619,23 @@ test('csv import invalid rows panel keeps usable height in the browser layout', 
       element.scrollTop = element.scrollHeight
     })
     await expect(page.getByTestId('import-row-layout-row-80')).toBeVisible()
-    await page.getByTestId('import-row-layout-row-80').getByRole('button', { name: /edit row/i }).click()
+    await page
+      .getByTestId('import-row-layout-row-80')
+      .getByRole('button', { name: /edit row/i })
+      .click()
 
-    await expect.poll(async () => {
-      const bottomRowPanelBox = await requiredBox(invalidRowsPanel)
-      const bottomRowNotesBox = await requiredBox(page.getByLabel('Notes'))
+    await expect
+      .poll(async () => {
+        const bottomRowPanelBox = await requiredBox(invalidRowsPanel)
+        const bottomRowNotesBox = await requiredBox(page.getByLabel('Notes'))
 
-      return bottomRowNotesBox.y >= bottomRowPanelBox.y
-        && bottomRowNotesBox.y + bottomRowNotesBox.height <= bottomRowPanelBox.y + bottomRowPanelBox.height
-    }).toBe(true)
+        return (
+          bottomRowNotesBox.y >= bottomRowPanelBox.y &&
+          bottomRowNotesBox.y + bottomRowNotesBox.height <=
+            bottomRowPanelBox.y + bottomRowPanelBox.height
+        )
+      })
+      .toBe(true)
 
     await expectElementBottomVisible(invalidRowsPanel, page.getByLabel('Notes'))
   }
@@ -599,12 +680,16 @@ test.describe('Xiaomi Pad 6 tablet layout', () => {
 
     if (page.viewportSize()!.width === 900) {
       expect(scrollState.scrollWidth).toBeGreaterThan(scrollState.clientWidth)
-      await scrollSurface.evaluate((element) => { element.scrollLeft = element.scrollWidth })
+      await scrollSurface.evaluate((element) => {
+        element.scrollLeft = element.scrollWidth
+      })
       await expectInViewport(page.getByTestId(`book-table-actions-cell-${layoutBooks[0].id}`))
     }
   })
 
-  test('cards per row is adaptive in portrait and user-controlled in landscape', async ({ page }) => {
+  test('cards per row is adaptive in portrait and user-controlled in landscape', async ({
+    page,
+  }) => {
     await page.addInitScript(() => {
       window.localStorage.setItem('novelki.books.cards-per-row.v1', '8')
     })
@@ -613,7 +698,8 @@ test.describe('Xiaomi Pad 6 tablet layout', () => {
 
     const grid = page.locator('.book-card-grid')
     const cardsPerRow = page.getByLabel('Cards per row')
-    const columnCount = () => grid.evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(' ').length)
+    const columnCount = () =>
+      grid.evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(' ').length)
 
     if (page.viewportSize()!.width === 900) {
       await expect(cardsPerRow).toBeHidden()
@@ -625,7 +711,9 @@ test.describe('Xiaomi Pad 6 tablet layout', () => {
       expect(await columnCount()).toBe(8)
       await cardsPerRow.selectOption('3')
       await expect.poll(columnCount).toBe(3)
-      expect(await page.evaluate(() => window.localStorage.getItem('novelki.books.cards-per-row.v1'))).toBe('3')
+      expect(
+        await page.evaluate(() => window.localStorage.getItem('novelki.books.cards-per-row.v1')),
+      ).toBe('3')
     }
   })
 
@@ -683,10 +771,14 @@ test.describe('Xiaomi Pad 6 tablet layout', () => {
     const dateRangeButton = page.getByRole('button', { name: /date range/i })
     await expectMinTouchTarget(dateRangeButton)
     await dateRangeButton.click()
-    const datePopover = page.locator('.ui-popover').filter({ has: page.getByRole('button', { name: 'Last 3 months' }) })
+    const datePopover = page
+      .locator('.ui-popover')
+      .filter({ has: page.getByRole('button', { name: 'Last 3 months' }) })
     await expectInViewport(datePopover)
     await expectMinTouchTarget(datePopover.getByRole('button', { name: 'Last 3 months' }))
-    await expectMinTouchTarget(datePopover.locator('.analytics-calendar-day-button').filter({ visible: true }).first())
+    await expectMinTouchTarget(
+      datePopover.locator('.analytics-calendar-day-button').filter({ visible: true }).first(),
+    )
     await expectNoHorizontalOverflow(page)
   })
 

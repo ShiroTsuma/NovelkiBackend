@@ -56,21 +56,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const value = useMemo(
-    () => {
-      const roles = readRoles(token)
-      return {
-        token,
-        isRestoring,
-        isAuthenticated: Boolean(token),
-        roles,
-        isAdmin: roles.includes('Admin'),
-        setSession,
-        logout,
-      }
-    },
-    [isRestoring, logout, setSession, token],
-  )
+  const value = useMemo(() => {
+    const roles = readRoles(token)
+    return {
+      token,
+      isRestoring,
+      isAuthenticated: Boolean(token),
+      roles,
+      isAdmin: roles.includes('Admin'),
+      setSession,
+      logout,
+    }
+  }, [isRestoring, logout, setSession, token])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

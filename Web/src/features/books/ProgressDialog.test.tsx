@@ -30,7 +30,9 @@ describe('ProgressDialog', () => {
     await user.type(chapterInput, value)
 
     expect(chapterInput).toHaveAttribute('aria-invalid', 'true')
-    expect(screen.getByText('Chapter number must be a non-negative number without exponent notation.')).toBeInTheDocument()
+    expect(
+      screen.getByText('Chapter number must be a non-negative number without exponent notation.'),
+    ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
     expect(api.updateProgress).not.toHaveBeenCalled()
   })
@@ -44,7 +46,9 @@ describe('ProgressDialog', () => {
     await user.clear(chapterInput)
     await user.type(chapterInput, '2000')
 
-    expect(screen.getByText('Current chapter cannot be greater than total chapters.')).toBeInTheDocument()
+    expect(
+      screen.getByText('Current chapter cannot be greater than total chapters.'),
+    ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
   })
 
@@ -76,10 +80,13 @@ describe('ProgressDialog', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }))
 
     await waitFor(() => expect(api.updateProgress).toHaveBeenCalled())
-    expect(vi.mocked(api.updateProgress).mock.calls[0]).toEqual([books[0].id, {
-      currentChapterNumber: books[0].currentChapterNumber,
-      currentChapterLabel: books[0].currentChapterLabel,
-      comment: 'same chapter note',
-    }])
+    expect(vi.mocked(api.updateProgress).mock.calls[0]).toEqual([
+      books[0].id,
+      {
+        currentChapterNumber: books[0].currentChapterNumber,
+        currentChapterLabel: books[0].currentChapterLabel,
+        comment: 'same chapter note',
+      },
+    ])
   })
 })

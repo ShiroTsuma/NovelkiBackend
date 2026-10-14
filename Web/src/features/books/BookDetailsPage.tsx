@@ -6,7 +6,12 @@ import { toast } from 'sonner'
 import { api } from '@/api/client'
 import type { BookDto, BookLinkDto, BookProgressHistoryDto } from '@/api/types'
 import { HttpError } from '@/api/http'
-import { buttonVariants, DialogPanel, Surface, useBodyScrollLock } from '@/components/app/DesignSystem'
+import {
+  buttonVariants,
+  DialogPanel,
+  Surface,
+  useBodyScrollLock,
+} from '@/components/app/DesignSystem'
 import { buttonClass, secondaryButtonClass } from '@/components/app/FormField'
 import { BookCoverArtwork, CoverLightbox, useResolvedCoverImage } from './BookCoverSection'
 import { isLowRating } from './bookRating'
@@ -32,7 +37,7 @@ export function BookDetailsPage() {
     queryKey: ['book', id],
     queryFn: () => api.getBook(id!),
     enabled: Boolean(id),
-    refetchInterval: (query) => query.state.data?.cover?.status === 'Pending' ? 2_000 : false,
+    refetchInterval: (query) => (query.state.data?.cover?.status === 'Pending' ? 2_000 : false),
   })
   const previewImageUrl = useResolvedCoverImage(bookQuery.data?.cover)
   const deleteMutation = useMutation({
@@ -88,14 +93,23 @@ export function BookDetailsPage() {
   }, [book?.description, descriptionExpanded])
 
   if (bookQuery.isLoading) {
-    return <Surface className="p-6 text-slate-500" tone="muted">Loading...</Surface>
+    return (
+      <Surface className="p-6 text-slate-500" tone="muted">
+        Loading...
+      </Surface>
+    )
   }
 
   if (!book) {
-    return <Surface className="p-6 text-slate-500" tone="muted">Book not found.</Surface>
+    return (
+      <Surface className="p-6 text-slate-500" tone="muted">
+        Book not found.
+      </Surface>
+    )
   }
 
-  const shouldOfferRefresh = book.cover?.source !== 'ManualUpload' && book.cover?.source !== 'ManualUrl'
+  const shouldOfferRefresh =
+    book.cover?.source !== 'ManualUpload' && book.cover?.source !== 'ManualUrl'
   const refreshLabel = book.cover?.imageUrl ? 'Search again' : 'Search cover'
   const displayCoverStatus = getDisplayCoverStatus(book.cover?.status, book.cover?.failureReason)
   const displayCoverFailure = getDisplayCoverFailure(book.cover?.failureReason)
@@ -107,11 +121,11 @@ export function BookDetailsPage() {
 
   const descriptionStyle: CSSProperties | undefined = !descriptionExpanded
     ? {
-      display: '-webkit-box',
-      WebkitBoxOrient: 'vertical',
-      WebkitLineClamp: 4,
-      overflow: 'hidden',
-    }
+        display: '-webkit-box',
+        WebkitBoxOrient: 'vertical',
+        WebkitLineClamp: 4,
+        overflow: 'hidden',
+      }
     : undefined
 
   return (
@@ -124,7 +138,11 @@ export function BookDetailsPage() {
           </Link>
           <div className="flex flex-wrap gap-2">
             <ProgressDialog book={book} />
-            <Link className={buttonClass} state={{ bookListReturnTo }} to={`/books/${book.id}/edit`}>
+            <Link
+              className={buttonClass}
+              state={{ bookListReturnTo }}
+              to={`/books/${book.id}/edit`}
+            >
               <Edit className="h-4 w-4" />
               Edit
             </Link>
@@ -147,7 +165,9 @@ export function BookDetailsPage() {
                 <BookCoverArtwork
                   className="w-full lg:w-[320px]"
                   cover={book.cover}
-                  emptyActionLabel={!book.cover?.imageUrl && shouldOfferRefresh ? refreshLabel : undefined}
+                  emptyActionLabel={
+                    !book.cover?.imageUrl && shouldOfferRefresh ? refreshLabel : undefined
+                  }
                   emptyLabel="No cover in library yet."
                   hint={coverHint}
                   hoverFooter={coverSourceLabel}
@@ -169,36 +189,52 @@ export function BookDetailsPage() {
                 <div className="flex min-w-0 flex-col gap-5">
                   <div className="flex min-w-0 flex-col gap-3">
                     <div className="flex flex-col gap-2">
-                      <div className="text-xs font-semibold uppercase tracking-[0.26em] text-slate-400">{book.contentType}</div>
+                      <div className="text-xs font-semibold uppercase tracking-[0.26em] text-slate-400">
+                        {book.contentType}
+                      </div>
                       <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
-                        <h1 className="min-w-0 break-words text-3xl font-semibold tracking-tight text-slate-950 md:text-4xl">{book.primaryTitle}</h1>
+                        <h1 className="min-w-0 break-words text-3xl font-semibold tracking-tight text-slate-950 md:text-4xl">
+                          {book.primaryTitle}
+                        </h1>
                         <BookStatusPill status={book.status} />
                       </div>
                       {book.alternativeTitles.length ? (
-                        <p className="text-sm text-slate-400">{book.alternativeTitles.join(' | ')}</p>
+                        <p className="text-sm text-slate-400">
+                          {book.alternativeTitles.join(' | ')}
+                        </p>
                       ) : null}
                       <p className="text-[11px] uppercase tracking-[0.24em] text-slate-400">
                         AUTHOR:{' '}
-                        <span className="text-lg font-semibold normal-case tracking-normal text-slate-950">{book.author ?? 'unknown'}</span>
+                        <span className="text-lg font-semibold normal-case tracking-normal text-slate-950">
+                          {book.author ?? 'unknown'}
+                        </span>
                       </p>
                     </div>
                     <Surface as="div" className="grid gap-4 p-4" tone="muted">
                       <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
                         <div className="min-w-0 flex-1">
                           <div className="mb-2 flex items-center justify-between gap-3">
-                            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Progress</div>
-                            <div className="text-sm font-medium text-slate-700">{formatProgressInline(book)}</div>
+                            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                              Progress
+                            </div>
+                            <div className="text-sm font-medium text-slate-700">
+                              {formatProgressInline(book)}
+                            </div>
                           </div>
                           <ProgressBar book={book} />
                         </div>
                         <div className="flex items-center gap-3 xl:pl-4">
-                          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Rating</div>
+                          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Rating
+                          </div>
                           <RatingSummary rating={book.rating} />
                         </div>
                       </div>
                       <div className="grid gap-4 border-t border-slate-200 pt-4 md:grid-cols-2">
                         <div className="grid content-start gap-2 self-start">
-                          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Genres</div>
+                          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Genres
+                          </div>
                           <DescribedMetadataPills
                             descriptions={book.genreDescriptions}
                             empty={<p className="text-sm text-slate-500">No genres.</p>}
@@ -208,7 +244,9 @@ export function BookDetailsPage() {
                           />
                         </div>
                         <div className="grid content-start gap-2 self-start">
-                          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Tags</div>
+                          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Tags
+                          </div>
                           <DescribedMetadataPills
                             descriptions={book.tagDescriptions}
                             empty={<p className="text-sm text-slate-500">No tags.</p>}
@@ -220,10 +258,18 @@ export function BookDetailsPage() {
                       </div>
                     </Surface>
                     <div className="grid gap-2">
-                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Description</div>
+                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Description
+                      </div>
                       {book.description ? (
                         <div className="grid gap-2">
-                          <p className="max-w-4xl whitespace-pre-line text-sm leading-6 text-slate-600" ref={descriptionRef} style={descriptionStyle}>{book.description}</p>
+                          <p
+                            className="max-w-4xl whitespace-pre-line text-sm leading-6 text-slate-600"
+                            ref={descriptionRef}
+                            style={descriptionStyle}
+                          >
+                            {book.description}
+                          </p>
                           {descriptionOverflowing ? (
                             <button
                               className="ui-inline-link w-fit text-sm"
@@ -249,12 +295,22 @@ export function BookDetailsPage() {
           <BookFilesPanel bookId={book.id} />
           <Panel title="Links">
             <div className="grid gap-2">
-              {book.links.length ? book.links.map((link) => (
-                <a className="flex items-center justify-between rounded-md border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50" href={link.url} key={link.id} rel="noreferrer" target="_blank">
-                  <span>{getBookLinkLabel(link)}</span>
-                  <ExternalLink className="h-4 w-4 text-slate-400" />
-                </a>
-              )) : <p className="text-sm text-slate-500">No links.</p>}
+              {book.links.length ? (
+                book.links.map((link) => (
+                  <a
+                    className="flex items-center justify-between rounded-md border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50"
+                    href={link.url}
+                    key={link.id}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    <span>{getBookLinkLabel(link)}</span>
+                    <ExternalLink className="h-4 w-4 text-slate-400" />
+                  </a>
+                ))
+              ) : (
+                <p className="text-sm text-slate-500">No links.</p>
+              )}
             </div>
           </Panel>
           <Panel title="Notes">
@@ -269,34 +325,38 @@ export function BookDetailsPage() {
         </section>
         <Panel title="Changelog">
           <div className="grid gap-3">
-            {progressHistory.length ? progressHistory.map((entry) => (
-              <Surface as="div" className="px-4 py-3" key={entry.id} tone="muted">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="text-sm font-semibold text-slate-950">
-                      {entry.chapterLabel || entry.chapterNumber || 'Updated progress'}
+            {progressHistory.length ? (
+              progressHistory.map((entry) => (
+                <Surface as="div" className="px-4 py-3" key={entry.id} tone="muted">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="text-sm font-semibold text-slate-950">
+                        {entry.chapterLabel || entry.chapterNumber || 'Updated progress'}
+                      </div>
+                      {entry.delta != null ? (
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${entry.delta > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}
+                        >
+                          {entry.delta > 0 ? `+${entry.delta}` : entry.delta}
+                        </span>
+                      ) : null}
                     </div>
-                    {entry.delta != null ? (
-                      <span
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${entry.delta > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}
-                      >
-                        {entry.delta > 0 ? `+${entry.delta}` : entry.delta}
-                      </span>
-                    ) : null}
+                    <div className="text-xs text-slate-500">{formatDate(entry.changedAt)}</div>
                   </div>
-                  <div className="text-xs text-slate-500">{formatDate(entry.changedAt)}</div>
-                </div>
-                <div className="mt-1 text-sm text-slate-600">
-                  {entry.chapterNumber != null || entry.chapterLabel ? (
-                    <p>
-                      Progress: {entry.chapterLabel || entry.chapterNumber}
-                      {entry.chapterNumber != null && entry.chapterLabel ? ` (${entry.chapterNumber})` : ''}
-                    </p>
-                  ) : null}
-                  {entry.comment ? <p className="whitespace-pre-line">{entry.comment}</p> : null}
-                </div>
-              </Surface>
-            )) : (
+                  <div className="mt-1 text-sm text-slate-600">
+                    {entry.chapterNumber != null || entry.chapterLabel ? (
+                      <p>
+                        Progress: {entry.chapterLabel || entry.chapterNumber}
+                        {entry.chapterNumber != null && entry.chapterLabel
+                          ? ` (${entry.chapterNumber})`
+                          : ''}
+                      </p>
+                    ) : null}
+                    {entry.comment ? <p className="whitespace-pre-line">{entry.comment}</p> : null}
+                  </div>
+                </Surface>
+              ))
+            ) : (
               <p className="text-sm text-slate-500">No changelog yet.</p>
             )}
           </div>
@@ -323,17 +383,18 @@ export function BookDetailsPage() {
 }
 
 export function getProgressHistoryWithDeltas(entries: BookProgressHistoryDto[]) {
-  const sorted = [...entries].sort((left, right) => (
-    new Date(right.changedAt).getTime() - new Date(left.changedAt).getTime()
-  ))
+  const sorted = [...entries].sort(
+    (left, right) => new Date(right.changedAt).getTime() - new Date(left.changedAt).getTime(),
+  )
 
   return sorted.map((entry, index) => {
     const previousEntry = sorted[index + 1]
     const currentChapterNumber = entry.chapterNumber
     const previousChapterNumber = previousEntry?.chapterNumber
-    const delta = currentChapterNumber != null && previousChapterNumber != null
-      ? currentChapterNumber - previousChapterNumber
-      : null
+    const delta =
+      currentChapterNumber != null && previousChapterNumber != null
+        ? currentChapterNumber - previousChapterNumber
+        : null
 
     return {
       ...entry,
@@ -343,11 +404,13 @@ export function getProgressHistoryWithDeltas(entries: BookProgressHistoryDto[]) 
 }
 
 function ProgressBar({ book }: { book: BookDto }) {
-  const current = typeof book.currentChapterNumber === 'number' ? Number(book.currentChapterNumber) : null
+  const current =
+    typeof book.currentChapterNumber === 'number' ? Number(book.currentChapterNumber) : null
   const total = typeof book.totalChapters === 'number' ? Number(book.totalChapters) : null
-  const percent = current != null && total != null && total > 0
-    ? Math.max(0, Math.min(100, (current / total) * 100))
-    : null
+  const percent =
+    current != null && total != null && total > 0
+      ? Math.max(0, Math.min(100, (current / total) * 100))
+      : null
 
   return (
     <div className="grid gap-2">
@@ -374,9 +437,13 @@ function RatingSummary({ rating }: { rating?: number | null }) {
       <div className="flex items-center gap-1">
         {Array.from({ length: 10 }, (_, index) => (
           <Star
-            className={`h-4 w-4 ${index < filledStars
-              ? lowRating ? 'fill-rose-500 text-rose-500' : 'fill-amber-400 text-amber-400'
-              : 'fill-slate-200 text-slate-300'}`}
+            className={`h-4 w-4 ${
+              index < filledStars
+                ? lowRating
+                  ? 'fill-rose-500 text-rose-500'
+                  : 'fill-amber-400 text-amber-400'
+                : 'fill-slate-200 text-slate-300'
+            }`}
             key={index}
           />
         ))}
@@ -395,9 +462,10 @@ function formatProgressInline(book: {
   totalChapters?: number | null
 }) {
   const isCompleted = book.status?.trim().toLowerCase() === 'completed'
-  const current = isCompleted && book.currentChapterNumber != null
-    ? book.currentChapterNumber
-    : book.currentChapterLabel || book.currentChapterNumber
+  const current =
+    isCompleted && book.currentChapterNumber != null
+      ? book.currentChapterNumber
+      : book.currentChapterLabel || book.currentChapterNumber
   if (!current && !book.totalChapters) {
     return '-'
   }
@@ -462,11 +530,17 @@ function DeleteBookDialog({
         <div className="grid gap-2">
           <h2 className="text-lg font-semibold text-slate-950">Delete book</h2>
           <p className="text-sm leading-6 text-slate-600">
-            Are you sure you want to delete <span className="font-semibold text-slate-950">{title}</span>? This cannot be undone.
+            Are you sure you want to delete{' '}
+            <span className="font-semibold text-slate-950">{title}</span>? This cannot be undone.
           </p>
         </div>
         <div className="flex justify-end gap-2">
-          <button className={secondaryButtonClass} disabled={pending} type="button" onClick={onCancel}>
+          <button
+            className={secondaryButtonClass}
+            disabled={pending}
+            type="button"
+            onClick={onCancel}
+          >
             Cancel
           </button>
           <button
@@ -488,5 +562,7 @@ function formatDate(value?: string | null) {
     return '-'
   }
 
-  return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
+  return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(
+    new Date(value),
+  )
 }

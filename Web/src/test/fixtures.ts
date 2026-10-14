@@ -1,4 +1,10 @@
-import type { BookDto, BookListItemDto, DictionaryDto, PaginatedResult, TokenResponse } from '@/api/types'
+import type {
+  BookDto,
+  BookListItemDto,
+  DictionaryDto,
+  PaginatedResult,
+  TokenResponse,
+} from '@/api/types'
 
 export const testSession: TokenResponse = {
   accessToken: createJwt({ role: 'User' }),
@@ -24,7 +30,7 @@ export const genres: DictionaryDto[] = [
   { id: '30000000-0000-0000-0000-000000000002', name: 'Slice of Life' },
 ]
 
-export const books: Array<BookDto & BookListItemDto> = [
+export const books: (BookDto & BookListItemDto)[] = [
   {
     id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
     created: '2026-01-01T10:00:00Z',
@@ -48,7 +54,10 @@ export const books: Array<BookDto & BookListItemDto> = [
     genreDescriptions: { Fantasy: 'Magic, strange worlds, and supernatural stories.' },
     genresCount: 1,
     tags: ['favorite', 'mystery'],
-    tagDescriptions: { favorite: 'A personal favorite.', mystery: 'Stories driven by secrets and investigation.' },
+    tagDescriptions: {
+      favorite: 'A personal favorite.',
+      mystery: 'Stories driven by secrets and investigation.',
+    },
     tagsCount: 2,
     links: [],
     linksCount: 0,
@@ -58,7 +67,8 @@ export const books: Array<BookDto & BookListItemDto> = [
     id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
     created: '2026-01-02T10:00:00Z',
     lastModified: '2026-02-02T10:00:00Z',
-    primaryTitle: 'A Very Long Book Title That Should Stay Inside Its Card Container Without Pushing Actions Away',
+    primaryTitle:
+      'A Very Long Book Title That Should Stay Inside Its Card Container Without Pushing Actions Away',
     alternativeTitles: [],
     author: 'Toika',
     authorOtherNames: [],

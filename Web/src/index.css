@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 :root {
   --qs-bg: #05070b;
@@ -26,7 +26,15 @@
   --scrollbar-thumb-active: #8b92d8;
   color: var(--qs-text);
   background: var(--qs-bg);
-  font-family: InterVariable, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family:
+    InterVariable,
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -92,7 +100,7 @@ body::before {
   z-index: -1;
   inset: 0;
   pointer-events: none;
-  content: "";
+  content: '';
   background-image:
     linear-gradient(rgb(139 146 216 / 0.022) 1px, transparent 1px),
     linear-gradient(90deg, rgb(139 146 216 / 0.022) 1px, transparent 1px);
@@ -124,7 +132,7 @@ h1,
 h2,
 h3,
 h4 {
-  font-family: "IBM Plex Sans Variable", "IBM Plex Sans", InterVariable, sans-serif;
+  font-family: 'IBM Plex Sans Variable', 'IBM Plex Sans', InterVariable, sans-serif;
 }
 
 :focus-visible {
@@ -199,7 +207,7 @@ h4 {
 .app-brand__name {
   overflow: hidden;
   color: var(--qs-text);
-  font-family: "IBM Plex Sans Variable", "IBM Plex Sans", sans-serif;
+  font-family: 'IBM Plex Sans Variable', 'IBM Plex Sans', sans-serif;
   font-size: 1rem;
   font-weight: 660;
   letter-spacing: -0.015em;
@@ -238,7 +246,10 @@ h4 {
   border-radius: var(--qs-control-radius);
   font-size: 0.8125rem;
   font-weight: 620;
-  transition: color 140ms ease, border-color 140ms ease, background-color 140ms ease;
+  transition:
+    color 140ms ease,
+    border-color 140ms ease,
+    background-color 140ms ease;
 }
 
 .app-nav-link::after {
@@ -247,11 +258,13 @@ h4 {
   bottom: -0.18rem;
   left: 0.75rem;
   height: 2px;
-  content: "";
+  content: '';
   background: var(--qs-accent);
   opacity: 0;
   transform: scaleX(0.55);
-  transition: opacity 140ms ease, transform 140ms ease;
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
 }
 
 .app-nav-link--idle {
@@ -335,7 +348,10 @@ h4 {
   font-size: 0.875rem;
   font-weight: 650;
   line-height: 1.15;
-  transition: color 140ms ease, background-color 140ms ease, border-color 140ms ease;
+  transition:
+    color 140ms ease,
+    background-color 140ms ease,
+    border-color 140ms ease;
 }
 
 .ui-button:disabled {
@@ -408,7 +424,9 @@ h4 {
   color: var(--qs-text);
   background: var(--qs-surface-muted);
   font-size: 0.875rem;
-  transition: border-color 140ms ease, background-color 140ms ease;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease;
 }
 
 .ui-control::placeholder {
@@ -560,7 +578,7 @@ select.ui-control {
 
 .ui-panel-title {
   color: var(--qs-text);
-  font-family: "IBM Plex Sans Variable", "IBM Plex Sans", sans-serif;
+  font-family: 'IBM Plex Sans Variable', 'IBM Plex Sans', sans-serif;
   font-size: 1rem;
   font-weight: 650;
 }
@@ -611,7 +629,10 @@ select.ui-control {
   background: var(--qs-surface-muted);
   font-size: 0.75rem;
   font-weight: 650;
-  transition: color 140ms ease, border-color 140ms ease, background-color 140ms ease;
+  transition:
+    color 140ms ease,
+    border-color 140ms ease,
+    background-color 140ms ease;
 }
 
 .ui-filter-chip:hover:not(:disabled) {
@@ -665,7 +686,10 @@ select.ui-control {
   color: var(--qs-muted);
   background: var(--qs-surface);
   text-align: left;
-  transition: color 140ms ease, border-color 140ms ease, background-color 140ms ease;
+  transition:
+    color 140ms ease,
+    border-color 140ms ease,
+    background-color 140ms ease;
 }
 
 .ui-choice-card:hover {
@@ -720,7 +744,7 @@ select.ui-control {
 
 .ui-display-title {
   color: var(--qs-text);
-  font-family: "IBM Plex Sans Variable", "IBM Plex Sans", sans-serif;
+  font-family: 'IBM Plex Sans Variable', 'IBM Plex Sans', sans-serif;
   font-size: clamp(1.75rem, 3vw, 2.4rem);
   font-weight: 650;
   letter-spacing: -0.035em;
@@ -843,7 +867,10 @@ select.ui-control {
   min-height: 24rem;
   grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
   overflow: visible;
-  transition: border-color 150ms ease, transform 150ms ease, box-shadow 150ms ease;
+  transition:
+    border-color 150ms ease,
+    transform 150ms ease,
+    box-shadow 150ms ease;
 }
 
 .discover-card:hover,
@@ -1086,7 +1113,9 @@ select.ui-control {
   gap: 0.8rem;
   border-bottom: 1px solid var(--qs-border);
   padding: 0.8rem 0.25rem;
-  transition: padding 140ms ease, background-color 140ms ease;
+  transition:
+    padding 140ms ease,
+    background-color 140ms ease;
 }
 
 .manage-item:hover,
@@ -1464,7 +1493,10 @@ select.ui-control {
   min-width: 0;
   max-width: 100%;
   overflow: hidden;
-  transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .book-card:hover {
@@ -1475,8 +1507,7 @@ select.ui-control {
 .book-card--completed {
   border-color: rgb(216 184 95 / 0.72);
   background:
-    linear-gradient(145deg, rgb(216 184 95 / 0.055), transparent 38%),
-    var(--qs-surface-muted);
+    linear-gradient(145deg, rgb(216 184 95 / 0.055), transparent 38%), var(--qs-surface-muted);
   box-shadow:
     0 0 0 1px rgb(216 184 95 / 0.18),
     0 0 22px rgb(216 184 95 / 0.24),
@@ -1486,8 +1517,7 @@ select.ui-control {
 .book-card--completed:hover {
   border-color: #e0c367;
   background:
-    linear-gradient(145deg, rgb(216 184 95 / 0.09), transparent 42%),
-    var(--qs-surface-raised);
+    linear-gradient(145deg, rgb(216 184 95 / 0.09), transparent 42%), var(--qs-surface-raised);
   box-shadow:
     0 0 0 1px rgb(224 195 103 / 0.26),
     0 0 28px rgb(216 184 95 / 0.34),
@@ -1665,10 +1695,10 @@ select.ui-control {
 .book-form-layout {
   display: grid;
   grid-template-areas:
-    "identity"
-    "rail"
-    "reading"
-    "details";
+    'identity'
+    'rail'
+    'reading'
+    'details';
   gap: 1rem;
 }
 
@@ -1725,7 +1755,7 @@ select.ui-control {
 
 .book-form-section-title {
   color: var(--qs-text);
-  font-family: "IBM Plex Sans Variable", "IBM Plex Sans", sans-serif;
+  font-family: 'IBM Plex Sans Variable', 'IBM Plex Sans', sans-serif;
   font-size: 1.05rem;
   font-weight: 650;
   letter-spacing: -0.015em;
@@ -1808,8 +1838,7 @@ select.ui-control {
   padding: 1.25rem;
   border-bottom: 1px solid var(--qs-border);
   background:
-    linear-gradient(120deg, rgb(102 113 205 / 0.12), transparent 45%),
-    var(--qs-surface-raised);
+    linear-gradient(120deg, rgb(102 113 205 / 0.12), transparent 45%), var(--qs-surface-raised);
 }
 
 .book-html-dialog__mark {
@@ -1828,7 +1857,7 @@ select.ui-control {
 .book-html-dialog__title {
   margin-top: 0.15rem;
   color: var(--qs-text);
-  font-family: "IBM Plex Sans Variable", "IBM Plex Sans", sans-serif;
+  font-family: 'IBM Plex Sans Variable', 'IBM Plex Sans', sans-serif;
   font-size: 1.25rem;
   font-weight: 670;
   letter-spacing: -0.025em;
@@ -1883,7 +1912,10 @@ select.ui-control {
   color: var(--qs-muted);
   background: var(--qs-surface);
   cursor: pointer;
-  transition: border-color 140ms ease, background-color 140ms ease, transform 140ms ease;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease,
+    transform 140ms ease;
 }
 
 .book-html-preview:hover,
@@ -2034,7 +2066,10 @@ select.ui-control {
 }
 
 .book-form-rating-option svg {
-  transition: color 140ms ease, fill 140ms ease, transform 140ms ease;
+  transition:
+    color 140ms ease,
+    fill 140ms ease,
+    transform 140ms ease;
 }
 
 .book-form-rating-option:hover svg {
@@ -2086,7 +2121,8 @@ select.ui-control {
   background: var(--qs-surface-raised);
 }
 
-.analytics-chart-surface :where(.recharts-wrapper, .recharts-surface, .recharts-layer, svg, g, path, rect, circle):focus {
+.analytics-chart-surface
+  :where(.recharts-wrapper, .recharts-surface, .recharts-layer, svg, g, path, rect, circle):focus {
   outline: none;
 }
 
@@ -2095,7 +2131,9 @@ select.ui-control {
 }
 
 .analytics-chart-surface .analytics-drilldown-chart,
-.analytics-chart-surface .analytics-drilldown-chart :where(.recharts-wrapper, .recharts-surface, .recharts-layer, path, rect, circle),
+.analytics-chart-surface
+  .analytics-drilldown-chart
+  :where(.recharts-wrapper, .recharts-surface, .recharts-layer, path, rect, circle),
 .analytics-chart-surface .analytics-drilldown-shape,
 .analytics-chart-surface .analytics-drilldown-shape :where(path, rect, circle) {
   cursor: pointer;
@@ -2221,9 +2259,9 @@ select.ui-control {
   .book-form-layout {
     grid-template-columns: minmax(0, 1fr) clamp(13rem, 24vw, 16rem);
     grid-template-areas:
-      "identity rail"
-      "reading reading"
-      "details details";
+      'identity rail'
+      'reading reading'
+      'details details';
     align-items: stretch;
   }
 
@@ -2300,9 +2338,9 @@ select.ui-control {
   .book-form-layout {
     grid-template-columns: minmax(0, 1fr) 21rem;
     grid-template-areas:
-      "identity rail"
-      "reading rail"
-      "details rail";
+      'identity rail'
+      'reading rail'
+      'details rail';
     gap: 1.25rem;
   }
 
@@ -2428,7 +2466,6 @@ select.ui-control {
   .book-html-dialog__privacy {
     width: 100%;
   }
-
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,7 +1,15 @@
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { BookAnalyticsDto, BookAnalyticsLibraryGrowthPointDto } from '@/api/types'
 import { Surface } from '@/components/app/DesignSystem'
-import { analyticsTooltipProps, dateRangeForBucket, DrilldownLink, fieldQuery, focusedValueDomain, formatCount, formatDateRange } from './chartUtils'
+import {
+  analyticsTooltipProps,
+  dateRangeForBucket,
+  DrilldownLink,
+  fieldQuery,
+  focusedValueDomain,
+  formatCount,
+  formatDateRange,
+} from './chartUtils'
 
 type LibraryGrowthChartProps = {
   data: BookAnalyticsDto | undefined
@@ -30,21 +38,42 @@ export function LibraryGrowthChart({ data }: LibraryGrowthChartProps) {
   return (
     <div className="grid gap-4">
       <p className="text-sm text-slate-600">
-        Opening count: {formatCount(openingCount)} books. Buckets with 0 additions stay in the series so import jumps remain visible.
+        Opening count: {formatCount(openingCount)} books. Buckets with 0 additions stay in the
+        series so import jumps remain visible.
       </p>
       <div className="h-56 min-w-0" aria-label="Library growth trend">
         <ResponsiveContainer>
           <LineChart data={chartPoints}>
             <XAxis dataKey="date" tickLine={false} />
             <YAxis allowDecimals={false} tickLine={false} yAxisId="daily" />
-            <YAxis allowDecimals={false} domain={cumulativeDomain} orientation="right" tickLine={false} yAxisId="cumulative" />
+            <YAxis
+              allowDecimals={false}
+              domain={cumulativeDomain}
+              orientation="right"
+              tickLine={false}
+              yAxisId="cumulative"
+            />
             <Tooltip
               {...analyticsTooltipProps}
-              formatter={(value, name) => [`${formatCount(Number(value))}`, growthLabel(name)]}
+              formatter={(value, name) => [formatCount(Number(value)), growthLabel(name)]}
               labelFormatter={(label) => `Bucket ${label}`}
             />
-            <Line dataKey="cumulativeBooks" name="cumulativeBooks" stroke="#8b92d8" strokeWidth={2} yAxisId="cumulative" dot={{ r: 3 }} />
-            <Line dataKey="booksAdded" name="booksAdded" stroke="#d1aa6e" strokeWidth={2} yAxisId="daily" dot={{ r: 3 }} />
+            <Line
+              dataKey="cumulativeBooks"
+              name="cumulativeBooks"
+              stroke="#8b92d8"
+              strokeWidth={2}
+              yAxisId="cumulative"
+              dot={{ r: 3 }}
+            />
+            <Line
+              dataKey="booksAdded"
+              name="booksAdded"
+              stroke="#d1aa6e"
+              strokeWidth={2}
+              yAxisId="daily"
+              dot={{ r: 3 }}
+            />
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -54,12 +83,11 @@ export function LibraryGrowthChart({ data }: LibraryGrowthChartProps) {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <span className="font-semibold text-slate-950">{point.label}</span>
               <span className="text-slate-700">
-                +{formatCount(point.booksAdded)} added · {formatCount(point.cumulativeBooks)} cumulative
+                +{formatCount(point.booksAdded)} added · {formatCount(point.cumulativeBooks)}{' '}
+                cumulative
               </span>
             </div>
-            <div className="mt-1 flex flex-wrap gap-2 text-slate-600">
-              {typeSummary(point)}
-            </div>
+            <div className="mt-1 flex flex-wrap gap-2 text-slate-600">{typeSummary(point)}</div>
           </Surface>
         ))}
       </div>
@@ -68,15 +96,22 @@ export function LibraryGrowthChart({ data }: LibraryGrowthChartProps) {
 }
 
 export function libraryGrowthRows(data?: BookAnalyticsDto) {
-  return compactGrowthPoints(data?.libraryGrowth.points ?? [], data?.scope.bucket ?? 'day').map((point) => [
-    point.label,
-    formatCount(point.booksAdded),
-    formatCount(point.cumulativeBooks),
-    point.byType.length ? point.byType.map((item) => `${item.type}: ${formatCount(item.bookCount)}`).join(', ') : 'No additions',
-  ])
+  return compactGrowthPoints(data?.libraryGrowth.points ?? [], data?.scope.bucket ?? 'day').map(
+    (point) => [
+      point.label,
+      formatCount(point.booksAdded),
+      formatCount(point.cumulativeBooks),
+      point.byType.length
+        ? point.byType.map((item) => `${item.type}: ${formatCount(item.bookCount)}`).join(', ')
+        : 'No additions',
+    ],
+  )
 }
 
-export function libraryGrowthChartPoints(points: BookAnalyticsLibraryGrowthPointDto[], bucket: string) {
+export function libraryGrowthChartPoints(
+  points: BookAnalyticsLibraryGrowthPointDto[],
+  bucket: string,
+) {
   return points.map((point) => {
     const period = dateRangeForBucket(point.date, bucket)
     return { ...point, label: formatDateRange(period.start, period.end), endExclusive: period.end }
@@ -84,10 +119,18 @@ export function libraryGrowthChartPoints(points: BookAnalyticsLibraryGrowthPoint
 }
 
 function compactGrowthPoints(points: BookAnalyticsLibraryGrowthPointDto[], bucket: string) {
-  return libraryGrowthChartPoints(points, bucket).reduce<Array<BookAnalyticsLibraryGrowthPointDto & { label: string; endExclusive: string }>>((rows, point) => {
+  return libraryGrowthChartPoints(points, bucket).reduce<
+    (BookAnalyticsLibraryGrowthPointDto & { label: string; endExclusive: string })[]
+  >((rows, point) => {
     const isEmpty = point.booksAdded === 0 && point.byType.length === 0
     const previous = rows.at(-1)
-    if (isEmpty && previous && previous.booksAdded === 0 && previous.byType.length === 0 && previous.cumulativeBooks === point.cumulativeBooks) {
+    if (
+      isEmpty &&
+      previous &&
+      previous.booksAdded === 0 &&
+      previous.byType.length === 0 &&
+      previous.cumulativeBooks === point.cumulativeBooks
+    ) {
       previous.endExclusive = point.endExclusive
       previous.label = formatDateRange(previous.date, previous.endExclusive)
       return rows
@@ -104,7 +147,10 @@ function typeSummary(point: BookAnalyticsLibraryGrowthPointDto & { endExclusive?
   }
 
   return point.byType.map((item) => (
-    <DrilldownLink key={item.type} query={`${fieldQuery('type', item.type)} created:>=${point.date} created:<${point.endExclusive ?? point.date}`}>
+    <DrilldownLink
+      key={item.type}
+      query={`${fieldQuery('type', item.type)} created:>=${point.date} created:<${point.endExclusive ?? point.date}`}
+    >
       {item.type}: {formatCount(item.bookCount)}
     </DrilldownLink>
   ))

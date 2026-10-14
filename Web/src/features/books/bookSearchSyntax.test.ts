@@ -37,17 +37,20 @@ describe('book search syntax', () => {
     const actions = getLocalBookSearchSuggestions(context)
 
     expect(actions.map((item) => item.kind).slice(0, 2)).toEqual(['include', 'remove'])
-    expect(applyBookSearchSuggestion(query, context, actions[0]).value)
-      .toBe('title:Lord tag:dropped rating:>=8')
-    expect(applyBookSearchSuggestion(query, context, actions[1]).value)
-      .toBe('title:Lord rating:>=8')
+    expect(applyBookSearchSuggestion(query, context, actions[0]).value).toBe(
+      'title:Lord tag:dropped rating:>=8',
+    )
+    expect(applyBookSearchSuggestion(query, context, actions[1]).value).toBe(
+      'title:Lord rating:>=8',
+    )
   })
 
   it('preserves an exclusion prefix while completing a filter name', () => {
     const query = '-rat'
     const context = analyzeBookSearch(query, query.length)
-    const rating = getLocalBookSearchSuggestions(context)
-      .find((suggestion) => suggestion.definition?.canonical === 'rating')!
+    const rating = getLocalBookSearchSuggestions(context).find(
+      (suggestion) => suggestion.definition?.canonical === 'rating',
+    )!
 
     expect(applyBookSearchSuggestion(query, context, rating)).toEqual({
       value: '-rating:',
@@ -57,8 +60,9 @@ describe('book search syntax', () => {
 
   it('opens quotes and places the caret inside for text filters', () => {
     const context = analyzeBookSearch('tit', 'tit'.length)
-    const title = getLocalBookSearchSuggestions(context)
-      .find((suggestion) => suggestion.definition?.canonical === 'title')!
+    const title = getLocalBookSearchSuggestions(context).find(
+      (suggestion) => suggestion.definition?.canonical === 'title',
+    )!
 
     expect(applyBookSearchSuggestion('tit', context, title)).toEqual({
       value: 'title:""',
@@ -71,8 +75,9 @@ describe('book search syntax', () => {
     (field) => {
       const query = `${field}:""`
       const context = analyzeBookSearch(query, query.length - 1)
-      const wildcard = getLocalBookSearchSuggestions(context)
-        .find((suggestion) => suggestion.kind === 'wildcard')!
+      const wildcard = getLocalBookSearchSuggestions(context).find(
+        (suggestion) => suggestion.kind === 'wildcard',
+      )!
 
       expect(wildcard.label).toBe('* wildcard')
       expect(wildcard.description).toContain(`${field}:"Lord *"`)
@@ -115,8 +120,12 @@ describe('book search syntax', () => {
     ])
 
     expect(suggestions.map((suggestion) => suggestion.definition?.canonical)).toContain('title')
-    expect(suggestions.map((suggestion) => suggestion.definition?.canonical)).not.toContain('status')
-    expect(suggestions.map((suggestion) => suggestion.definition?.canonical)).not.toContain('rating')
+    expect(suggestions.map((suggestion) => suggestion.definition?.canonical)).not.toContain(
+      'status',
+    )
+    expect(suggestions.map((suggestion) => suggestion.definition?.canonical)).not.toContain(
+      'rating',
+    )
   })
 
   it('never proposes none as a filter value', () => {
@@ -143,11 +152,12 @@ describe('book search syntax', () => {
       value: 'tag:"fantasy" ',
       caret: 'tag:"fantasy" '.length,
     })
-    expect(getLocalBookSearchSuggestions(analyzeBookSearch(result.value, result.caret)))
-      .toEqual(expect.arrayContaining([
+    expect(getLocalBookSearchSuggestions(analyzeBookSearch(result.value, result.caret))).toEqual(
+      expect.arrayContaining([
         expect.objectContaining({ label: 'title:#' }),
         expect.objectContaining({ label: 'author:' }),
-      ]))
+      ]),
+    )
   })
 
   it('builds a suggestion scope query without the active token', () => {

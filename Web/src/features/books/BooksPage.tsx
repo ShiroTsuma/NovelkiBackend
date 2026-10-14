@@ -1,17 +1,28 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ChevronDown, Download, Edit, Eye, LayoutGrid, List, Plus, Star, Upload } from 'lucide-react'
+import {
+  ChevronDown,
+  Download,
+  Edit,
+  Eye,
+  LayoutGrid,
+  List,
+  Plus,
+  Star,
+  Upload,
+} from 'lucide-react'
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { api } from '@/api/client'
 import { HttpError } from '@/api/http'
-import type { BookImportFinalizeResult, BookListItemDto, BookSummaryDto, BookSummaryTypeCountDto } from '@/api/types'
+import type {
+  BookImportFinalizeResult,
+  BookListItemDto,
+  BookSummaryDto,
+  BookSummaryTypeCountDto,
+} from '@/api/types'
 import { extractAnalyticsDateFilters } from '@/features/analytics/dateQueryFilters'
-import {
-  buttonClass,
-  inputClass,
-  secondaryButtonClass,
-} from '@/components/app/FormField'
+import { buttonClass, inputClass, secondaryButtonClass } from '@/components/app/FormField'
 import { PageHeader, Surface } from '@/components/app/DesignSystem'
 import { BookDataTable } from './BookDataTable'
 import { BookCoverArtwork } from './BookCoverSection'
@@ -69,31 +80,178 @@ const topActionButtonSpacingClass = 'gap-2.5 pl-3.5 pr-4'
 const bookSearchDelayMs = 220
 
 const bookColumns: ColumnDefinition<BookListItemDto>[] = [
-  { id: 'title', label: 'Title', defaultVisible: true, sortBy: 'title', widthClass: 'w-72', render: (book) => <TitleCell book={book} /> },
-  { id: 'author', label: 'Author', defaultVisible: true, sortBy: 'author', widthClass: 'w-44', render: (book) => <AuthorCell book={book} /> },
-  { id: 'status', label: 'Status', defaultVisible: true, sortBy: 'status', widthClass: 'w-32', render: (book) => book.status },
-  { id: 'type', label: 'Type', defaultVisible: true, sortBy: 'type', widthClass: 'w-24', render: (book) => book.contentType },
-  { id: 'progress', label: 'Progress', defaultVisible: true, sortBy: 'progress', widthClass: 'w-32', render: formatProgress },
-  { id: 'totalChapters', label: totalChaptersColumnLabel(), defaultVisible: false, sortBy: 'chapters', widthClass: 'w-28', render: (book) => book.totalChapters ?? '-' },
-  { id: 'rating', label: 'Rating', defaultVisible: true, sortBy: 'rating', widthClass: 'w-16', render: (book) => book.rating ?? '-' },
-  { id: 'priority', label: 'Priority', defaultVisible: false, sortBy: 'priority', widthClass: 'w-20', render: (book) => book.priority ?? '-' },
-  { id: 'created', label: 'Created', defaultVisible: false, sortBy: 'created', widthClass: 'w-40', render: (book) => formatDate(book.created) },
-  { id: 'lastModified', label: 'Updated', defaultVisible: true, sortBy: 'lastModified', widthClass: 'w-40', render: (book) => formatDate(book.lastModified || book.created) },
-  { id: 'genres', label: 'Genres', defaultVisible: false, widthClass: 'w-40', render: (book) => <DescribedMetadataPills descriptions={book.genreDescriptions} totalCount={book.genresCount} values={book.genres} /> },
-  { id: 'tags', label: 'Tags', defaultVisible: true, widthClass: 'w-40', render: (book) => <DescribedMetadataPills descriptions={book.tagDescriptions} totalCount={book.tagsCount} values={book.tags} /> },
-  { id: 'links', label: 'Links', defaultVisible: false, widthClass: 'w-16', render: (book) => book.linksCount },
-  { id: 'notes', label: 'Notes', defaultVisible: false, widthClass: 'w-56', render: (book) => <TruncatedCellText value={book.notes} /> },
-  { id: 'description', label: 'Description', defaultVisible: false, widthClass: 'w-56', render: (book) => <TruncatedCellText value={book.description} /> },
+  {
+    id: 'title',
+    label: 'Title',
+    defaultVisible: true,
+    sortBy: 'title',
+    widthClass: 'w-72',
+    render: (book) => <TitleCell book={book} />,
+  },
+  {
+    id: 'author',
+    label: 'Author',
+    defaultVisible: true,
+    sortBy: 'author',
+    widthClass: 'w-44',
+    render: (book) => <AuthorCell book={book} />,
+  },
+  {
+    id: 'status',
+    label: 'Status',
+    defaultVisible: true,
+    sortBy: 'status',
+    widthClass: 'w-32',
+    render: (book) => book.status,
+  },
+  {
+    id: 'type',
+    label: 'Type',
+    defaultVisible: true,
+    sortBy: 'type',
+    widthClass: 'w-24',
+    render: (book) => book.contentType,
+  },
+  {
+    id: 'progress',
+    label: 'Progress',
+    defaultVisible: true,
+    sortBy: 'progress',
+    widthClass: 'w-32',
+    render: formatProgress,
+  },
+  {
+    id: 'totalChapters',
+    label: totalChaptersColumnLabel(),
+    defaultVisible: false,
+    sortBy: 'chapters',
+    widthClass: 'w-28',
+    render: (book) => book.totalChapters ?? '-',
+  },
+  {
+    id: 'rating',
+    label: 'Rating',
+    defaultVisible: true,
+    sortBy: 'rating',
+    widthClass: 'w-16',
+    render: (book) => book.rating ?? '-',
+  },
+  {
+    id: 'priority',
+    label: 'Priority',
+    defaultVisible: false,
+    sortBy: 'priority',
+    widthClass: 'w-20',
+    render: (book) => book.priority ?? '-',
+  },
+  {
+    id: 'created',
+    label: 'Created',
+    defaultVisible: false,
+    sortBy: 'created',
+    widthClass: 'w-40',
+    render: (book) => formatDate(book.created),
+  },
+  {
+    id: 'lastModified',
+    label: 'Updated',
+    defaultVisible: true,
+    sortBy: 'lastModified',
+    widthClass: 'w-40',
+    render: (book) => formatDate(book.lastModified || book.created),
+  },
+  {
+    id: 'genres',
+    label: 'Genres',
+    defaultVisible: false,
+    widthClass: 'w-40',
+    render: (book) => (
+      <DescribedMetadataPills
+        descriptions={book.genreDescriptions}
+        totalCount={book.genresCount}
+        values={book.genres}
+      />
+    ),
+  },
+  {
+    id: 'tags',
+    label: 'Tags',
+    defaultVisible: true,
+    widthClass: 'w-40',
+    render: (book) => (
+      <DescribedMetadataPills
+        descriptions={book.tagDescriptions}
+        totalCount={book.tagsCount}
+        values={book.tags}
+      />
+    ),
+  },
+  {
+    id: 'links',
+    label: 'Links',
+    defaultVisible: false,
+    widthClass: 'w-16',
+    render: (book) => book.linksCount,
+  },
+  {
+    id: 'notes',
+    label: 'Notes',
+    defaultVisible: false,
+    widthClass: 'w-56',
+    render: (book) => <TruncatedCellText value={book.notes} />,
+  },
+  {
+    id: 'description',
+    label: 'Description',
+    defaultVisible: false,
+    widthClass: 'w-56',
+    render: (book) => <TruncatedCellText value={book.description} />,
+  },
 ]
 
 const bookCardFields: ColumnDefinition<BookListItemDto>[] = [
-  { id: 'title', label: 'Title', defaultVisible: true, render: (book) => <span>{book.primaryTitle}</span> },
-  { id: 'alternativeTitles', label: 'Alternative titles', defaultVisible: false, render: (book) => <span>{formatList(book.alternativeTitles)}</span> },
-  { id: 'author', label: 'Author', defaultVisible: true, render: (book) => <span>{book.author ?? 'Unknown author'}</span> },
-  { id: 'status', label: 'Status', defaultVisible: true, render: (book) => <span>{book.status}</span> },
-  { id: 'type', label: 'Type', defaultVisible: false, render: (book) => <span>{book.contentType}</span> },
-  { id: 'progress', label: 'Progress', defaultVisible: true, render: (book) => <span>{formatProgress(book)}</span> },
-  { id: 'rating', label: 'Rating', defaultVisible: true, render: (book) => <span>{book.rating ?? '-'}</span> },
+  {
+    id: 'title',
+    label: 'Title',
+    defaultVisible: true,
+    render: (book) => <span>{book.primaryTitle}</span>,
+  },
+  {
+    id: 'alternativeTitles',
+    label: 'Alternative titles',
+    defaultVisible: false,
+    render: (book) => <span>{formatList(book.alternativeTitles)}</span>,
+  },
+  {
+    id: 'author',
+    label: 'Author',
+    defaultVisible: true,
+    render: (book) => <span>{book.author ?? 'Unknown author'}</span>,
+  },
+  {
+    id: 'status',
+    label: 'Status',
+    defaultVisible: true,
+    render: (book) => <span>{book.status}</span>,
+  },
+  {
+    id: 'type',
+    label: 'Type',
+    defaultVisible: false,
+    render: (book) => <span>{book.contentType}</span>,
+  },
+  {
+    id: 'progress',
+    label: 'Progress',
+    defaultVisible: true,
+    render: (book) => <span>{formatProgress(book)}</span>,
+  },
+  {
+    id: 'rating',
+    label: 'Rating',
+    defaultVisible: true,
+    render: (book) => <span>{book.rating ?? '-'}</span>,
+  },
 ]
 
 export function BooksPage() {
@@ -101,8 +259,14 @@ export function BooksPage() {
   const location = useLocation()
   const restoredScrollPosition = useRef(false)
   const queryClient = useQueryClient()
-  const [columnPreferences, setColumnPreferences] = useColumnPreferences(bookColumnsStorageKey, bookColumns)
-  const [cardFieldPreferences, setCardFieldPreferences] = useColumnPreferences(bookCardFieldsStorageKey, bookCardFields)
+  const [columnPreferences, setColumnPreferences] = useColumnPreferences(
+    bookColumnsStorageKey,
+    bookColumns,
+  )
+  const [cardFieldPreferences, setCardFieldPreferences] = useColumnPreferences(
+    bookCardFieldsStorageKey,
+    bookCardFields,
+  )
   const [viewMode, setViewMode] = useViewMode(bookLayoutStorageKey)
   const [cardsPerRow, setCardsPerRow] = useCardsPerRow(cardsPerRowStorageKey)
   const effectiveCardsPerRow = useResponsiveCardsPerRow(cardsPerRow)
@@ -113,9 +277,8 @@ export function BooksPage() {
   const [epubImportOpen, setEpubImportOpen] = useState(false)
   const [importMode, setImportMode] = useState<'csv' | 'full'>('csv')
   const [summaryOpen, setSummaryOpen] = useState(false)
-  const pageSizeOptions = viewMode === 'cards'
-    ? getCardPageSizeOptions(effectiveCardsPerRow)
-    : bookListPageSizeOptions
+  const pageSizeOptions =
+    viewMode === 'cards' ? getCardPageSizeOptions(effectiveCardsPerRow) : bookListPageSizeOptions
   const {
     pageSize: requestedPageSize,
     query,
@@ -142,14 +305,15 @@ export function BooksPage() {
   const visibleCardFields = getVisibleColumns(bookCardFields, cardFieldPreferences)
   const booksQuery = useQuery({
     queryKey: ['books', skip, pageSize, debouncedRequestQuery, sortBy, sortDirection],
-    queryFn: ({ signal }) => api.getBooks({
-      skip,
-      take: pageSize,
-      query: debouncedRequestQuery,
-      sortBy,
-      sortDirection,
-      signal,
-    }),
+    queryFn: ({ signal }) =>
+      api.getBooks({
+        skip,
+        take: pageSize,
+        query: debouncedRequestQuery,
+        sortBy,
+        sortDirection,
+        signal,
+      }),
     placeholderData: keepPreviousData,
     staleTime: 30_000,
   })
@@ -160,7 +324,13 @@ export function BooksPage() {
     staleTime: 30_000,
   })
   const cycleSortMutation = useMutation({
-    mutationFn: ({ nextSortBy, currentSortDirection }: { nextSortBy: string; currentSortDirection: string | null }) => (
+    mutationFn: ({
+      nextSortBy,
+      currentSortDirection,
+    }: {
+      nextSortBy: string
+      currentSortDirection: string | null
+    }) =>
       api.getBooks({
         skip,
         take: pageSize,
@@ -168,10 +338,12 @@ export function BooksPage() {
         sortBy: nextSortBy,
         sortDirection: currentSortDirection ?? undefined,
         advanceCycle: true,
-      })
-    ),
+      }),
     onSuccess: (result, variables) => {
-      const resolvedSortDirection = getCyclicSortDirectionFromResult(result.data, variables.nextSortBy) ?? variables.currentSortDirection ?? sortDirection
+      const resolvedSortDirection =
+        getCyclicSortDirectionFromResult(result.data, variables.nextSortBy) ??
+        variables.currentSortDirection ??
+        sortDirection
       queryClient.setQueryData(
         ['books', skip, pageSize, requestQuery, variables.nextSortBy, resolvedSortDirection],
         result,
@@ -223,7 +395,9 @@ export function BooksPage() {
       toast.success('Full backup ready.')
     },
     onError: (error) => {
-      toast.error(error instanceof HttpError ? error.apiError.detail : 'Could not export the full backup.')
+      toast.error(
+        error instanceof HttpError ? error.apiError.detail : 'Could not export the full backup.',
+      )
     },
   })
   const [exportMenuOpen, setExportMenuOpen] = useState(false)
@@ -251,9 +425,13 @@ export function BooksPage() {
   const scrollShortcuts = useBookListScrollShortcuts()
   const settingsColumns = viewMode === 'cards' ? bookCardFields : bookColumns
   const settingsPreferences = viewMode === 'cards' ? cardFieldPreferences : columnPreferences
-  const setSettingsPreferences = viewMode === 'cards' ? setCardFieldPreferences : setColumnPreferences
+  const setSettingsPreferences =
+    viewMode === 'cards' ? setCardFieldPreferences : setColumnPreferences
   const settingsTitle = viewMode === 'cards' ? 'Visible card fields' : 'Visible columns'
-  const settingsDescription = viewMode === 'cards' ? 'Choose which book fields appear on cards.' : 'Change table order and visibility.'
+  const settingsDescription =
+    viewMode === 'cards'
+      ? 'Choose which book fields appear on cards.'
+      : 'Change table order and visibility.'
   const allowSettingsReorder = viewMode === 'table'
 
   function handleImportComplete(result: BookImportFinalizeResult) {
@@ -267,126 +445,162 @@ export function BooksPage() {
       <PageHeader
         description="List, search, and quick navigation through your library."
         title="Books"
-        actions={(
+        actions={
           <>
-          <button
-            aria-controls="books-summary-panel"
-            aria-expanded={summaryOpen}
-            className={`${secondaryButtonClass} ${topActionButtonSpacingClass}`}
-            type="button"
-            onClick={() => setSummaryOpen((current) => !current)}
-          >
-            <span>Summary</span>
-            <ChevronDown className={`h-4 w-4 transition ${summaryOpen ? 'rotate-180' : ''}`} />
-          </button>
-          <div className="relative">
             <button
-              aria-expanded={exportMenuOpen}
-              aria-haspopup="menu"
+              aria-controls="books-summary-panel"
+              aria-expanded={summaryOpen}
               className={`${secondaryButtonClass} ${topActionButtonSpacingClass}`}
               type="button"
-              onClick={() => {
-                setImportMenuOpen(false)
-                setExportMenuOpen((current) => !current)
-              }}
+              onClick={() => setSummaryOpen((current) => !current)}
             >
-              <Download className="h-4 w-4" />
-              Export
-              <ChevronDown className={`h-4 w-4 transition ${exportMenuOpen ? 'rotate-180' : ''}`} />
+              <span>Summary</span>
+              <ChevronDown className={`h-4 w-4 transition ${summaryOpen ? 'rotate-180' : ''}`} />
             </button>
-            {exportMenuOpen ? (
-              <div className="ui-popover absolute right-0 z-20 mt-2 grid min-w-56 overflow-hidden p-1" role="menu">
-                <button
-                  className="rounded-[var(--qs-control-radius)] px-3 py-2 text-left text-sm font-semibold text-[var(--qs-text)] hover:bg-[var(--qs-surface-muted)] disabled:opacity-60"
-                  disabled={exportMutation.isPending}
-                  role="menuitem"
-                  type="button"
-                  onClick={() => {
-                    setExportMenuOpen(false)
-                    exportMutation.mutate()
-                  }}
+            <div className="relative">
+              <button
+                aria-expanded={exportMenuOpen}
+                aria-haspopup="menu"
+                className={`${secondaryButtonClass} ${topActionButtonSpacingClass}`}
+                type="button"
+                onClick={() => {
+                  setImportMenuOpen(false)
+                  setExportMenuOpen((current) => !current)
+                }}
+              >
+                <Download className="h-4 w-4" />
+                Export
+                <ChevronDown
+                  className={`h-4 w-4 transition ${exportMenuOpen ? 'rotate-180' : ''}`}
+                />
+              </button>
+              {exportMenuOpen ? (
+                <div
+                  className="ui-popover absolute right-0 z-20 mt-2 grid min-w-56 overflow-hidden p-1"
+                  role="menu"
                 >
-                  {exportMutation.isPending ? 'Exporting CSV...' : 'CSV'}
-                  <span className="mt-0.5 block text-xs font-normal text-[var(--qs-muted)]">Books matching the current filters</span>
-                </button>
-                <button
-                  className="rounded-[var(--qs-control-radius)] px-3 py-2 text-left text-sm font-semibold text-[var(--qs-text)] hover:bg-[var(--qs-surface-muted)] disabled:opacity-60"
-                  disabled={fullExportMutation.isPending}
-                  role="menuitem"
-                  type="button"
-                  onClick={() => {
-                    setExportMenuOpen(false)
-                    fullExportMutation.mutate()
-                  }}
+                  <button
+                    className="rounded-[var(--qs-control-radius)] px-3 py-2 text-left text-sm font-semibold text-[var(--qs-text)] hover:bg-[var(--qs-surface-muted)] disabled:opacity-60"
+                    disabled={exportMutation.isPending}
+                    role="menuitem"
+                    type="button"
+                    onClick={() => {
+                      setExportMenuOpen(false)
+                      exportMutation.mutate()
+                    }}
+                  >
+                    {exportMutation.isPending ? 'Exporting CSV...' : 'CSV'}
+                    <span className="mt-0.5 block text-xs font-normal text-[var(--qs-muted)]">
+                      Books matching the current filters
+                    </span>
+                  </button>
+                  <button
+                    className="rounded-[var(--qs-control-radius)] px-3 py-2 text-left text-sm font-semibold text-[var(--qs-text)] hover:bg-[var(--qs-surface-muted)] disabled:opacity-60"
+                    disabled={fullExportMutation.isPending}
+                    role="menuitem"
+                    type="button"
+                    onClick={() => {
+                      setExportMenuOpen(false)
+                      fullExportMutation.mutate()
+                    }}
+                  >
+                    {fullExportMutation.isPending ? 'Creating full backup...' : 'Full backup (ZIP)'}
+                    <span className="mt-0.5 block text-xs font-normal text-[var(--qs-muted)]">
+                      CSV plus stored cover files; EPUBs exported separately
+                    </span>
+                  </button>
+                  <button
+                    className="px-3 py-3 text-left text-sm font-semibold hover:bg-[var(--qs-surface-muted)]"
+                    role="menuitem"
+                    type="button"
+                    onClick={() => {
+                      setExportMenuOpen(false)
+                      setEpubExportOpen(true)
+                    }}
+                  >
+                    EPUB files (ZIP)
+                    <span className="mt-0.5 block text-xs font-normal text-[var(--qs-muted)]">
+                      Choose books and files; includes a restore manifest
+                    </span>
+                  </button>
+                </div>
+              ) : null}
+            </div>
+            <div className="relative">
+              <button
+                aria-expanded={importMenuOpen}
+                aria-haspopup="menu"
+                className={`${secondaryButtonClass} ${topActionButtonSpacingClass}`}
+                type="button"
+                onClick={() => {
+                  setExportMenuOpen(false)
+                  setImportMenuOpen((current) => !current)
+                }}
+              >
+                <Upload className="h-4 w-4" />
+                Import
+                <ChevronDown
+                  className={`h-4 w-4 transition ${importMenuOpen ? 'rotate-180' : ''}`}
+                />
+              </button>
+              {importMenuOpen ? (
+                <div
+                  className="ui-popover absolute right-0 z-20 mt-2 grid min-w-56 overflow-hidden p-1"
+                  role="menu"
                 >
-                  {fullExportMutation.isPending ? 'Creating full backup...' : 'Full backup (ZIP)'}
-                  <span className="mt-0.5 block text-xs font-normal text-[var(--qs-muted)]">CSV plus stored cover files; EPUBs exported separately</span>
-                </button>
-                <button className="px-3 py-3 text-left text-sm font-semibold hover:bg-[var(--qs-surface-muted)]" role="menuitem" type="button"
-                  onClick={() => { setExportMenuOpen(false); setEpubExportOpen(true) }}>
-                  EPUB files (ZIP)
-                  <span className="mt-0.5 block text-xs font-normal text-[var(--qs-muted)]">Choose books and files; includes a restore manifest</span>
-                </button>
-              </div>
-            ) : null}
-          </div>
-          <div className="relative">
-            <button
-              aria-expanded={importMenuOpen}
-              aria-haspopup="menu"
-              className={`${secondaryButtonClass} ${topActionButtonSpacingClass}`}
-              type="button"
-              onClick={() => {
-                setExportMenuOpen(false)
-                setImportMenuOpen((current) => !current)
-              }}
-            >
-              <Upload className="h-4 w-4" />
-              Import
-              <ChevronDown className={`h-4 w-4 transition ${importMenuOpen ? 'rotate-180' : ''}`} />
-            </button>
-            {importMenuOpen ? (
-              <div className="ui-popover absolute right-0 z-20 mt-2 grid min-w-56 overflow-hidden p-1" role="menu">
-                <button
-                  className="rounded-[var(--qs-control-radius)] px-3 py-2 text-left text-sm font-semibold text-[var(--qs-text)] hover:bg-[var(--qs-surface-muted)]"
-                  role="menuitem"
-                  type="button"
-                  onClick={() => {
-                    setImportMenuOpen(false)
-                    setImportMode('csv')
-                    setImportDialogOpen(true)
-                  }}
-                >
-                  CSV
-                  <span className="mt-0.5 block text-xs font-normal text-[var(--qs-muted)]">Import book data from a CSV file</span>
-                </button>
-                <button
-                  className="rounded-[var(--qs-control-radius)] px-3 py-2 text-left text-sm font-semibold text-[var(--qs-text)] hover:bg-[var(--qs-surface-muted)]"
-                  role="menuitem"
-                  type="button"
-                  onClick={() => {
-                    setImportMenuOpen(false)
-                    setImportMode('full')
-                    setImportDialogOpen(true)
-                  }}
-                >
-                  Full backup (ZIP)
-                  <span className="mt-0.5 block text-xs font-normal text-[var(--qs-muted)]">Restore book data and stored covers</span>
-                </button>
-                <button className="px-3 py-3 text-left text-sm font-semibold hover:bg-[var(--qs-surface-muted)]" role="menuitem" type="button"
-                  onClick={() => { setImportMenuOpen(false); setEpubImportOpen(true) }}>
-                  EPUB archive
-                  <span className="mt-0.5 block text-xs font-normal text-[var(--qs-muted)]">Restore EPUBs to existing books</span>
-                </button>
-              </div>
-            ) : null}
-          </div>
-          <Link className={`${buttonClass} ${topActionButtonSpacingClass}`} to="/books/new">
-            <Plus className="h-4 w-4" />
-            Add book
-          </Link>
+                  <button
+                    className="rounded-[var(--qs-control-radius)] px-3 py-2 text-left text-sm font-semibold text-[var(--qs-text)] hover:bg-[var(--qs-surface-muted)]"
+                    role="menuitem"
+                    type="button"
+                    onClick={() => {
+                      setImportMenuOpen(false)
+                      setImportMode('csv')
+                      setImportDialogOpen(true)
+                    }}
+                  >
+                    CSV
+                    <span className="mt-0.5 block text-xs font-normal text-[var(--qs-muted)]">
+                      Import book data from a CSV file
+                    </span>
+                  </button>
+                  <button
+                    className="rounded-[var(--qs-control-radius)] px-3 py-2 text-left text-sm font-semibold text-[var(--qs-text)] hover:bg-[var(--qs-surface-muted)]"
+                    role="menuitem"
+                    type="button"
+                    onClick={() => {
+                      setImportMenuOpen(false)
+                      setImportMode('full')
+                      setImportDialogOpen(true)
+                    }}
+                  >
+                    Full backup (ZIP)
+                    <span className="mt-0.5 block text-xs font-normal text-[var(--qs-muted)]">
+                      Restore book data and stored covers
+                    </span>
+                  </button>
+                  <button
+                    className="px-3 py-3 text-left text-sm font-semibold hover:bg-[var(--qs-surface-muted)]"
+                    role="menuitem"
+                    type="button"
+                    onClick={() => {
+                      setImportMenuOpen(false)
+                      setEpubImportOpen(true)
+                    }}
+                  >
+                    EPUB archive
+                    <span className="mt-0.5 block text-xs font-normal text-[var(--qs-muted)]">
+                      Restore EPUBs to existing books
+                    </span>
+                  </button>
+                </div>
+              ) : null}
+            </div>
+            <Link className={`${buttonClass} ${topActionButtonSpacingClass}`} to="/books/new">
+              <Plus className="h-4 w-4" />
+              Add book
+            </Link>
           </>
-        )}
+        }
       />
 
       {lastImportResult ? (
@@ -422,10 +636,13 @@ export function BooksPage() {
 
       <Surface className="min-w-0 overflow-hidden" id="book-list-results">
         <div className="flex flex-wrap items-center justify-end gap-2 border-b border-slate-200 px-4 py-3">
-          {(isWaitingForSearch || booksQuery.isFetching || cycleSortMutation.isPending) && !booksQuery.isLoading ? (
+          {(isWaitingForSearch || booksQuery.isFetching || cycleSortMutation.isPending) &&
+          !booksQuery.isLoading ? (
             <span className="mr-auto text-xs font-medium text-slate-500">Searching...</span>
           ) : null}
-          {viewMode === 'cards' ? <CardsPerRowControl value={cardsPerRow} onChange={setCardsPerRow} /> : null}
+          {viewMode === 'cards' ? (
+            <CardsPerRowControl value={cardsPerRow} onChange={setCardsPerRow} />
+          ) : null}
           <ViewModeToggle value={viewMode} onChange={setViewMode} />
           <ColumnSettingsPopup
             allowReorder={allowSettingsReorder}
@@ -445,8 +662,20 @@ export function BooksPage() {
             items={booksQuery.data?.data ?? []}
             renderActions={(book) => (
               <div className="flex justify-end gap-2">
-                <BookDetailsLink ariaLabel={`View ${book.primaryTitle}`} bookId={book.id} className={`${secondaryButtonClass} ui-icon-button`}><Eye className="h-4 w-4" /></BookDetailsLink>
-                <BookEditLink ariaLabel={`Edit ${book.primaryTitle}`} bookId={book.id} className={`${secondaryButtonClass} ui-icon-button`}><Edit className="h-4 w-4" /></BookEditLink>
+                <BookDetailsLink
+                  ariaLabel={`View ${book.primaryTitle}`}
+                  bookId={book.id}
+                  className={`${secondaryButtonClass} ui-icon-button`}
+                >
+                  <Eye className="h-4 w-4" />
+                </BookDetailsLink>
+                <BookEditLink
+                  ariaLabel={`Edit ${book.primaryTitle}`}
+                  bookId={book.id}
+                  className={`${secondaryButtonClass} ui-icon-button`}
+                >
+                  <Edit className="h-4 w-4" />
+                </BookEditLink>
               </div>
             )}
             sortBy={sortBy}
@@ -478,9 +707,23 @@ export function BooksPage() {
           onGoToPage={pagination.onGoToPage}
         />
       </Surface>
-      {epubExportOpen && <FileExportDialog query={requestQuery} onClose={() => setEpubExportOpen(false)} />}
-      {epubImportOpen && <FileImportDialog onClose={() => setEpubImportOpen(false)} onImported={() => { void queryClient.invalidateQueries({ queryKey: ['book-files'] }) }} />}
-      <ImportBooksDialog mode={importMode} open={importDialogOpen} onClose={() => setImportDialogOpen(false)} onImported={handleImportComplete} />
+      {epubExportOpen && (
+        <FileExportDialog query={requestQuery} onClose={() => setEpubExportOpen(false)} />
+      )}
+      {epubImportOpen && (
+        <FileImportDialog
+          onClose={() => setEpubImportOpen(false)}
+          onImported={() => {
+            void queryClient.invalidateQueries({ queryKey: ['book-files'] })
+          }}
+        />
+      )}
+      <ImportBooksDialog
+        mode={importMode}
+        open={importDialogOpen}
+        onClose={() => setImportDialogOpen(false)}
+        onImported={handleImportComplete}
+      />
       <ScrollShortcutButtons
         showBackToTop={scrollShortcuts.showBackToTop}
         showGoDown={scrollShortcuts.showGoDown}
@@ -508,7 +751,11 @@ function CardsPerRowControl({
           value={value}
           onChange={(event) => onChange(Number(event.target.value))}
         >
-          {cardsPerRowOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+          {cardsPerRowOptions.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
         </select>
         <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
       </span>
@@ -554,12 +801,14 @@ export function BookAdvancedSearch({
   value: string
   onChange: (value: string) => void
 }) {
-  return <BookSearchInput
-    placeholder={'Search: returnee author:Toika genre:fantasy rating:>=8 -tag:dropped -rating:8'}
-    remoteSuggestionsEnabled={false}
-    value={value}
-    onChange={onChange}
-  />
+  return (
+    <BookSearchInput
+      placeholder={'Search: returnee author:Toika genre:fantasy rating:>=8 -tag:dropped -rating:8'}
+      remoteSuggestionsEnabled={false}
+      value={value}
+      onChange={onChange}
+    />
+  )
 }
 
 function BookSummaryPanel({
@@ -606,9 +855,14 @@ function BookSummaryPanel({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-sm font-semibold text-slate-950">Library summary</h2>
-          <p className="text-sm text-slate-500">Aggregated from all books matching the current filters.</p>
+          <p className="text-sm text-slate-500">
+            Aggregated from all books matching the current filters.
+          </p>
         </div>
-        <Link className={`${secondaryButtonClass} ${topActionButtonSpacingClass}`} to={analyticsHref}>
+        <Link
+          className={`${secondaryButtonClass} ${topActionButtonSpacingClass}`}
+          to={analyticsHref}
+        >
           Open analytics
         </Link>
       </div>
@@ -616,8 +870,14 @@ function BookSummaryPanel({
         <SummaryMetricCard label="Total books" value={formatBookCount(summary.totalBooks)} />
         <SummaryMetricCard label="Rated" value={formatBookCount(summary.ratedBooks)} />
         <SummaryMetricCard label="Unrated" value={formatBookCount(summary.unratedBooks)} />
-        <SummaryMetricCard label="Average rating" value={formatAverageRating(summary.averageRating)} />
-        <SummaryMetricCard label="Current chapters" value={formatChapterCount(summary.currentChapters)} />
+        <SummaryMetricCard
+          label="Average rating"
+          value={formatAverageRating(summary.averageRating)}
+        />
+        <SummaryMetricCard
+          label="Current chapters"
+          value={formatChapterCount(summary.currentChapters)}
+        />
       </div>
       {summary.totalBooks === 0 ? (
         <Surface as="div" className="px-4 py-3 text-sm text-slate-600" tone="muted">
@@ -628,7 +888,10 @@ function BookSummaryPanel({
           <div className="grid gap-4 xl:grid-cols-2">
             <SummaryCompactSection
               title="Status distribution"
-              items={summary.statusCounts.map((status) => ({ label: status.status, value: formatBookCount(status.count) }))}
+              items={summary.statusCounts.map((status) => ({
+                label: status.status,
+                value: formatBookCount(status.count),
+              }))}
             />
             <SummaryCompactTypeSection items={summary.typeCounts} />
           </div>
@@ -647,7 +910,13 @@ function SummaryMetricCard({ label, value }: { label: string; value: string }) {
   )
 }
 
-function SummaryCompactSection({ items, title }: { items: Array<{ label: string; value: string }>; title: string }) {
+function SummaryCompactSection({
+  items,
+  title,
+}: {
+  items: { label: string; value: string }[]
+  title: string
+}) {
   return (
     <Surface as="div" className="p-4">
       <div className="mb-3 text-sm font-semibold text-slate-950">{title}</div>
@@ -656,7 +925,7 @@ function SummaryCompactSection({ items, title }: { items: Array<{ label: string;
   )
 }
 
-function SummaryCountList({ items }: { items: Array<{ label: string; value: string }> }) {
+function SummaryCountList({ items }: { items: { label: string; value: string }[] }) {
   if (!items.length) {
     return <div className="text-sm text-slate-500">No data for this tab.</div>
   }
@@ -664,9 +933,14 @@ function SummaryCountList({ items }: { items: Array<{ label: string; value: stri
   return (
     <div className="grid gap-2">
       {items.map((item) => (
-        <div className="flex items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm" key={item.label}>
+        <div
+          className="flex items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
+          key={item.label}
+        >
           <span className="font-medium text-slate-700">{item.label}</span>
-          <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-700">{item.value}</span>
+          <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-700">
+            {item.value}
+          </span>
         </div>
       ))}
     </div>
@@ -693,9 +967,13 @@ function SummaryTypeDetails({ items }: { items: BookSummaryTypeCountDto[] }) {
         <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3" key={item.type}>
           <div className="flex items-center justify-between gap-3">
             <div className="font-semibold text-slate-950">{item.type}</div>
-            <div className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-700">{formatBookCount(item.bookCount)} books</div>
+            <div className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-700">
+              {formatBookCount(item.bookCount)} books
+            </div>
           </div>
-          <div className="mt-2 text-sm text-slate-600">Current chapters: {formatChapterCount(item.currentChapters)}</div>
+          <div className="mt-2 text-sm text-slate-600">
+            Current chapters: {formatChapterCount(item.currentChapters)}
+          </div>
         </div>
       ))}
     </div>
@@ -757,7 +1035,11 @@ function BookCardGrid({
   }
 
   if (!books.length) {
-    return <div className="px-4 py-8 text-center text-slate-500">No books match the current filters.</div>
+    return (
+      <div className="px-4 py-8 text-center text-slate-500">
+        No books match the current filters.
+      </div>
+    )
   }
 
   const cardText = getCardTextSizeClasses(cardsPerRow)
@@ -777,7 +1059,9 @@ function BookCardGrid({
   })
 
   return (
-    <div className={`book-card-grid grid min-w-0 gap-4 p-4 sm:grid-cols-2 ${getDesktopCardsPerRowClass(cardsPerRow)}`}>
+    <div
+      className={`book-card-grid grid min-w-0 gap-4 p-4 sm:grid-cols-2 ${getDesktopCardsPerRowClass(cardsPerRow)}`}
+    >
       {books.map((book) => (
         <Surface
           as="article"
@@ -785,7 +1069,10 @@ function BookCardGrid({
           key={book.id}
           tone="muted"
         >
-          <BookDetailsLink bookId={book.id} className="grid min-w-0 w-full max-w-full overflow-hidden">
+          <BookDetailsLink
+            bookId={book.id}
+            className="grid min-w-0 w-full max-w-full overflow-hidden"
+          >
             <div className="relative min-w-0 max-w-full overflow-hidden">
               <BookCoverArtwork
                 className="book-card__cover min-w-0 w-full max-w-full"
@@ -802,7 +1089,9 @@ function BookCardGrid({
                 >
                   <Star aria-hidden="true" className="book-card-rating__star h-3.5 w-3.5" />
                   <span className="book-card-rating__value">{book.rating}</span>
-                  <span aria-hidden="true" className="book-card-rating__scale">/10</span>
+                  <span aria-hidden="true" className="book-card-rating__scale">
+                    /10
+                  </span>
                 </span>
               ) : null}
               {hasCardField(fields, 'status') ? (
@@ -813,32 +1102,61 @@ function BookCardGrid({
                 />
               ) : null}
             </div>
-            <div className={`grid min-w-0 max-w-full gap-1 overflow-hidden p-3 ${cardDetailsClass}`}>
+            <div
+              className={`grid min-w-0 max-w-full gap-1 overflow-hidden p-3 ${cardDetailsClass}`}
+            >
               {showTitle ? (
                 <div className="min-w-0 max-w-full overflow-hidden min-h-10">
-                  <h2 className={`min-w-0 max-w-full line-clamp-2 break-words font-semibold text-slate-950 ${cardText.title}`} title={book.primaryTitle}>{book.primaryTitle}</h2>
+                  <h2
+                    className={`min-w-0 max-w-full line-clamp-2 break-words font-semibold text-slate-950 ${cardText.title}`}
+                    title={book.primaryTitle}
+                  >
+                    {book.primaryTitle}
+                  </h2>
                 </div>
               ) : null}
               {showAlternativeTitles ? (
                 <div className="min-w-0 max-w-full overflow-hidden min-h-10">
-                  <p className={`min-w-0 max-w-full line-clamp-2 break-words text-slate-500 ${cardText.meta}`} title={formatListTooltip(book.alternativeTitles, book.alternativeTitlesCount)}>{formatList(book.alternativeTitles)}</p>
+                  <p
+                    className={`min-w-0 max-w-full line-clamp-2 break-words text-slate-500 ${cardText.meta}`}
+                    title={formatListTooltip(book.alternativeTitles, book.alternativeTitlesCount)}
+                  >
+                    {formatList(book.alternativeTitles)}
+                  </p>
                 </div>
               ) : null}
               {showAuthor ? (
                 <div className={`min-w-0 max-w-full overflow-hidden ${cardRowMinHeights.author}`}>
-                  <p className={`min-w-0 max-w-full truncate text-slate-500 ${cardText.meta}`} title={book.author ?? 'Unknown author'}>{book.author ?? 'Unknown author'}</p>
+                  <p
+                    className={`min-w-0 max-w-full truncate text-slate-500 ${cardText.meta}`}
+                    title={book.author ?? 'Unknown author'}
+                  >
+                    {book.author ?? 'Unknown author'}
+                  </p>
                 </div>
               ) : null}
               {showProgress || showType ? (
-                <div className={`flex min-w-0 max-w-full items-end justify-between gap-3 overflow-hidden ${cardRowMinHeights.progress}`}>
+                <div
+                  className={`flex min-w-0 max-w-full items-end justify-between gap-3 overflow-hidden ${cardRowMinHeights.progress}`}
+                >
                   <div className="min-w-0 flex-1">
                     {showProgress ? (
-                      <p className={`truncate font-medium text-slate-700 ${cardText.meta}`} title={formatProgress(book)}>{formatProgress(book)}</p>
+                      <p
+                        className={`truncate font-medium text-slate-700 ${cardText.meta}`}
+                        title={formatProgress(book)}
+                      >
+                        {formatProgress(book)}
+                      </p>
                     ) : null}
                   </div>
                   <div className="min-w-0 max-w-[50%] flex-1 text-right">
                     {showType ? (
-                      <p className={`min-w-0 max-w-full truncate font-semibold italic tracking-wide text-slate-700 ${cardText.meta}`} title={book.contentType}>{book.contentType}</p>
+                      <p
+                        className={`min-w-0 max-w-full truncate font-semibold italic tracking-wide text-slate-700 ${cardText.meta}`}
+                        title={book.contentType}
+                      >
+                        {book.contentType}
+                      </p>
                     ) : null}
                   </div>
                 </div>
@@ -1088,32 +1406,34 @@ function getCyclicSortDirectionFromResult(books: BookListItemDto[], sortBy: stri
     return null
   }
 
-  return sortBy === 'status'
-    ? firstBook.status
-    : sortBy === 'type'
-      ? firstBook.contentType
-      : null
+  return sortBy === 'status' ? firstBook.status : sortBy === 'type' ? firstBook.contentType : null
 }
 
 function normalizeCardsPerRow(value: number) {
-  return cardsPerRowOptions.includes(value as typeof cardsPerRowOptions[number]) ? value : 4
+  return cardsPerRowOptions.includes(value as (typeof cardsPerRowOptions)[number]) ? value : 4
 }
 
 export function getCardPageSizeOptions(cardsPerRow: number) {
   const normalizedCardsPerRow = cardsPerRow === 1 ? 1 : normalizeCardsPerRow(cardsPerRow)
   const maximumPageSize = Math.max(...bookListPageSizeOptions)
-  return [...new Set(bookListPageSizeOptions.map((pageSize) => {
-    const roundedUp = Math.ceil(pageSize / normalizedCardsPerRow) * normalizedCardsPerRow
-    return roundedUp <= maximumPageSize
-      ? roundedUp
-      : Math.floor(maximumPageSize / normalizedCardsPerRow) * normalizedCardsPerRow
-  }))]
+  return [
+    ...new Set(
+      bookListPageSizeOptions.map((pageSize) => {
+        const roundedUp = Math.ceil(pageSize / normalizedCardsPerRow) * normalizedCardsPerRow
+        return roundedUp <= maximumPageSize
+          ? roundedUp
+          : Math.floor(maximumPageSize / normalizedCardsPerRow) * normalizedCardsPerRow
+      }),
+    ),
+  ]
 }
 
 export function getClosestPageSize(pageSize: number, options: readonly number[]) {
-  return options.reduce((closest, option) => (
-    Math.abs(option - pageSize) < Math.abs(closest - pageSize) ? option : closest
-  ), options[0] ?? bookListPageSizeOptions[0])
+  return options.reduce(
+    (closest, option) =>
+      Math.abs(option - pageSize) < Math.abs(closest - pageSize) ? option : closest,
+    options[0] ?? bookListPageSizeOptions[0],
+  )
 }
 
 function getDesktopCardsPerRowClass(cardsPerRow: number) {
@@ -1152,7 +1472,9 @@ export function formatDate(value?: string | null) {
     return '-'
   }
 
-  return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
+  return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(
+    new Date(value),
+  )
 }
 
 function formatList(values: string[]) {
@@ -1176,7 +1498,11 @@ function formatListTooltip(values: string[], totalCount = values.length) {
 
 function TruncatedCellText({ value }: { value?: string | null }) {
   const text = value || '-'
-  return <span className="block truncate" title={value ?? undefined}>{text}</span>
+  return (
+    <span className="block truncate" title={value ?? undefined}>
+      {text}
+    </span>
+  )
 }
 
 function buildAnalyticsHref(query: string) {

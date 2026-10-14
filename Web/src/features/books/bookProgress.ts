@@ -7,9 +7,10 @@ export type BookProgressLike = {
 
 export function formatProgress(book: BookProgressLike) {
   const isCompleted = book.status.trim().toLowerCase() === 'completed'
-  const current = isCompleted && book.currentChapterNumber != null
-    ? book.currentChapterNumber
-    : book.currentChapterLabel || book.currentChapterNumber
+  const current =
+    isCompleted && book.currentChapterNumber != null
+      ? book.currentChapterNumber
+      : book.currentChapterLabel || book.currentChapterNumber
   if (!current && !book.totalChapters) {
     return '-'
   }

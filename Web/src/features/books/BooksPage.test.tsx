@@ -7,7 +7,21 @@ import { expectReadableTextContrast } from '@/test/contrast'
 import { bookListItems, books, dictionaries, paginated, statuses } from '@/test/fixtures'
 import { renderWithProviders } from '@/test/render'
 import { toast } from 'sonner'
-import { BooksPage, defaultColumnPreferences, formatAverageRating, formatProgress, getCardDetailRowClass, getCardPageSizeOptions, getCardRowMinHeightClasses, getCardTextSizeClasses, getClosestPageSize, getColumnPopupPosition, getResponsiveCardsPerRow, getVisibleColumns, readCardsPerRow } from './BooksPage'
+import {
+  BooksPage,
+  defaultColumnPreferences,
+  formatAverageRating,
+  formatProgress,
+  getCardDetailRowClass,
+  getCardPageSizeOptions,
+  getCardRowMinHeightClasses,
+  getCardTextSizeClasses,
+  getClosestPageSize,
+  getColumnPopupPosition,
+  getResponsiveCardsPerRow,
+  getVisibleColumns,
+  readCardsPerRow,
+} from './BooksPage'
 
 vi.mock('@/api/client', () => ({
   api: {
@@ -45,17 +59,21 @@ describe('BooksPage', () => {
     expect(await screen.findByText('Lord of Mysteries')).toBeInTheDocument()
     expect(screen.getByText('Cuttlefish')).toBeInTheDocument()
     await user.hover(screen.getByLabelText('1 alternative name'))
-    expect(screen.getByRole('tooltip')).toHaveTextContent('Alternative name: Cuttlefish That Loves Diving')
+    expect(screen.getByRole('tooltip')).toHaveTextContent(
+      'Alternative name: Cuttlefish That Loves Diving',
+    )
     await user.unhover(screen.getByLabelText('1 alternative name'))
     await user.hover(screen.getByText('favorite'))
     expect(screen.getByRole('tooltip')).toHaveTextContent('A personal favorite.')
-    expect(api.getBooks).toHaveBeenCalledWith(expect.objectContaining({
-      skip: 0,
-      take: 20,
-      query: '',
-      sortBy: 'lastModified',
-      sortDirection: 'desc',
-    }))
+    expect(api.getBooks).toHaveBeenCalledWith(
+      expect.objectContaining({
+        skip: 0,
+        take: 20,
+        query: '',
+        sortBy: 'lastModified',
+        sortDirection: 'desc',
+      }),
+    )
   })
 
   it('keeps table actions isolated from crowded columns', async () => {
@@ -68,28 +86,33 @@ describe('BooksPage', () => {
     expect(container.querySelectorAll('col')).toHaveLength(9)
     expect(screen.getByRole('columnheader', { name: /actions/i })).toHaveClass('sticky', 'right-0')
     expect(screen.queryByRole('columnheader', { name: /^id$/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('columnheader', { name: /alternative titles/i })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('columnheader', { name: /alternative titles/i }),
+    ).not.toBeInTheDocument()
     expect(screen.getByLabelText('1 alternative title')).toHaveTextContent('+1')
   })
 
   it('keeps all enabled table columns inside a symmetric scroll container', async () => {
-    window.localStorage.setItem('novelki.books.columns.v1', JSON.stringify([
-      { id: 'title', visible: true },
-      { id: 'author', visible: true },
-      { id: 'status', visible: true },
-      { id: 'type', visible: true },
-      { id: 'progress', visible: true },
-      { id: 'totalChapters', visible: true },
-      { id: 'rating', visible: true },
-      { id: 'priority', visible: true },
-      { id: 'created', visible: true },
-      { id: 'lastModified', visible: true },
-      { id: 'genres', visible: true },
-      { id: 'tags', visible: true },
-      { id: 'links', visible: true },
-      { id: 'notes', visible: true },
-      { id: 'description', visible: true },
-    ]))
+    window.localStorage.setItem(
+      'novelki.books.columns.v1',
+      JSON.stringify([
+        { id: 'title', visible: true },
+        { id: 'author', visible: true },
+        { id: 'status', visible: true },
+        { id: 'type', visible: true },
+        { id: 'progress', visible: true },
+        { id: 'totalChapters', visible: true },
+        { id: 'rating', visible: true },
+        { id: 'priority', visible: true },
+        { id: 'created', visible: true },
+        { id: 'lastModified', visible: true },
+        { id: 'genres', visible: true },
+        { id: 'tags', visible: true },
+        { id: 'links', visible: true },
+        { id: 'notes', visible: true },
+        { id: 'description', visible: true },
+      ]),
+    )
     vi.mocked(api.getBooks).mockResolvedValue(paginated(bookListItems))
     const user = userEvent.setup()
 
@@ -106,9 +129,13 @@ describe('BooksPage', () => {
     expect(scroller).toHaveClass('max-w-full', 'overflow-x-auto')
     expect(section).toHaveClass('min-w-0', 'overflow-hidden')
     expect(screen.queryByRole('columnheader', { name: /^id$/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('columnheader', { name: /alternative titles/i })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('columnheader', { name: /alternative titles/i }),
+    ).not.toBeInTheDocument()
     await user.hover(screen.getByText('Fantasy'))
-    expect(screen.getByRole('tooltip')).toHaveTextContent('Magic, strange worlds, and supernatural stories.')
+    expect(screen.getByRole('tooltip')).toHaveTextContent(
+      'Magic, strange worlds, and supernatural stories.',
+    )
   })
 
   it('discovers filters and colon-based operators from the search suggestions', async () => {
@@ -165,9 +192,13 @@ describe('BooksPage', () => {
     await user.type(searchInput, 'status:plan to read ')
 
     expect(searchInput).toHaveValue('status:plan to read ')
-    await waitFor(() => expect(api.getBooks).toHaveBeenLastCalledWith(expect.objectContaining({
-      query: 'status:plan to read',
-    })))
+    await waitFor(() =>
+      expect(api.getBooks).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          query: 'status:plan to read',
+        }),
+      ),
+    )
   })
 
   it('clears the active search from the right-side clear button', async () => {
@@ -180,7 +211,9 @@ describe('BooksPage', () => {
     await user.click(screen.getByRole('button', { name: /clear search and filters/i }))
 
     expect(searchInput).toHaveValue('')
-    await waitFor(() => expect(api.getBooks).toHaveBeenLastCalledWith(expect.objectContaining({ query: '' })))
+    await waitFor(() =>
+      expect(api.getBooks).toHaveBeenLastCalledWith(expect.objectContaining({ query: '' })),
+    )
   })
 
   it('inserts frequency-ranked text suggestions as quoted filter values', async () => {
@@ -197,11 +230,15 @@ describe('BooksPage', () => {
     await screen.findByText('Lord of Mysteries')
     const searchInput = screen.getByRole('combobox', { name: /search books/i })
     await user.type(searchInput, 'status:comp')
-    await waitFor(() => expect(api.getBookSearchSuggestions).toHaveBeenCalledWith(expect.objectContaining({
-      field: 'status',
-      search: 'comp',
-      take: 10,
-    })))
+    await waitFor(() =>
+      expect(api.getBookSearchSuggestions).toHaveBeenCalledWith(
+        expect.objectContaining({
+          field: 'status',
+          search: 'comp',
+          take: 10,
+        }),
+      ),
+    )
     const completedSuggestion = await screen.findByRole('option', { name: /^Completed/i })
     await user.click(completedSuggestion)
 
@@ -221,11 +258,15 @@ describe('BooksPage', () => {
 
     await screen.findByText('Lord of Mysteries')
     await user.click(screen.getByRole('combobox', { name: /search books/i }))
-    await waitFor(() => expect(api.getBookSearchSuggestions).toHaveBeenCalledWith(expect.objectContaining({
-      field: 'author',
-      search: 'perf',
-      take: 10,
-    })))
+    await waitFor(() =>
+      expect(api.getBookSearchSuggestions).toHaveBeenCalledWith(
+        expect.objectContaining({
+          field: 'author',
+          search: 'perf',
+          take: 10,
+        }),
+      ),
+    )
 
     expect(screen.getByRole('option', { name: /^Exclude author:"perf"/i })).toBeInTheDocument()
     expect(screen.getByRole('option', { name: /^Remove author:"perf"/i })).toBeInTheDocument()
@@ -244,11 +285,15 @@ describe('BooksPage', () => {
 
     await screen.findByText('Lord of Mysteries')
     await user.click(screen.getByRole('combobox', { name: /search books/i }))
-    await waitFor(() => expect(api.getBookSearchSuggestions).toHaveBeenCalledWith(expect.objectContaining({
-      field: 'author',
-      search: 'Perf',
-      take: 10,
-    })))
+    await waitFor(() =>
+      expect(api.getBookSearchSuggestions).toHaveBeenCalledWith(
+        expect.objectContaining({
+          field: 'author',
+          search: 'Perf',
+          take: 10,
+        }),
+      ),
+    )
     await waitFor(() => {
       expect(screen.getByRole('listbox')).toHaveAttribute('aria-busy', 'false')
       expect(screen.getByRole('option', { name: /^Exclude author:"Perf"/ })).toBeInTheDocument()
@@ -265,17 +310,23 @@ describe('BooksPage', () => {
     ])
     const user = userEvent.setup()
 
-    renderWithProviders(<BooksPage />, { route: '/books?query=status%3ACompleted%20type%3A%22Manga%22' })
+    renderWithProviders(<BooksPage />, {
+      route: '/books?query=status%3ACompleted%20type%3A%22Manga%22',
+    })
 
     await screen.findByText('Lord of Mysteries')
     const searchInput = screen.getByRole('combobox', { name: /search books/i })
     await user.click(searchInput)
-    await waitFor(() => expect(api.getBookSearchSuggestions).toHaveBeenCalledWith(expect.objectContaining({
-      field: 'type',
-      search: 'Manga',
-      query: 'status:Completed',
-      take: 10,
-    })))
+    await waitFor(() =>
+      expect(api.getBookSearchSuggestions).toHaveBeenCalledWith(
+        expect.objectContaining({
+          field: 'type',
+          search: 'Manga',
+          query: 'status:Completed',
+          take: 10,
+        }),
+      ),
+    )
 
     const unavailable = await screen.findByRole('option', { name: /^Manga/i })
     expect(unavailable).toBeDisabled()
@@ -343,9 +394,11 @@ describe('BooksPage', () => {
 
     await user.click(await screen.findByLabelText('View Lord of Mysteries'))
 
-    expect(window.sessionStorage.getItem(
-      'novelki.books.scroll-position.v1:/books?take=50&query=Fantasy',
-    )).toBe('731')
+    expect(
+      window.sessionStorage.getItem(
+        'novelki.books.scroll-position.v1:/books?take=50&query=Fantasy',
+      ),
+    ).toBe('731')
   })
 
   it('remembers the exact scroll position and filtered list url before editing directly', async () => {
@@ -357,9 +410,11 @@ describe('BooksPage', () => {
 
     await user.click(await screen.findByLabelText('Edit Lord of Mysteries'))
 
-    expect(window.sessionStorage.getItem(
-      'novelki.books.scroll-position.v1:/books?take=50&query=Fantasy',
-    )).toBe('731')
+    expect(
+      window.sessionStorage.getItem(
+        'novelki.books.scroll-position.v1:/books?take=50&query=Fantasy',
+      ),
+    ).toBe('731')
   })
 
   it('restores and consumes the saved scroll position after the book list loads', async () => {
@@ -392,12 +447,16 @@ describe('BooksPage', () => {
   })
 
   it('shows the actual number of metadata values omitted by the list projection', async () => {
-    vi.mocked(api.getBooks).mockResolvedValue(paginated([{
-      ...bookListItems[0],
-      tags: ['visible-one', 'visible-two', 'visible-three', 'known-hidden'],
-      tagDescriptions: {},
-      tagsCount: 26,
-    }]))
+    vi.mocked(api.getBooks).mockResolvedValue(
+      paginated([
+        {
+          ...bookListItems[0],
+          tags: ['visible-one', 'visible-two', 'visible-three', 'known-hidden'],
+          tagDescriptions: {},
+          tagsCount: 26,
+        },
+      ]),
+    )
 
     renderWithProviders(<BooksPage />, { route: '/books' })
 
@@ -411,11 +470,21 @@ describe('BooksPage', () => {
 
     await screen.findByText('Lord of Mysteries')
     const topButtons = screen.getAllByRole('button')
-    expect(topButtons.findIndex((button) => /summary/i.test(button.textContent ?? ''))).toBeLessThan(
+    expect(
+      topButtons.findIndex((button) => /summary/i.test(button.textContent ?? '')),
+    ).toBeLessThan(
       topButtons.findIndex((button) => /^export$/i.test(button.textContent?.trim() ?? '')),
     )
-    expect(screen.getByRole('button', { name: /^export$/i })).toHaveClass('gap-2.5', 'pl-3.5', 'pr-4')
-    expect(screen.getByRole('button', { name: /^import$/i })).toHaveClass('gap-2.5', 'pl-3.5', 'pr-4')
+    expect(screen.getByRole('button', { name: /^export$/i })).toHaveClass(
+      'gap-2.5',
+      'pl-3.5',
+      'pr-4',
+    )
+    expect(screen.getByRole('button', { name: /^import$/i })).toHaveClass(
+      'gap-2.5',
+      'pl-3.5',
+      'pr-4',
+    )
     expect(screen.getByRole('link', { name: /add book/i })).toHaveClass('gap-2.5', 'pl-3.5', 'pr-4')
   })
 
@@ -427,17 +496,21 @@ describe('BooksPage', () => {
     const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
     const user = userEvent.setup()
 
-    renderWithProviders(<BooksPage />, { route: '/books?query=author%3AToika&sortBy=title&sortDirection=asc' })
+    renderWithProviders(<BooksPage />, {
+      route: '/books?query=author%3AToika&sortBy=title&sortDirection=asc',
+    })
 
     await screen.findByText('Lord of Mysteries')
     await user.click(screen.getByRole('button', { name: /^export$/i }))
     await user.click(screen.getByRole('menuitem', { name: /^csv/i }))
 
-    await waitFor(() => expect(api.downloadBooksExport).toHaveBeenCalledWith({
-      query: 'author:Toika',
-      sortBy: 'title',
-      sortDirection: 'asc',
-    }))
+    await waitFor(() =>
+      expect(api.downloadBooksExport).toHaveBeenCalledWith({
+        query: 'author:Toika',
+        sortBy: 'title',
+        sortDirection: 'asc',
+      }),
+    )
     expect(clickSpy).toHaveBeenCalledTimes(1)
     expect(createObjectUrl).toHaveBeenCalledTimes(1)
     expect(revokeObjectUrl).toHaveBeenCalledWith('blob:books-export')
@@ -465,18 +538,22 @@ describe('BooksPage', () => {
     expect(menuItems[1]).toHaveTextContent(/^Full backup/)
 
     await user.click(menuItems[1])
-    expect(screen.getByRole('heading', { name: /import books from full backup/i })).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: /import books from full backup/i }),
+    ).toBeInTheDocument()
   })
 
   it('shows the API detail when a full export is rate limited', async () => {
     vi.mocked(api.getBooks).mockResolvedValue(paginated(bookListItems))
-    vi.mocked(api.downloadBooksFullExport).mockRejectedValue(new HttpError({
-      type: 'RateLimitExceeded',
-      title: 'Too Many Requests',
-      status: 429,
-      detail: 'Too many requests. Try again in 30 minutes.',
-      instance: '/book/export/full',
-    }))
+    vi.mocked(api.downloadBooksFullExport).mockRejectedValue(
+      new HttpError({
+        type: 'RateLimitExceeded',
+        title: 'Too Many Requests',
+        status: 429,
+        detail: 'Too many requests. Try again in 30 minutes.',
+        instance: '/book/export/full',
+      }),
+    )
     const user = userEvent.setup()
 
     renderWithProviders(<BooksPage />, { route: '/books' })
@@ -494,7 +571,9 @@ describe('BooksPage', () => {
     vi.mocked(api.getBooks).mockResolvedValue(paginated(books))
     vi.mocked(api.getBooksSummary).mockResolvedValue(createSummary())
 
-    renderWithProviders(<BooksPage />, { route: '/books?query=author%3AToika&sortBy=title&sortDirection=asc' })
+    renderWithProviders(<BooksPage />, {
+      route: '/books?query=author%3AToika&sortBy=title&sortDirection=asc',
+    })
 
     await screen.findByText('Lord of Mysteries')
     expect(api.getBooksSummary).not.toHaveBeenCalled()
@@ -505,7 +584,9 @@ describe('BooksPage', () => {
     vi.mocked(api.getBooksSummary).mockResolvedValue(createSummary())
     const user = userEvent.setup()
 
-    renderWithProviders(<BooksPage />, { route: '/books?query=author%3AToika&sortBy=title&sortDirection=asc' })
+    renderWithProviders(<BooksPage />, {
+      route: '/books?query=author%3AToika&sortBy=title&sortDirection=asc',
+    })
 
     await screen.findByText('Lord of Mysteries')
     await user.click(screen.getByRole('button', { name: /summary/i }))
@@ -514,13 +595,18 @@ describe('BooksPage', () => {
     expect(api.getBooksSummary).toHaveBeenCalledWith({ query: 'author:Toika' })
     expect(screen.getByText('Total books')).toBeInTheDocument()
     expect(screen.getByText('Average rating')).toBeInTheDocument()
-    const summarySection = screen.getByRole('heading', { name: /library summary/i }).closest('section')
+    const summarySection = screen
+      .getByRole('heading', { name: /library summary/i })
+      .closest('section')
     expect(summarySection).not.toBeNull()
     expect(screen.getByText('Status distribution')).toBeInTheDocument()
     expect(screen.getByText('Book types')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /open analytics/i })).toBeInTheDocument()
     const searchInput = screen.getByRole('combobox', { name: /search books/i })
-    expect((summarySection?.compareDocumentPosition(searchInput) ?? 0) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(
+      (summarySection?.compareDocumentPosition(searchInput) ?? 0) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
   })
 
   it('shows a summary empty state when no books match the current filters', async () => {
@@ -555,13 +641,18 @@ describe('BooksPage', () => {
     vi.mocked(api.getBooksSummary).mockResolvedValue(createSummary())
     const user = userEvent.setup()
 
-    renderWithProviders(<BooksPage />, { route: '/books?query=author%3AToika%20title%3A%22Lord%20of%20Mysteries%22' })
+    renderWithProviders(<BooksPage />, {
+      route: '/books?query=author%3AToika%20title%3A%22Lord%20of%20Mysteries%22',
+    })
 
     await screen.findByText('Lord of Mysteries')
     await user.click(screen.getByRole('button', { name: /summary/i }))
 
     const link = await screen.findByRole('link', { name: /open analytics/i })
-    expect(link).toHaveAttribute('href', '/analytics?query=author%3AToika+title%3A%22Lord+of+Mysteries%22')
+    expect(link).toHaveAttribute(
+      'href',
+      '/analytics?query=author%3AToika+title%3A%22Lord+of+Mysteries%22',
+    )
     expect(screen.getByText('Status distribution')).toBeInTheDocument()
     expect(screen.getByText('Book types')).toBeInTheDocument()
     expect(screen.queryByText('Estimated reading time')).not.toBeInTheDocument()
@@ -572,7 +663,9 @@ describe('BooksPage', () => {
     vi.mocked(api.getBooksSummary).mockResolvedValue(createSummary())
     const user = userEvent.setup()
 
-    renderWithProviders(<BooksPage />, { route: '/books?query=author%3AToika%20created%3A%3D2026%20updated%3A%3C%3D07.2026' })
+    renderWithProviders(<BooksPage />, {
+      route: '/books?query=author%3AToika%20created%3A%3D2026%20updated%3A%3C%3D07.2026',
+    })
 
     await screen.findByText('Lord of Mysteries')
     await user.click(screen.getByRole('button', { name: /summary/i }))
@@ -606,7 +699,10 @@ describe('BooksPage', () => {
     await screen.findByText('Lord of Mysteries')
     await user.click(screen.getByRole('button', { name: /summary/i }))
 
-    expect(await screen.findByRole('link', { name: /open analytics/i })).toHaveAttribute('href', '/analytics')
+    expect(await screen.findByRole('link', { name: /open analytics/i })).toHaveAttribute(
+      'href',
+      '/analytics',
+    )
   })
 
   it('lets the user change cards per row and persists the preference', async () => {
@@ -621,7 +717,9 @@ describe('BooksPage', () => {
 
     expect(window.localStorage.getItem('novelki.books.cards-per-row.v1')).toBe('6')
     expect(container.querySelector('.lg\\:grid-cols-6')).toBeTruthy()
-    await waitFor(() => expect(api.getBooks).toHaveBeenLastCalledWith(expect.objectContaining({ take: 24 })))
+    await waitFor(() =>
+      expect(api.getBooks).toHaveBeenLastCalledWith(expect.objectContaining({ take: 24 })),
+    )
     expect(screen.getByRole('combobox', { name: /per page/i })).toHaveValue('24')
     expect(screen.getByRole('combobox', { name: /per page/i })).toHaveTextContent('24')
     expect(screen.getByRole('combobox', { name: /per page/i })).toHaveTextContent('54')
@@ -643,7 +741,12 @@ describe('BooksPage', () => {
     expect(cards).toHaveLength(books.length)
     cards.forEach((card) => {
       expect(card).toHaveClass('book-card', 'min-w-0', 'w-full', 'max-w-full')
-      expect(card.querySelector('a')).toHaveClass('min-w-0', 'w-full', 'max-w-full', 'overflow-hidden')
+      expect(card.querySelector('a')).toHaveClass(
+        'min-w-0',
+        'w-full',
+        'max-w-full',
+        'overflow-hidden',
+      )
       expect(card.querySelector('.book-card__cover')).toHaveClass('min-w-0', 'w-full', 'max-w-full')
     })
   })
@@ -664,10 +767,7 @@ describe('BooksPage', () => {
   })
 
   it('uses a red rating treatment for scores up to and including five', async () => {
-    vi.mocked(api.getBooks).mockResolvedValue(paginated([
-      books[0],
-      { ...books[1], rating: 5 },
-    ]))
+    vi.mocked(api.getBooks).mockResolvedValue(paginated([books[0], { ...books[1], rating: 5 }]))
     const user = userEvent.setup()
 
     renderWithProviders(<BooksPage />, { route: '/books' })
@@ -757,7 +857,9 @@ describe('BooksPage', () => {
     expect(screen.queryByText('Cuttlefish')).not.toBeInTheDocument()
     expect(screen.getByText('LOTM')).toBeInTheDocument()
     expect(screen.getAllByText('Novel')[0]).toHaveClass('font-semibold', 'italic')
-    expect(window.localStorage.getItem('novelki.books.card-fields.v1')).toContain('"alternativeTitles"')
+    expect(window.localStorage.getItem('novelki.books.card-fields.v1')).toContain(
+      '"alternativeTitles"',
+    )
   })
 
   it('updates query params and refetches when sorting by title', async () => {
@@ -769,19 +871,24 @@ describe('BooksPage', () => {
     await screen.findByText('Lord of Mysteries')
     await user.click(screen.getByRole('button', { name: /title/i }))
 
-    await waitFor(() => expect(api.getBooks).toHaveBeenLastCalledWith(expect.objectContaining({
-      skip: 0,
-      take: 20,
-      query: '',
-      sortBy: 'title',
-      sortDirection: 'asc',
-    })))
+    await waitFor(() =>
+      expect(api.getBooks).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          skip: 0,
+          take: 20,
+          query: '',
+          sortBy: 'title',
+          sortDirection: 'asc',
+        }),
+      ),
+    )
   })
 
   it('sorts by total chapters from the table column', async () => {
-    window.localStorage.setItem('novelki.books.columns.v1', JSON.stringify([
-      { id: 'totalChapters', visible: true },
-    ]))
+    window.localStorage.setItem(
+      'novelki.books.columns.v1',
+      JSON.stringify([{ id: 'totalChapters', visible: true }]),
+    )
     vi.mocked(api.getBooks).mockResolvedValue(paginated(books))
     const user = userEvent.setup()
 
@@ -790,19 +897,24 @@ describe('BooksPage', () => {
     await screen.findByText('Lord of Mysteries')
     await user.click(screen.getByRole('button', { name: /total chapters|total/i }))
 
-    await waitFor(() => expect(api.getBooks).toHaveBeenLastCalledWith(expect.objectContaining({
-      skip: 0,
-      take: 20,
-      query: '',
-      sortBy: 'chapters',
-      sortDirection: 'asc',
-    })))
+    await waitFor(() =>
+      expect(api.getBooks).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          skip: 0,
+          take: 20,
+          query: '',
+          sortBy: 'chapters',
+          sortDirection: 'asc',
+        }),
+      ),
+    )
   })
 
   it('renders the total chapters column label in the shared column settings', async () => {
-    window.localStorage.setItem('novelki.books.columns.v1', JSON.stringify([
-      { id: 'totalChapters', visible: true },
-    ]))
+    window.localStorage.setItem(
+      'novelki.books.columns.v1',
+      JSON.stringify([{ id: 'totalChapters', visible: true }]),
+    )
     vi.mocked(api.getBooks).mockResolvedValue(paginated(books))
     const user = userEvent.setup()
 
@@ -819,7 +931,8 @@ describe('BooksPage', () => {
       if (params.advanceCycle) {
         return {
           ...paginated(books),
-          data: params.sortDirection === statuses[0].name ? [books[1], books[0]] : [books[0], books[1]],
+          data:
+            params.sortDirection === statuses[0].name ? [books[1], books[0]] : [books[0], books[1]],
         }
       }
 
@@ -833,24 +946,36 @@ describe('BooksPage', () => {
     const statusHeader = screen.getByRole('button', { name: /status/i })
 
     await user.click(statusHeader)
-    await waitFor(() => expect(api.getBooks).toHaveBeenLastCalledWith(expect.objectContaining({
-      sortBy: 'status',
-      advanceCycle: true,
-    })))
+    await waitFor(() =>
+      expect(api.getBooks).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          sortBy: 'status',
+          advanceCycle: true,
+        }),
+      ),
+    )
 
     await user.click(statusHeader)
-    await waitFor(() => expect(api.getBooks).toHaveBeenLastCalledWith(expect.objectContaining({
-      sortBy: 'status',
-      sortDirection: statuses[0].name,
-      advanceCycle: true,
-    })))
+    await waitFor(() =>
+      expect(api.getBooks).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          sortBy: 'status',
+          sortDirection: statuses[0].name,
+          advanceCycle: true,
+        }),
+      ),
+    )
 
     await user.click(statusHeader)
-    await waitFor(() => expect(api.getBooks).toHaveBeenLastCalledWith(expect.objectContaining({
-      sortBy: 'status',
-      sortDirection: statuses[1].name,
-      advanceCycle: true,
-    })))
+    await waitFor(() =>
+      expect(api.getBooks).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          sortBy: 'status',
+          sortDirection: statuses[1].name,
+          advanceCycle: true,
+        }),
+      ),
+    )
   })
 
   it('does not refetch after syncing the resolved cyclic sort direction into the url', async () => {
@@ -873,10 +998,14 @@ describe('BooksPage', () => {
 
     await user.click(screen.getByRole('button', { name: /status/i }))
 
-    await waitFor(() => expect(api.getBooks).toHaveBeenCalledWith(expect.objectContaining({
-      sortBy: 'status',
-      advanceCycle: true,
-    })))
+    await waitFor(() =>
+      expect(api.getBooks).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sortBy: 'status',
+          advanceCycle: true,
+        }),
+      ),
+    )
     await waitFor(() => expect(vi.mocked(api.getBooks).mock.calls.length).toBe(initialCalls + 1))
   })
 
@@ -892,7 +1021,10 @@ describe('BooksPage', () => {
       if (params.advanceCycle) {
         return {
           ...paginated(typeBooks),
-          data: params.sortDirection === dictionaries[0].name ? [typeBooks[1], typeBooks[0]] : [typeBooks[0], typeBooks[1]],
+          data:
+            params.sortDirection === dictionaries[0].name
+              ? [typeBooks[1], typeBooks[0]]
+              : [typeBooks[0], typeBooks[1]],
         }
       }
 
@@ -906,24 +1038,36 @@ describe('BooksPage', () => {
     const typeHeader = screen.getByRole('button', { name: /type/i })
 
     await user.click(typeHeader)
-    await waitFor(() => expect(api.getBooks).toHaveBeenLastCalledWith(expect.objectContaining({
-      sortBy: 'type',
-      advanceCycle: true,
-    })))
+    await waitFor(() =>
+      expect(api.getBooks).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          sortBy: 'type',
+          advanceCycle: true,
+        }),
+      ),
+    )
 
     await user.click(typeHeader)
-    await waitFor(() => expect(api.getBooks).toHaveBeenLastCalledWith(expect.objectContaining({
-      sortBy: 'type',
-      sortDirection: dictionaries[0].name,
-      advanceCycle: true,
-    })))
+    await waitFor(() =>
+      expect(api.getBooks).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          sortBy: 'type',
+          sortDirection: dictionaries[0].name,
+          advanceCycle: true,
+        }),
+      ),
+    )
 
     await user.click(typeHeader)
-    await waitFor(() => expect(api.getBooks).toHaveBeenLastCalledWith(expect.objectContaining({
-      sortBy: 'type',
-      sortDirection: dictionaries[1].name,
-      advanceCycle: true,
-    })))
+    await waitFor(() =>
+      expect(api.getBooks).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          sortBy: 'type',
+          sortDirection: dictionaries[1].name,
+          advanceCycle: true,
+        }),
+      ),
+    )
   })
 
   it('shows page numbers and supports jumping to a specific page', async () => {
@@ -945,36 +1089,48 @@ describe('BooksPage', () => {
 
     await user.click(screen.getByRole('button', { name: '2' }))
 
-    await waitFor(() => expect(api.getBooks).toHaveBeenLastCalledWith(expect.objectContaining({
-      skip: 20,
-      take: 20,
-      query: '',
-      sortBy: 'lastModified',
-      sortDirection: 'desc',
-    })))
+    await waitFor(() =>
+      expect(api.getBooks).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          skip: 20,
+          take: 20,
+          query: '',
+          sortBy: 'lastModified',
+          sortDirection: 'desc',
+        }),
+      ),
+    )
 
     await user.click(screen.getByRole('button', { name: /next page/i }))
 
-    await waitFor(() => expect(api.getBooks).toHaveBeenLastCalledWith(expect.objectContaining({
-      skip: 40,
-      take: 20,
-      query: '',
-      sortBy: 'lastModified',
-      sortDirection: 'desc',
-    })))
+    await waitFor(() =>
+      expect(api.getBooks).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          skip: 40,
+          take: 20,
+          query: '',
+          sortBy: 'lastModified',
+          sortDirection: 'desc',
+        }),
+      ),
+    )
 
     await user.click(screen.getByRole('button', { name: /jump between pages/i }))
     const jumpInput = screen.getByRole('textbox', { name: /page number/i })
     await user.type(jumpInput, '11')
     await user.keyboard('{Enter}')
 
-    await waitFor(() => expect(api.getBooks).toHaveBeenLastCalledWith(expect.objectContaining({
-      skip: 200,
-      take: 20,
-      query: '',
-      sortBy: 'lastModified',
-      sortDirection: 'desc',
-    })))
+    await waitFor(() =>
+      expect(api.getBooks).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          skip: 200,
+          take: 20,
+          query: '',
+          sortBy: 'lastModified',
+          sortDirection: 'desc',
+        }),
+      ),
+    )
   })
 
   it('renders the list footer after table and cards content without sticky spacing', async () => {
@@ -1077,7 +1233,10 @@ describe('BooksPage', () => {
     renderWithProviders(<BooksPage />, { route: '/books' })
 
     await screen.findByText('Lord of Mysteries')
-    vi.spyOn(document.getElementById('book-list-results')!, 'getBoundingClientRect').mockReturnValue({
+    vi.spyOn(
+      document.getElementById('book-list-results')!,
+      'getBoundingClientRect',
+    ).mockReturnValue({
       top: -790,
     } as DOMRect)
     await user.click(screen.getByRole('button', { name: '2' }))
@@ -1094,7 +1253,10 @@ describe('BooksPage', () => {
     const user = userEvent.setup()
     const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
     Object.defineProperty(window, 'innerHeight', { configurable: true, value: 800 })
-    Object.defineProperty(document.documentElement, 'scrollHeight', { configurable: true, value: 2400 })
+    Object.defineProperty(document.documentElement, 'scrollHeight', {
+      configurable: true,
+      value: 2400,
+    })
     Object.defineProperty(window, 'scrollY', { configurable: true, value: 0 })
 
     renderWithProviders(<BooksPage />, { route: '/books' })
@@ -1134,12 +1296,12 @@ describe('BooksPage', () => {
   })
 
   it('calculates a predictable columns popup position on desktop and mobile', () => {
-    expect(getColumnPopupPosition({ left: 400, right: 520, bottom: 100 } as DOMRect, 1280, 720)).toEqual({
+    expect(getColumnPopupPosition({ left: 400, right: 520, bottom: 100 }, 1280, 720)).toEqual({
       left: '200px',
       top: '110px',
     })
 
-    expect(getColumnPopupPosition({ left: 40, right: 180, bottom: 80 } as DOMRect, 390, 844)).toEqual({
+    expect(getColumnPopupPosition({ left: 40, right: 180, bottom: 80 }, 390, 844)).toEqual({
       left: '16px',
       top: '90px',
     })
@@ -1147,8 +1309,21 @@ describe('BooksPage', () => {
 
   it('formats progress with chapter label and total', () => {
     expect(formatProgress(books[0])).toBe('348 / 1432')
-    expect(formatProgress({ ...books[0], currentChapterLabel: 'Side Story', currentChapterNumber: null })).toBe('Side Story / 1432')
-    expect(formatProgress({ ...books[0], currentChapterLabel: null, currentChapterNumber: null, totalChapters: null })).toBe('-')
+    expect(
+      formatProgress({
+        ...books[0],
+        currentChapterLabel: 'Side Story',
+        currentChapterNumber: null,
+      }),
+    ).toBe('Side Story / 1432')
+    expect(
+      formatProgress({
+        ...books[0],
+        currentChapterLabel: null,
+        currentChapterNumber: null,
+        totalChapters: null,
+      }),
+    ).toBe('-')
   })
 
   it('formats average rating for summary cards', () => {
@@ -1173,9 +1348,11 @@ describe('BooksPage', () => {
     expect(getClosestPageSize(50, getCardPageSizeOptions(6))).toBe(54)
     expect(getClosestPageSize(20, getCardPageSizeOptions(8))).toBe(24)
     for (const cardsPerRow of [2, 3, 4, 5, 6, 7, 8]) {
-      expect(getCardPageSizeOptions(cardsPerRow).every((pageSize) => (
-        pageSize <= 500 && pageSize % cardsPerRow === 0
-      ))).toBe(true)
+      expect(
+        getCardPageSizeOptions(cardsPerRow).every(
+          (pageSize) => pageSize <= 500 && pageSize % cardsPerRow === 0,
+        ),
+      ).toBe(true)
     }
   })
 
@@ -1202,23 +1379,27 @@ describe('BooksPage', () => {
   })
 
   it('builds card detail rows only from globally enabled card fields', () => {
-    expect(getCardDetailRowClass({
-      cardsPerRow: 4,
-      showAlternativeTitles: false,
-      showAuthor: false,
-      showProgress: false,
-      showTitle: true,
-      showType: false,
-    })).toBe('grid-rows-[minmax(0,3.5rem)]')
+    expect(
+      getCardDetailRowClass({
+        cardsPerRow: 4,
+        showAlternativeTitles: false,
+        showAuthor: false,
+        showProgress: false,
+        showTitle: true,
+        showType: false,
+      }),
+    ).toBe('grid-rows-[minmax(0,3.5rem)]')
 
-    expect(getCardDetailRowClass({
-      cardsPerRow: 4,
-      showAlternativeTitles: false,
-      showAuthor: true,
-      showProgress: true,
-      showTitle: true,
-      showType: true,
-    })).toBe('grid-rows-[minmax(0,3.5rem)_minmax(0,1.5rem)_minmax(0,1.75rem)]')
+    expect(
+      getCardDetailRowClass({
+        cardsPerRow: 4,
+        showAlternativeTitles: false,
+        showAuthor: true,
+        showProgress: true,
+        showTitle: true,
+        showType: true,
+      }),
+    ).toBe('grid-rows-[minmax(0,3.5rem)_minmax(0,1.5rem)_minmax(0,1.75rem)]')
   })
 
   it('uses tighter card detail row presets as more cards are shown per row', () => {
@@ -1230,10 +1411,18 @@ describe('BooksPage', () => {
       showType: false,
     }
 
-    expect(getCardDetailRowClass({ cardsPerRow: 4, ...visibleFields })).toBe('grid-rows-[minmax(0,3.5rem)_minmax(0,1.5rem)]')
-    expect(getCardDetailRowClass({ cardsPerRow: 6, ...visibleFields })).toBe('grid-rows-[minmax(0,3rem)_minmax(0,1.25rem)]')
-    expect(getCardDetailRowClass({ cardsPerRow: 8, ...visibleFields })).toBe('grid-rows-[minmax(0,2.5rem)_minmax(0,1rem)]')
-    expect(getCardDetailRowClass({ cardsPerRow: 8, ...visibleFields, showProgress: true })).toBe('grid-rows-[minmax(0,2.5rem)_minmax(0,1rem)_minmax(0,1.25rem)]')
+    expect(getCardDetailRowClass({ cardsPerRow: 4, ...visibleFields })).toBe(
+      'grid-rows-[minmax(0,3.5rem)_minmax(0,1.5rem)]',
+    )
+    expect(getCardDetailRowClass({ cardsPerRow: 6, ...visibleFields })).toBe(
+      'grid-rows-[minmax(0,3rem)_minmax(0,1.25rem)]',
+    )
+    expect(getCardDetailRowClass({ cardsPerRow: 8, ...visibleFields })).toBe(
+      'grid-rows-[minmax(0,2.5rem)_minmax(0,1rem)]',
+    )
+    expect(getCardDetailRowClass({ cardsPerRow: 8, ...visibleFields, showProgress: true })).toBe(
+      'grid-rows-[minmax(0,2.5rem)_minmax(0,1rem)_minmax(0,1.25rem)]',
+    )
   })
 
   it('uses tighter card row min-heights for dense card layouts', () => {
@@ -1264,16 +1453,12 @@ describe('BooksPage', () => {
         { status: 'Reading', count: 1 },
         { status: 'Completed', count: 1 },
       ],
-      typeCounts: [
-        { type: 'Novel', bookCount: 2, currentChapters: 468 },
-      ],
+      typeCounts: [{ type: 'Novel', bookCount: 2, currentChapters: 468 }],
       genreCounts: [
         { genre: 'Fantasy', bookCount: 1 },
         { genre: 'Slice of Life', bookCount: 1 },
       ],
-      ratingCounts: [
-        { rating: 9, bookCount: 1 },
-      ],
+      ratingCounts: [{ rating: 9, bookCount: 1 }],
     }
   }
 })

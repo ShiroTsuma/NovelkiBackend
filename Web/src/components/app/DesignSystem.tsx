@@ -42,12 +42,7 @@ export function Surface({
 }) {
   const Component = as
 
-  return (
-    <Component
-      className={cn('ui-surface', `ui-surface--${tone}`, className)}
-      {...props}
-    />
-  )
+  return <Component className={cn('ui-surface', `ui-surface--${tone}`, className)} {...props} />
 }
 
 export function PageHeader({
@@ -82,11 +77,7 @@ export function Badge({
   className?: string
   tone?: 'accent' | 'neutral' | 'success' | 'warning' | 'danger'
 }) {
-  return (
-    <span className={cn('ui-badge', `ui-badge--${tone}`, className)}>
-      {children}
-    </span>
-  )
+  return <span className={cn('ui-badge', `ui-badge--${tone}`, className)}>{children}</span>
 }
 
 export function DialogPanel({

@@ -22,7 +22,8 @@ export function DiscoverPage() {
 
   const books = useQuery({
     queryKey: ['public-books', debouncedSearch],
-    queryFn: () => api.searchPublicBooks({ search: debouncedSearch || undefined, skip: 0, take: 40 }),
+    queryFn: () =>
+      api.searchPublicBooks({ search: debouncedSearch || undefined, skip: 0, take: 40 }),
     placeholderData: keepPreviousData,
   })
 
@@ -69,14 +70,20 @@ export function DiscoverPage() {
       </Surface>
 
       {books.isError ? (
-        <Surface className="discover-state" tone="danger">Could not load shared books. Try again.</Surface>
+        <Surface className="discover-state" tone="danger">
+          Could not load shared books. Try again.
+        </Surface>
       ) : books.isPending ? (
         <Surface className="discover-state">Loading the community shelf…</Surface>
       ) : books.data.data.length === 0 ? (
         <Surface className="discover-state">
           <Sparkles className="mx-auto h-6 w-6" />
           <strong>No shared books found</strong>
-          <span>{search.trim() ? 'Try a broader public-metadata search.' : 'Shared books will appear here when readers list them.'}</span>
+          <span>
+            {search.trim()
+              ? 'Try a broader public-metadata search.'
+              : 'Shared books will appear here when readers list them.'}
+          </span>
         </Surface>
       ) : (
         <div className="discover-grid">
@@ -94,82 +101,102 @@ export function DiscoverPage() {
   )
 }
 
-function PublicBookCard({ snapshot, copying, onCopy }: {
+function PublicBookCard({
+  snapshot,
+  copying,
+  onCopy,
+}: {
   snapshot: PublicBookSnapshotDto
   copying: boolean
   onCopy: () => void
 }) {
   const [filesOpen, setFilesOpen] = useState(false)
-  const cover: BookCoverDto | null = snapshot.coverUrl ? {
-    id: snapshot.id,
-    status: 'Found',
-    imageUrl: snapshot.coverUrl,
-    thumbnailImageUrl: snapshot.coverUrl,
-    lastAttemptAt: snapshot.snapshotAt,
-  } : null
+  const cover: BookCoverDto | null = snapshot.coverUrl
+    ? {
+        id: snapshot.id,
+        status: 'Found',
+        imageUrl: snapshot.coverUrl,
+        thumbnailImageUrl: snapshot.coverUrl,
+        lastAttemptAt: snapshot.snapshotAt,
+      }
+    : null
 
   return (
     <>
-    <Surface as="article" className="discover-card">
-      <div className="discover-card__cover">
-        <BookCoverArtwork
-          className="rounded-none border-0"
-          cover={cover}
-          emptyLabel="Snapshot without a cover"
-          loading="lazy"
-          preferredVariant="thumbnail"
-          title={`Cover of ${snapshot.primaryTitle}`}
-        />
-      </div>
-      <div className="discover-card__body">
-        <div className="discover-card__heading">
-          <div className="min-w-0">
-            <MetadataSummary
-              alternatives={snapshot.alternativeTitles}
-              countNoun="alternative title"
-              primary={snapshot.primaryTitle}
-              primaryClassName="discover-card__title"
-            />
-            {snapshot.author ? (
+      <Surface as="article" className="discover-card">
+        <div className="discover-card__cover">
+          <BookCoverArtwork
+            className="rounded-none border-0"
+            cover={cover}
+            emptyLabel="Snapshot without a cover"
+            loading="lazy"
+            preferredVariant="thumbnail"
+            title={`Cover of ${snapshot.primaryTitle}`}
+          />
+        </div>
+        <div className="discover-card__body">
+          <div className="discover-card__heading">
+            <div className="min-w-0">
               <MetadataSummary
-                alternatives={snapshot.authorOtherNames}
-                countNoun="alternative name"
-                primary={snapshot.author}
-                primaryClassName="discover-card__author"
+                alternatives={snapshot.alternativeTitles}
+                countNoun="alternative title"
+                primary={snapshot.primaryTitle}
+                primaryClassName="discover-card__title"
               />
-            ) : <span className="discover-card__author">Unknown author</span>}
+              {snapshot.author ? (
+                <MetadataSummary
+                  alternatives={snapshot.authorOtherNames}
+                  countNoun="alternative name"
+                  primary={snapshot.author}
+                  primaryClassName="discover-card__author"
+                />
+              ) : (
+                <span className="discover-card__author">Unknown author</span>
+              )}
+            </div>
+            <Badge tone="neutral">{snapshot.contentType}</Badge>
           </div>
-          <Badge tone="neutral">{snapshot.contentType}</Badge>
-        </div>
 
-        <p className="discover-card__description">{snapshot.description || 'No description was included in this snapshot.'}</p>
+          <p className="discover-card__description">
+            {snapshot.description || 'No description was included in this snapshot.'}
+          </p>
 
-        {snapshot.totalChapters != null ? (
-          <div className="discover-card__metadata">
-            <span>Chapters</span>
-            <strong>{snapshot.totalChapters.toLocaleString()}</strong>
+          {snapshot.totalChapters != null ? (
+            <div className="discover-card__metadata">
+              <span>Chapters</span>
+              <strong>{snapshot.totalChapters.toLocaleString()}</strong>
+            </div>
+          ) : null}
+
+          <MetadataGroup label="Genres" values={snapshot.genres} />
+          <MetadataGroup label="Tags" values={snapshot.tags} />
+
+          <div className="discover-card__footer">
+            <span>Snapshot {new Date(snapshot.snapshotAt).toLocaleDateString()}</span>
+            {(snapshot.filesCount ?? 0) > 0 && (
+              <button
+                className={buttonVariants.secondary}
+                type="button"
+                onClick={() => setFilesOpen(true)}
+              >
+                Files ({snapshot.filesCount})
+              </button>
+            )}
+            <button
+              className={buttonVariants.primary}
+              disabled={copying || snapshot.isOwner}
+              type="button"
+              onClick={onCopy}
+            >
+              <BookPlus className="h-4 w-4" />
+              {snapshot.isOwner ? 'Your listing' : copying ? 'Adding…' : 'Add to library'}
+            </button>
           </div>
-        ) : null}
-
-        <MetadataGroup label="Genres" values={snapshot.genres} />
-        <MetadataGroup label="Tags" values={snapshot.tags} />
-
-        <div className="discover-card__footer">
-          <span>Snapshot {new Date(snapshot.snapshotAt).toLocaleDateString()}</span>
-          {(snapshot.filesCount ?? 0) > 0 && <button className={buttonVariants.secondary} type="button" onClick={() => setFilesOpen(true)}>Files ({snapshot.filesCount})</button>}
-          <button
-            className={buttonVariants.primary}
-            disabled={copying || snapshot.isOwner}
-            type="button"
-            onClick={onCopy}
-          >
-            <BookPlus className="h-4 w-4" />
-            {snapshot.isOwner ? 'Your listing' : copying ? 'Adding…' : 'Add to library'}
-          </button>
         </div>
-      </div>
-    </Surface>
-    {filesOpen && <BookFilesDialog snapshotId={snapshot.id} onClose={() => setFilesOpen(false)} />}
+      </Surface>
+      {filesOpen && (
+        <BookFilesDialog snapshotId={snapshot.id} onClose={() => setFilesOpen(false)} />
+      )}
     </>
   )
 }

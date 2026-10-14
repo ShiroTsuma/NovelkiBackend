@@ -75,13 +75,15 @@ describe('AdminPage', () => {
     })
 
     expect(await screen.findByText('No results.')).toBeInTheDocument()
-    await waitFor(() => expect(api.getAdminBooks).toHaveBeenCalledWith({
-      skip: 0,
-      take: 20,
-      query: 'title:Missing',
-      sortBy: 'title',
-      sortDirection: 'asc',
-    }))
+    await waitFor(() =>
+      expect(api.getAdminBooks).toHaveBeenCalledWith({
+        skip: 0,
+        take: 20,
+        query: 'title:Missing',
+        sortBy: 'title',
+        sortDirection: 'asc',
+      }),
+    )
   })
 
   it('filters admin books by typed status query', async () => {
@@ -95,11 +97,11 @@ describe('AdminPage', () => {
       primaryTitle: 'Completed Title',
       status: 'Completed',
     })
-    vi.mocked(api.getAdminBooks).mockImplementation(async (params) => (
+    vi.mocked(api.getAdminBooks).mockImplementation(async (params) =>
       params.query === 'status:completed'
         ? paginated([completed])
-        : paginated([reading, completed])
-    ))
+        : paginated([reading, completed]),
+    )
     const user = userEvent.setup()
 
     renderWithProviders(<AdminPage />, { route: '/admin' })
@@ -107,13 +109,17 @@ describe('AdminPage', () => {
     expect(await screen.findByText('Reading Title')).toBeInTheDocument()
     await user.type(screen.getByPlaceholderText(/rating:>=8/i), 'status:completed')
 
-    await waitFor(() => expect(api.getAdminBooks).toHaveBeenLastCalledWith(expect.objectContaining({
-      skip: 0,
-      take: 20,
-      query: 'status:completed',
-      sortBy: 'lastModified',
-      sortDirection: 'desc',
-    })))
+    await waitFor(() =>
+      expect(api.getAdminBooks).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          skip: 0,
+          take: 20,
+          query: 'status:completed',
+          sortBy: 'lastModified',
+          sortDirection: 'desc',
+        }),
+      ),
+    )
     expect(await screen.findByText('Completed Title')).toBeInTheDocument()
     await waitFor(() => expect(screen.queryByText('Reading Title')).not.toBeInTheDocument())
   })
@@ -130,9 +136,13 @@ describe('AdminPage', () => {
     await user.type(searchInput, 'status:plan to read ')
 
     expect(searchInput).toHaveValue('status:plan to read ')
-    await waitFor(() => expect(api.getAdminBooks).toHaveBeenLastCalledWith(expect.objectContaining({
-      query: 'status:plan to read',
-    })))
+    await waitFor(() =>
+      expect(api.getAdminBooks).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          query: 'status:plan to read',
+        }),
+      ),
+    )
   })
 
   it('keeps previous admin rows visible while the next search is fetching', async () => {
@@ -142,13 +152,15 @@ describe('AdminPage', () => {
         return pendingSearch.promise
       }
 
-      return Promise.resolve(paginated([
-        createAdminBook({
-          id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-          primaryTitle: 'Reading Title',
-          status: 'Reading',
-        }),
-      ]))
+      return Promise.resolve(
+        paginated([
+          createAdminBook({
+            id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+            primaryTitle: 'Reading Title',
+            status: 'Reading',
+          }),
+        ]),
+      )
     })
     const user = userEvent.setup()
 
@@ -157,19 +169,25 @@ describe('AdminPage', () => {
     expect(await screen.findByText('Reading Title')).toBeInTheDocument()
     await user.type(screen.getByPlaceholderText(/rating:>=8/i), 'status:completed')
 
-    await waitFor(() => expect(api.getAdminBooks).toHaveBeenLastCalledWith(expect.objectContaining({
-      query: 'status:completed',
-    })))
+    await waitFor(() =>
+      expect(api.getAdminBooks).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          query: 'status:completed',
+        }),
+      ),
+    )
     expect(screen.getByText('Reading Title')).toBeInTheDocument()
     expect(screen.getByText('Searching...')).toBeInTheDocument()
 
-    pendingSearch.resolve(paginated([
-      createAdminBook({
-        id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
-        primaryTitle: 'Completed Title',
-        status: 'Completed',
-      }),
-    ]))
+    pendingSearch.resolve(
+      paginated([
+        createAdminBook({
+          id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+          primaryTitle: 'Completed Title',
+          status: 'Completed',
+        }),
+      ]),
+    )
 
     expect(await screen.findByText('Completed Title')).toBeInTheDocument()
     await waitFor(() => expect(screen.queryByText('Searching...')).not.toBeInTheDocument())
@@ -193,16 +211,21 @@ describe('AdminPage', () => {
 
     await user.click(screen.getByRole('button', { name: '2' }))
 
-    await waitFor(() => expect(api.getAdminBooks).toHaveBeenLastCalledWith(expect.objectContaining({
-      skip: 20,
-      take: 20,
-    })))
+    await waitFor(() =>
+      expect(api.getAdminBooks).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          skip: 20,
+          take: 20,
+        }),
+      ),
+    )
   })
 
   it('sorts by total chapters from the admin table column', async () => {
-    window.localStorage.setItem('novelki.adminBooks.columns.v1', JSON.stringify([
-      { id: 'totalChapters', visible: true },
-    ]))
+    window.localStorage.setItem(
+      'novelki.adminBooks.columns.v1',
+      JSON.stringify([{ id: 'totalChapters', visible: true }]),
+    )
     vi.mocked(api.getAdminBooks).mockResolvedValue(paginated([createAdminBook()]))
     const user = userEvent.setup()
 
@@ -211,13 +234,17 @@ describe('AdminPage', () => {
     expect(await screen.findByText('Shadow Slave')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /total chapters|total/i }))
 
-    await waitFor(() => expect(api.getAdminBooks).toHaveBeenLastCalledWith(expect.objectContaining({
-      skip: 0,
-      take: 20,
-      query: '',
-      sortBy: 'chapters',
-      sortDirection: 'asc',
-    })))
+    await waitFor(() =>
+      expect(api.getAdminBooks).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          skip: 0,
+          take: 20,
+          query: '',
+          sortBy: 'chapters',
+          sortDirection: 'asc',
+        }),
+      ),
+    )
   })
 
   it('shows shared scroll shortcut buttons', async () => {
@@ -225,7 +252,10 @@ describe('AdminPage', () => {
     const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
     const user = userEvent.setup()
     Object.defineProperty(window, 'innerHeight', { configurable: true, value: 800 })
-    Object.defineProperty(document.documentElement, 'scrollHeight', { configurable: true, value: 2400 })
+    Object.defineProperty(document.documentElement, 'scrollHeight', {
+      configurable: true,
+      value: 2400,
+    })
     Object.defineProperty(window, 'scrollY', { configurable: true, value: 640 })
 
     renderWithProviders(<AdminPage />, { route: '/admin' })

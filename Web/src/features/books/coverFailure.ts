@@ -26,8 +26,10 @@ export function getDisplayCoverFailure(failureReason?: string | null) {
 }
 
 function isCoverDownloadFailure(failureReason: string) {
-  return failureReason.includes('Response status code does not indicate success')
-    || /HTTP\s+3\d\d/i.test(failureReason)
+  return (
+    failureReason.includes('Response status code does not indicate success') ||
+    /HTTP\s+3\d\d/i.test(failureReason)
+  )
 }
 
 function isProviderResponseFailure(failureReason?: string | null) {

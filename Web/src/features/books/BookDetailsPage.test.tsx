@@ -23,7 +23,11 @@ vi.mock('sonner', () => ({
 }))
 
 vi.mock('./BookCoverSection', () => ({
-  BookCoverArtwork: ({ title, hint }: { title: string; hint?: string }) => <div>{title} cover{hint}</div>,
+  BookCoverArtwork: ({ title, hint }: { title: string; hint?: string }) => (
+    <div>
+      {title} cover{hint}
+    </div>
+  ),
   CoverLightbox: () => null,
   useResolvedCoverImage: () => null,
 }))
@@ -40,13 +44,18 @@ describe('BookDetailsPage', () => {
     })
 
     renderWithProviders(
-      <Routes><Route element={<BookDetailsPage />} path="/books/:id" /></Routes>,
+      <Routes>
+        <Route element={<BookDetailsPage />} path="/books/:id" />
+      </Routes>,
       { route: '/books/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' },
     )
 
-    expect(await screen.findByText((_, element) =>
-      element?.tagName === 'P' && element.textContent === 'First paragraph.\nSecond paragraph.',
-    )).toHaveClass('whitespace-pre-line')
+    expect(
+      await screen.findByText(
+        (_, element) =>
+          element?.tagName === 'P' && element.textContent === 'First paragraph.\nSecond paragraph.',
+      ),
+    ).toHaveClass('whitespace-pre-line')
   })
 
   it('returns to the exact filtered book list url stored by the list page', async () => {
@@ -71,28 +80,30 @@ describe('BookDetailsPage', () => {
   })
 
   it('computes chapter deltas from sorted progress history entries', () => {
-    expect(getProgressHistoryWithDeltas([
-      {
-        id: 'older',
-        changedAt: '2026-01-01T10:00:00Z',
-        chapterNumber: 10,
-      },
-      {
-        id: 'latest',
-        changedAt: '2026-01-03T10:00:00Z',
-        chapterNumber: 16,
-      },
-      {
-        id: 'middle',
-        changedAt: '2026-01-02T10:00:00Z',
-        chapterNumber: 12,
-      },
-      {
-        id: 'label-only',
-        changedAt: '2026-01-04T10:00:00Z',
-        chapterLabel: 'Side story',
-      },
-    ])).toEqual([
+    expect(
+      getProgressHistoryWithDeltas([
+        {
+          id: 'older',
+          changedAt: '2026-01-01T10:00:00Z',
+          chapterNumber: 10,
+        },
+        {
+          id: 'latest',
+          changedAt: '2026-01-03T10:00:00Z',
+          chapterNumber: 16,
+        },
+        {
+          id: 'middle',
+          changedAt: '2026-01-02T10:00:00Z',
+          chapterNumber: 12,
+        },
+        {
+          id: 'label-only',
+          changedAt: '2026-01-04T10:00:00Z',
+          chapterLabel: 'Side story',
+        },
+      ]),
+    ).toEqual([
       {
         id: 'label-only',
         changedAt: '2026-01-04T10:00:00Z',
@@ -212,7 +223,8 @@ describe('BookDetailsPage', () => {
   it('keeps the status beside a long default title', async () => {
     vi.mocked(api.getBook).mockResolvedValue({
       ...books[0],
-      primaryTitle: 'A Very Long Default Book Title That Needs Several Lines Without Moving The Status Below It',
+      primaryTitle:
+        'A Very Long Default Book Title That Needs Several Lines Without Moving The Status Below It',
     })
 
     renderWithProviders(
@@ -247,7 +259,9 @@ describe('BookDetailsPage', () => {
       { route: '/books/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' },
     )
 
-    expect(await screen.findByText(/A cover was found, but the image could not be downloaded/)).toBeInTheDocument()
+    expect(
+      await screen.findByText(/A cover was found, but the image could not be downloaded/),
+    ).toBeInTheDocument()
     expect(screen.queryByText(/301 \(Moved Permanently\)/)).not.toBeInTheDocument()
   })
 
@@ -280,6 +294,9 @@ describe('BookDetailsPage', () => {
       { route: '/books/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' },
     )
 
-    expect((await screen.findByText('Genres')).parentElement).toHaveClass('content-start', 'self-start')
+    expect((await screen.findByText('Genres')).parentElement).toHaveClass(
+      'content-start',
+      'self-start',
+    )
   })
 })

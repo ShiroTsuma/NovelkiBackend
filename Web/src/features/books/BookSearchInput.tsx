@@ -1,5 +1,16 @@
 import { useQuery } from '@tanstack/react-query'
-import { ArrowRight, Ban, CalendarDays, Hash, ListFilter, Search, TextCursorInput, Trash2, Undo2, X } from 'lucide-react'
+import {
+  ArrowRight,
+  Ban,
+  CalendarDays,
+  Hash,
+  ListFilter,
+  Search,
+  TextCursorInput,
+  Trash2,
+  Undo2,
+  X,
+} from 'lucide-react'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { api } from '@/api/client'
 import { inputClass } from '@/components/app/FormField'
@@ -62,23 +73,27 @@ export function BookSearchInput({
   }, [draftValue])
 
   const context = useMemo(() => analyzeBookSearch(draftValue, caret), [caret, draftValue])
-  const remoteField = remoteSuggestionsEnabled && context.definition?.remote && context.hasColon
-    ? context.definition.canonical
-    : null
+  const remoteField =
+    remoteSuggestionsEnabled && context.definition?.remote && context.hasColon
+      ? context.definition.canonical
+      : null
   const searchValue = getBookSearchValue(context)
   const scopeQuery = getBookSearchScopeQuery(draftValue, context)
-  const remoteRequest = remoteField == null ? '' : `${remoteField}\u0000${searchValue}\u0000${scopeQuery}`
+  const remoteRequest =
+    remoteField == null ? '' : `${remoteField}\u0000${searchValue}\u0000${scopeQuery}`
   const debouncedRequest = useDebouncedValue(remoteRequest, suggestionDelayMs)
-  const [debouncedField, debouncedSearch = '', debouncedScopeQuery = ''] = debouncedRequest.split('\u0000')
+  const [debouncedField, debouncedSearch = '', debouncedScopeQuery = ''] =
+    debouncedRequest.split('\u0000')
   const remoteSuggestions = useQuery({
     queryKey: ['book-search-suggestions', debouncedField, debouncedSearch, debouncedScopeQuery],
-    queryFn: ({ signal }) => api.getBookSearchSuggestions({
-      field: debouncedField,
-      search: debouncedSearch || undefined,
-      query: debouncedScopeQuery || undefined,
-      take: 10,
-      signal,
-    }),
+    queryFn: ({ signal }) =>
+      api.getBookSearchSuggestions({
+        field: debouncedField,
+        search: debouncedSearch || undefined,
+        query: debouncedScopeQuery || undefined,
+        take: 10,
+        signal,
+      }),
     enabled: open && remoteField != null && debouncedField === remoteField,
     staleTime: 30_000,
   })
@@ -89,13 +104,18 @@ export function BookSearchInput({
       return local
     }
 
-    const response = debouncedRequest === remoteRequest
-      ? (remoteSuggestions.data ?? []).filter(
-          (suggestion) => suggestion.value.trim().toLocaleLowerCase() !== 'none' &&
-            !isBookSearchValueAlreadyApplied(draftValue, context, remoteField, suggestion.value),
-        )
-      : []
-    if (context.complete && response.some((suggestion) => suggestion.isExact && suggestion.isAvailable)) {
+    const response =
+      debouncedRequest === remoteRequest
+        ? (remoteSuggestions.data ?? []).filter(
+            (suggestion) =>
+              suggestion.value.trim().toLocaleLowerCase() !== 'none' &&
+              !isBookSearchValueAlreadyApplied(draftValue, context, remoteField, suggestion.value),
+          )
+        : []
+    if (
+      context.complete &&
+      response.some((suggestion) => suggestion.isExact && suggestion.isAvailable)
+    ) {
       return local
     }
 
@@ -145,16 +165,20 @@ export function BookSearchInput({
     setOpen(true)
   }
 
-  const loadingRemote = remoteField != null &&
-    (remoteRequest !== debouncedRequest || remoteSuggestions.isFetching)
+  const loadingRemote =
+    remoteField != null && (remoteRequest !== debouncedRequest || remoteSuggestions.isFetching)
 
   const content = (
     <>
       <div className="relative" ref={rootRef}>
-        <label className="sr-only" htmlFor="book-search-input">{ariaLabel}</label>
+        <label className="sr-only" htmlFor="book-search-input">
+          {ariaLabel}
+        </label>
         <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-slate-400" />
         <input
-          aria-activedescendant={open && suggestions[activeIndex] ? `${suggestionListId}-${activeIndex}` : undefined}
+          aria-activedescendant={
+            open && suggestions[activeIndex] ? `${suggestionListId}-${activeIndex}` : undefined
+          }
           aria-autocomplete="list"
           aria-controls={suggestionListId}
           aria-expanded={open}
@@ -240,10 +264,10 @@ export function BookSearchInput({
                   suggestion.disabled
                     ? 'cursor-not-allowed text-slate-400 opacity-60'
                     : activeIndex === index
-                    ? 'bg-slate-900 text-white'
-                    : suggestion.kind === 'remove'
-                      ? 'text-rose-700 hover:bg-rose-50'
-                      : 'text-[var(--qs-text)] hover:bg-[var(--qs-surface-muted)]'
+                      ? 'bg-slate-900 text-white'
+                      : suggestion.kind === 'remove'
+                        ? 'text-rose-700 hover:bg-rose-50'
+                        : 'text-[var(--qs-text)] hover:bg-[var(--qs-surface-muted)]'
                 }`}
                 id={`${suggestionListId}-${index}`}
                 key={suggestion.id}
@@ -259,21 +283,29 @@ export function BookSearchInput({
               >
                 <SuggestionIcon item={suggestion} />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate font-mono text-sm font-semibold">{suggestion.label}</span>
-                  <span className={`block truncate text-xs ${
-                    activeIndex === index ? 'text-slate-300' : 'text-[var(--qs-muted)]'
-                  }`}>
+                  <span className="block truncate font-mono text-sm font-semibold">
+                    {suggestion.label}
+                  </span>
+                  <span
+                    className={`block truncate text-xs ${
+                      activeIndex === index ? 'text-slate-300' : 'text-[var(--qs-muted)]'
+                    }`}
+                  >
                     {suggestion.description}
                   </span>
                 </span>
-                {(suggestion.kind === 'filter' ||
-                  suggestion.kind === 'value' ||
-                  suggestion.kind === 'wildcard') ? (
-                  <ArrowRight className={`h-4 w-4 shrink-0 ${
-                    suggestion.disabled
-                      ? 'text-slate-300'
-                      : activeIndex === index ? 'text-slate-300' : 'text-slate-400 group-hover:text-slate-600'
-                  }`} />
+                {suggestion.kind === 'filter' ||
+                suggestion.kind === 'value' ||
+                suggestion.kind === 'wildcard' ? (
+                  <ArrowRight
+                    className={`h-4 w-4 shrink-0 ${
+                      suggestion.disabled
+                        ? 'text-slate-300'
+                        : activeIndex === index
+                          ? 'text-slate-300'
+                          : 'text-slate-400 group-hover:text-slate-600'
+                    }`}
+                  />
                 ) : null}
               </button>
             ))}
@@ -297,19 +329,25 @@ export function BookSearchInput({
         ) : null}
       </div>
 
-      {showHelp ? <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
-        <span>Choose a suggestion or type</span>
-        <code>:</code>
-        <span>to build a filter.</span>
-        <code>-</code>
-        <span>excludes a term.</span>
-      </p> : null}
+      {showHelp ? (
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
+          <span>Choose a suggestion or type</span>
+          <code>:</code>
+          <span>to build a filter.</span>
+          <code>-</code>
+          <span>excludes a term.</span>
+        </p>
+      ) : null}
     </>
   )
 
-  return appearance === 'panel'
-    ? <Surface className="relative grid gap-2 p-4" tone="muted">{content}</Surface>
-    : <div className="relative grid gap-2">{content}</div>
+  return appearance === 'panel' ? (
+    <Surface className="relative grid gap-2 p-4" tone="muted">
+      {content}
+    </Surface>
+  ) : (
+    <div className="relative grid gap-2">{content}</div>
+  )
 }
 
 function SuggestionIcon({ item }: { item: BookSearchSuggestionItem }) {
@@ -336,10 +374,16 @@ function SuggestionIcon({ item }: { item: BookSearchSuggestionItem }) {
 }
 
 function formatCount(count: number) {
-  return new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(count)
+  return new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(
+    count,
+  )
 }
 
-function getNextSelectableIndex(suggestions: BookSearchSuggestionItem[], current: number, direction: 1 | -1) {
+function getNextSelectableIndex(
+  suggestions: BookSearchSuggestionItem[],
+  current: number,
+  direction: 1 | -1,
+) {
   if (suggestions.length === 0 || suggestions.every((suggestion) => suggestion.disabled)) {
     return 0
   }

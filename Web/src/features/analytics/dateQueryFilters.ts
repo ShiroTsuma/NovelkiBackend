@@ -82,8 +82,8 @@ function parseDateFilterToken(token: string) {
 }
 
 function parseDatePeriod(value: string) {
-  const day = value.match(/^(\d{4})-(\d{2})-(\d{2})$/)
-    ?? value.match(/^(\d{1,2})[./](\d{1,2})[./](\d{4})$/)
+  const day =
+    /^(\d{4})-(\d{2})-(\d{2})$/.exec(value) ?? /^(\d{1,2})[./](\d{1,2})[./](\d{4})$/.exec(value)
   if (day) {
     const year = day[1].length === 4 ? Number(day[1]) : Number(day[3])
     const month = day[1].length === 4 ? Number(day[2]) : Number(day[2])
@@ -92,8 +92,7 @@ function parseDatePeriod(value: string) {
     return start ? { start, endExclusive: addUtcDays(start, 1) } : null
   }
 
-  const month = value.match(/^(\d{4})[-/](\d{1,2})$/)
-    ?? value.match(/^(\d{1,2})[./](\d{4})$/)
+  const month = /^(\d{4})[-/](\d{1,2})$/.exec(value) ?? /^(\d{1,2})[./](\d{4})$/.exec(value)
   if (month) {
     const year = month[1].length === 4 ? Number(month[1]) : Number(month[2])
     const monthNumber = month[1].length === 4 ? Number(month[2]) : Number(month[1])
@@ -141,7 +140,11 @@ function tokenizeQuery(query: string) {
 }
 
 function unquote(value: string) {
-  if (value.length >= 2 && ((value[0] === '"' && value.at(-1) === '"') || (value[0] === "'" && value.at(-1) === "'"))) {
+  if (
+    value.length >= 2 &&
+    ((value.startsWith('"') && value.at(-1) === '"') ||
+      (value.startsWith("'") && value.at(-1) === "'"))
+  ) {
     return value.slice(1, -1)
   }
 
@@ -150,7 +153,11 @@ function unquote(value: string) {
 
 function toDateValue(year: number, month: number, day: number) {
   const date = new Date(Date.UTC(year, month - 1, day))
-  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
     return null
   }
 
