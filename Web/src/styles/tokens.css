@@ -1,0 +1,94 @@
+/*
+ * Novelki design tokens: graphite + paper.
+ * Every colour, radius, shadow and font used by the UI must come from here.
+ * Tailwind v4 reads @theme, so each token is also a utility
+ * (bg-surface, text-ink-2, border-line, rounded-control, font-display, …).
+ */
+
+@theme {
+  /* Fonts */
+  --font-sans: 'IBM Plex Sans Variable', 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Source Serif 4 Variable', 'Source Serif 4', Georgia, serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Grounds and surfaces: neutral graphite, no blue or violet tint */
+  --color-ground: #121313;
+  --color-sunk: #161717;
+  --color-surface: #1b1c1d;
+  --color-raised: #222325;
+  --color-hover: #1f2022;
+  --color-selected: #2c2e31;
+  --color-overlay: rgb(6 6 6 / 0.72);
+
+  /* Lines */
+  --color-line: #2b2d30;
+  --color-line-soft: #232426;
+  --color-line-strong: #3a3d41;
+  --color-line-focus: #55585e;
+
+  /* Ink (text). ink-3 is the lowest allowed for text: at least 4.5:1 on ground */
+  --color-ink: #eceae4;
+  --color-ink-2: #b0aea7;
+  --color-ink-3: #8a8882;
+  --color-ink-disabled: #5e5d59;
+  --color-ink-inverse: #121313;
+
+  /* Accent: paper. Used for the primary action, the current place and focus */
+  --color-accent: #eceae4;
+  --color-accent-hover: #ffffff;
+  --color-accent-ink: #121313;
+
+  /* Danger */
+  --color-danger: #c9675e;
+  --color-danger-soft: #2a1716;
+  --color-danger-line: #5a2a26;
+  --color-danger-ink: #eba59d;
+
+  /* Status: soft background, foreground and dot. Finished is the only filled one */
+  --color-status-reading: #7fa8c9;
+  --color-status-reading-soft: #1a2530;
+  --color-status-reading-ink: #a8c6de;
+  --color-status-finished: #4fbf6e;
+  --color-status-finished-soft: #16301f;
+  --color-status-finished-ink: #9fe0b1;
+  --color-status-finished-on: #0f1a12;
+  --color-status-hold: #d08a4e;
+  --color-status-hold-soft: #33240f;
+  --color-status-hold-ink: #e9b57e;
+  --color-status-plan: #9c9a93;
+  --color-status-plan-soft: #232326;
+  --color-status-plan-ink: #c9c7c0;
+  --color-status-dropped: #c9675e;
+  --color-status-dropped-soft: #331a18;
+  --color-status-dropped-ink: #eba59d;
+  --color-status-unknown: #6e6d68;
+  --color-status-unknown-soft: #1f1f21;
+  --color-status-unknown-ink: #a3a19b;
+
+  /* Book type: missing-cover placeholders */
+  --color-type-novel: #1e2a36;
+  --color-type-novel-ink: #c4d6e6;
+  --color-type-manga: #35201f;
+  --color-type-manga-ink: #ebc8c1;
+  --color-type-manhua: #322a16;
+  --color-type-manhua-ink: #e9d7a8;
+  --color-type-manhwa: #19302a;
+  --color-type-manhwa-ink: #bce0d2;
+  --color-type-other: #252528;
+  --color-type-other-ink: #cfcdc7;
+
+  /* Rating star */
+  --color-star: #d4b15f;
+
+  /* Radius */
+  --radius-pill: 6px;
+  --radius-control: 8px;
+  --radius-field: 10px;
+  --radius-panel: 14px;
+  --radius-dialog: 16px;
+
+  /* Elevation */
+  --shadow-overlay: 0 24px 64px rgb(0 0 0 / 0.55);
+  --shadow-popover: 0 12px 32px rgb(0 0 0 / 0.45);
+  --shadow-cover: 0 18px 48px rgb(0 0 0 / 0.45);
+}
