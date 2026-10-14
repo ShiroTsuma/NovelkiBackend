@@ -299,7 +299,16 @@ export function BookDetailsPage() {
         </Surface>
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <BookFilesPanel bookId={book.id} />
+          <BookFilesPanel
+            bookId={book.id}
+            searchBook={{
+              id: book.id,
+              title: book.primaryTitle,
+              alternativeTitles: book.alternativeTitles,
+              chaptersRead: book.currentChapterNumber ?? null,
+              chapterLabel: book.currentChapterLabel ?? null,
+            }}
+          />
           <Panel title="Links">
             <div className="grid gap-2">
               {book.links.length ? (

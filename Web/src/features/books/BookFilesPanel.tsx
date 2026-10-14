@@ -12,6 +12,7 @@ import {
 } from '@/api/bookFiles'
 import { buttonVariants, controlClass } from '@/components/app/designTokens'
 import { Surface } from '@/components/app/DesignSystem'
+import { EpubSearchDialog, type EpubSearchBook } from '@/features/epubSearch/EpubSearchDialog'
 import { FileModal } from './files/FileDialogs'
 import { fileError } from './files/fileJobs'
 import { FileDownloadDialog } from './files/FileDownloadDialog'
@@ -33,9 +34,18 @@ function useBookFiles(bookId?: string, snapshotId?: string) {
   })
 }
 
-export function BookFilesPanel({ bookId }: { bookId: string }) {
+export function BookFilesPanel({
+  bookId,
+  searchBook,
+}: {
+  bookId: string
+  /** Book details for "Find EPUB"; the button is hidden without them. */
+  searchBook?: Omit<EpubSearchBook, 'existingFileCount'> | undefined
+}) {
+  const queryClient = useQueryClient()
   const query = useBookFiles(bookId)
   const [open, setOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
   const files =
     query.data && 'files' in query.data ? query.data.files.filter((f) => !f.deletedAtUtc) : []
   return (
@@ -53,11 +63,32 @@ export function BookFilesPanel({ bookId }: { bookId: string }) {
                   : 'No EPUBs'}
           </p>
         </div>
-        <button className={buttonVariants.secondary} type="button" onClick={() => setOpen(true)}>
-          View
-        </button>
+        <div className="flex flex-wrap gap-2">
+          {searchBook ? (
+            <button
+              className={buttonVariants.secondary}
+              type="button"
+              onClick={() => setSearchOpen(true)}
+            >
+              Find EPUB
+            </button>
+          ) : null}
+          <button className={buttonVariants.secondary} type="button" onClick={() => setOpen(true)}>
+            View
+          </button>
+        </div>
       </Surface>
       {open && <BookFilesDialog bookId={bookId} onClose={() => setOpen(false)} />}
+      {searchBook && searchOpen ? (
+        <EpubSearchDialog
+          open
+          book={{ ...searchBook, existingFileCount: files.length }}
+          onClose={() => setSearchOpen(false)}
+          onDownloadFinished={() => {
+            void queryClient.invalidateQueries({ queryKey: ['book-files', bookId] })
+          }}
+        />
+      ) : null}
     </>
   )
 }
