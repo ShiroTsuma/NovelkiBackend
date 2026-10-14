@@ -449,6 +449,7 @@ export type BookImportRowDto = {
   authorName?: string | null
   contentType?: string | null
   status?: string | null
+  genres?: string | null
   tags?: string | null
   totalChapters?: string | null
   currentChapterNumber?: string | null
@@ -479,6 +480,7 @@ export type BookImportRowUpdateRequest = {
   authorName?: string | null
   contentType?: string | null
   status?: string | null
+  genres?: string | null
   tags?: string | null
   totalChapters?: string | null
   currentChapterNumber?: string | null

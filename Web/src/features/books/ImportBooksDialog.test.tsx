@@ -306,6 +306,45 @@ describe('ImportBooksDialog', () => {
     expect(titleInput).not.toHaveAttribute('aria-invalid')
   })
 
+  it('keeps row genres when revalidating an edited import row', async () => {
+    const sessionWithGenres: BookImportSessionDto = {
+      ...importSessionWithFieldErrors,
+      rows: [
+        { ...importSessionWithFieldErrors.rows[0]!, genres: 'Fantasy; Action', tags: 'favorite' },
+      ],
+    }
+    vi.mocked(api.createBookImportSession).mockResolvedValue(sessionWithGenres)
+    vi.mocked(api.updateBookImportRow).mockResolvedValue(sessionWithGenres)
+
+    const { container } = renderWithProviders(
+      <ImportBooksDialog open onClose={vi.fn()} onImported={vi.fn()} />,
+    )
+
+    fireEvent.change(container.querySelector('input[type="file"]')!, {
+      target: {
+        files: [new File(['primaryTitle,contentType,status'], 'books.csv', { type: 'text/csv' })],
+      },
+    })
+
+    fireEvent.click(await screen.findByRole('button', { name: /edit row/i }))
+    expect(screen.getByLabelText(/^Genres/)).toHaveValue('Fantasy; Action')
+
+    fireEvent.change(screen.getByLabelText(/^Type/), { target: { value: 'Novel' } })
+    fireEvent.click(screen.getByRole('button', { name: /revalidate row/i }))
+
+    await waitFor(() =>
+      expect(api.updateBookImportRow).toHaveBeenCalledWith(
+        'session-1',
+        'row-1',
+        expect.objectContaining({
+          contentType: 'Novel',
+          genres: 'Fantasy; Action',
+          tags: 'favorite',
+        }),
+      ),
+    )
+  })
+
   it('shows type and status suggestions for invalid import rows', async () => {
     vi.mocked(api.createBookImportSession).mockResolvedValue(importSessionWithFieldErrors)
 

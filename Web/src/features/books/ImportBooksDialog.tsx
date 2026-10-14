@@ -744,6 +744,12 @@ function ExpandedImportRowEditor({
           onChange={(value) => update('authorName', value)}
         />
         <LabeledInput
+          error={fieldError('genres')}
+          label="Genres"
+          value={draft.genres ?? ''}
+          onChange={(value) => update('genres', value)}
+        />
+        <LabeledInput
           error={fieldError('tags')}
           label="Tags"
           value={draft.tags ?? ''}
@@ -1121,6 +1127,7 @@ function createImportRowDraft(row: BookImportRowDto): BookImportRowUpdateRequest
     authorName: row.authorName ?? '',
     contentType: row.contentType ?? '',
     status: row.status ?? '',
+    genres: row.genres ?? '',
     tags: row.tags ?? '',
     totalChapters: row.totalChapters ?? '',
     currentChapterNumber: row.currentChapterNumber ?? '',
