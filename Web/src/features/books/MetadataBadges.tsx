@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useEffectEvent, useId, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
 type MetadataSummaryProps = {
@@ -137,7 +137,9 @@ function MetadataTooltip({
   const tooltipId = useId()
   const triggerRef = useRef<HTMLButtonElement | null>(null)
   const [isOpen, setIsOpen] = useState(false)
-  const [position, setPosition] = useState({ left: 0, top: 0, below: false })
+  const [position, setPosition] = useState({ left: 0, top: 0, below: false, maxHeight: 320 })
+  const wide = content.length > 240
+  const maxWidth = wide ? 448 : 288
 
   function updatePosition() {
     const trigger = triggerRef.current
@@ -147,19 +149,28 @@ function MetadataTooltip({
 
     const bounds = trigger.getBoundingClientRect()
     const availableWidth = Math.max(0, window.innerWidth - 24)
-    const halfTooltipWidth = Math.min(144, availableWidth / 2)
+    const halfTooltipWidth = Math.min(maxWidth / 2, availableWidth / 2)
     const centeredLeft = bounds.left + bounds.width / 2
     const left = Math.min(
       window.innerWidth - 12 - halfTooltipWidth,
       Math.max(12 + halfTooltipWidth, centeredLeft),
     )
 
+    // Open towards the side with more room and never taller than that room.
+    const gap = 8
+    const margin = 12
+    const spaceAbove = bounds.top - gap - margin
+    const spaceBelow = window.innerHeight - bounds.bottom - gap - margin
+    const below = spaceBelow > spaceAbove
     setPosition({
       left,
-      top: bounds.top < 140 ? bounds.bottom : bounds.top,
-      below: bounds.top < 140,
+      top: below ? bounds.bottom : bounds.top,
+      below,
+      maxHeight: Math.max(80, below ? spaceBelow : spaceAbove),
     })
   }
+
+  const onViewportChange = useEffectEvent(updatePosition)
 
   function showTooltip() {
     updatePosition()
@@ -171,11 +182,12 @@ function MetadataTooltip({
       return
     }
 
-    window.addEventListener('resize', updatePosition)
-    window.addEventListener('scroll', updatePosition, true)
+    const handler = () => onViewportChange()
+    window.addEventListener('resize', handler)
+    window.addEventListener('scroll', handler, true)
     return () => {
-      window.removeEventListener('resize', updatePosition)
-      window.removeEventListener('scroll', updatePosition, true)
+      window.removeEventListener('resize', handler)
+      window.removeEventListener('scroll', handler, true)
     }
   }, [isOpen])
 
@@ -197,12 +209,15 @@ function MetadataTooltip({
       {isOpen && typeof document !== 'undefined'
         ? createPortal(
             <span
-              className="metadata-tooltip ui-chart-tooltip pointer-events-none fixed z-[80] w-72 max-w-[calc(100vw-1.5rem)] whitespace-pre-line text-xs font-normal leading-5 shadow-lg"
+              className="metadata-tooltip ui-chart-tooltip pointer-events-none fixed z-[80] overflow-hidden text-xs leading-5 font-normal whitespace-pre-line shadow-lg"
               id={tooltipId}
               role="tooltip"
               style={{
                 left: position.left,
                 top: position.top,
+                width: maxWidth,
+                maxWidth: 'calc(100vw - 1.5rem)',
+                maxHeight: position.maxHeight,
                 transform: position.below
                   ? 'translate(-50%, 0.5rem)'
                   : 'translate(-50%, calc(-100% - 0.5rem))',
