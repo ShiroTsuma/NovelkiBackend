@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, ArrowUpRight, Pencil, Star } from 'lucide-react'
+import { ArrowLeft, ArrowUpRight, MoreHorizontal, Pencil, Search, Star } from 'lucide-react'
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -9,16 +9,19 @@ import { HttpError } from '@/api/http'
 import { Button } from '@/components/ui/Button'
 import { buttonStyles } from '@/components/ui/buttonStyles'
 import { Dialog } from '@/components/ui/Dialog'
+import { Menu, type MenuItem } from '@/components/ui/Menu'
 import { cn } from '@/lib/utils'
 import { BookCoverArtwork, CoverLightbox } from './BookCoverSection'
 import { BookFilesPanel } from './BookFilesPanel'
+import { TypeCoverPlaceholder } from './BookListCells'
 import { getBookListReturnTo } from './bookListNavigation'
 import { getProgressHistoryWithDeltas } from './bookProgressHistory'
 import { isLowRating } from './bookRating'
 import { getStatusTone, statusToneClasses } from './bookStatus'
-import { getDisplayCoverFailure, getDisplayCoverStatus } from './coverFailure'
+import { getDisplayCoverFailure } from './coverFailure'
 import { DescribedMetadataPills } from './MetadataBadges'
 import { ProgressDialog } from './ProgressDialog'
+import { setFieldFilter } from './queryTokens'
 import { StatusBadge } from './StatusBadge'
 import { useResolvedCoverImage } from './useResolvedCoverImage'
 
@@ -36,6 +39,7 @@ export function BookDetailsPage() {
   const [descriptionExpanded, setDescriptionExpanded] = useState(false)
   const [descriptionOverflowing, setDescriptionOverflowing] = useState(false)
   const [allTagsVisible, setAllTagsVisible] = useState(false)
+  const [epubSearchOpen, setEpubSearchOpen] = useState(false)
   const descriptionRef = useRef<HTMLParagraphElement | null>(null)
 
   function requireBookId() {
@@ -115,14 +119,37 @@ export function BookDetailsPage() {
   const shouldOfferRefresh =
     book.cover?.source !== 'ManualUpload' && book.cover?.source !== 'ManualUrl'
   const refreshLabel = book.cover?.imageUrl ? 'Search again' : 'Search cover'
-  const displayCoverStatus = getDisplayCoverStatus(book.cover?.status, book.cover?.failureReason)
   const displayCoverFailure = getDisplayCoverFailure(book.cover?.failureReason)
   const coverSourceLabel = book.cover?.source ? coverSourceText(book.cover.source) : undefined
-  const coverHint = !book.cover?.imageUrl
-    ? [`Status: ${displayCoverStatus}`, displayCoverFailure].filter(Boolean).join('\n')
-    : undefined
+  const coverNote =
+    book.cover?.imageUrl || !book.cover
+      ? null
+      : book.cover.status === 'Pending'
+        ? 'Looking for a cover…'
+        : displayCoverFailure
   const progressHistory = getProgressHistoryWithDeltas(book.progressHistory)
+  const editState = { bookListReturnTo }
+  const moreActions: MenuItem[] = [
+    ...(shouldOfferRefresh
+      ? [
+          {
+            label: refreshCoverMutation.isPending ? 'Searching…' : refreshLabel,
+            description: 'Look for a cover online',
+            disabled: refreshCoverMutation.isPending,
+            onSelect: () => refreshCoverMutation.mutate(),
+          },
+        ]
+      : []),
+    {
+      label: 'Delete book…',
+      description: 'With its reading history, EPUB files and cover',
+      danger: true,
+      disabled: deleteMutation.isPending,
+      onSelect: () => setDeleteConfirmOpen(true),
+    },
+  ]
   const hiddenTagCount = Math.max(0, book.tags.length - collapsedTagCount)
+  const visibleTags = allTagsVisible ? book.tags : book.tags.slice(0, collapsedTagCount)
 
   const descriptionStyle: CSSProperties | undefined = !descriptionExpanded
     ? {
@@ -148,12 +175,14 @@ export function BookDetailsPage() {
           <div className="w-[200px] flex-none sm:w-[220px]">
             <BookCoverArtwork
               className="w-full shadow-cover"
+              placeholder={
+                <TypeCoverPlaceholder contentType={book.contentType} title={book.primaryTitle} />
+              }
               cover={book.cover}
               emptyActionLabel={
                 !book.cover?.imageUrl && shouldOfferRefresh ? refreshLabel : undefined
               }
               emptyLabel="No cover in library yet."
-              hint={coverHint}
               hoverFooter={coverSourceLabel}
               interactive
               title={book.primaryTitle}
@@ -168,6 +197,9 @@ export function BookDetailsPage() {
                 }
               }}
             />
+            {coverNote ? (
+              <p className="m-0 mt-2 text-[13px] whitespace-pre-line text-ink-3">{coverNote}</p>
+            ) : null}
           </div>
 
           <div className="flex min-w-0 flex-[999_1_480px] flex-col gap-3.5">
@@ -176,7 +208,17 @@ export function BookDetailsPage() {
               <span>{book.contentType}</span>
               <span aria-hidden="true">·</span>
               <span>
-                by <span className="font-medium text-ink">{book.author ?? 'Unknown author'}</span>
+                by{' '}
+                {book.author ? (
+                  <Link
+                    className="font-medium text-ink underline decoration-line-focus underline-offset-[3px] hover:decoration-ink"
+                    to={`/books?${new URLSearchParams({ query: setFieldFilter('', 'author', book.author) }).toString()}`}
+                  >
+                    {book.author}
+                  </Link>
+                ) : (
+                  <span className="font-medium text-ink">Unknown author</span>
+                )}
               </span>
             </div>
             <h1 className="m-0 max-w-[900px] font-display text-[clamp(1.9rem,3.2vw,2.4rem)] leading-tight font-bold tracking-tight break-words">
@@ -190,6 +232,15 @@ export function BookDetailsPage() {
               <ProgressCard book={book} lastLogged={progressHistory[0]?.changedAt} />
               <StatCard label="Rating">
                 <RatingValue rating={book.rating} />
+                {book.rating == null ? (
+                  <Link
+                    className="block text-[13px] font-normal text-ink-2 underline decoration-line-focus underline-offset-[3px] hover:text-ink"
+                    state={editState}
+                    to={`/books/${book.id}/edit#rating`}
+                  >
+                    Rate it
+                  </Link>
+                ) : null}
               </StatCard>
               <StatCard label="Priority">
                 {book.priority != null ? (
@@ -207,12 +258,24 @@ export function BookDetailsPage() {
               <ProgressDialog book={book} />
               <Link
                 className={buttonStyles({ variant: 'secondary' })}
-                state={{ bookListReturnTo }}
+                state={editState}
                 to={`/books/${book.id}/edit`}
               >
                 <Pencil aria-hidden="true" className="size-4" />
                 Edit
               </Link>
+              <Button variant="secondary" onClick={() => setEpubSearchOpen(true)}>
+                <Search aria-hidden="true" className="size-4" />
+                Find EPUB
+              </Button>
+              <Menu
+                align="start"
+                label="More actions"
+                sections={[{ items: moreActions }]}
+                triggerClassName={buttonStyles({ variant: 'outline', size: 'icon' })}
+                triggerContent={<MoreHorizontal aria-hidden="true" className="size-4" />}
+                widthClassName="w-64"
+              />
             </div>
           </div>
         </section>
@@ -241,35 +304,35 @@ export function BookDetailsPage() {
             </Section>
 
             <Section title="Genres & tags">
-              <div className="grid content-start gap-2 self-start">
-                <h3 className="m-0 text-xs font-semibold tracking-wider text-ink-3 uppercase">
-                  Genres
-                </h3>
-                <DescribedMetadataPills
-                  descriptions={book.genreDescriptions}
-                  empty={<p className="m-0 text-ink-3">No genres.</p>}
-                  maxVisible={book.genres.length}
-                  values={book.genres}
-                  variant="detail"
-                />
-              </div>
-              <div className="grid content-start gap-2 self-start">
-                <h3 className="m-0 text-xs font-semibold tracking-wider text-ink-3 uppercase">
-                  Tags
-                </h3>
-                <DescribedMetadataPills
-                  descriptions={book.tagDescriptions}
-                  empty={<p className="m-0 text-ink-3">No tags.</p>}
-                  maxVisible={allTagsVisible ? book.tags.length : collapsedTagCount}
-                  values={book.tags}
-                  variant="detail"
-                />
-                {hiddenTagCount > 0 ? (
-                  <TextButton onClick={() => setAllTagsVisible(!allTagsVisible)}>
-                    {allTagsVisible ? 'Show fewer tags' : `Show all ${book.tags.length} tags`}
-                  </TextButton>
-                ) : null}
-              </div>
+              {book.genres.length || book.tags.length ? (
+                <>
+                  <DescribedMetadataPills
+                    descriptions={book.genreDescriptions}
+                    empty={null}
+                    linkTo={(genre) => libraryHref('genre', genre)}
+                    maxVisible={book.genres.length}
+                    values={book.genres}
+                    variant="genre"
+                  />
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <DescribedMetadataPills
+                      descriptions={book.tagDescriptions}
+                      empty={null}
+                      linkTo={(tag) => libraryHref('tag', tag)}
+                      maxVisible={visibleTags.length}
+                      values={visibleTags}
+                      variant="tag"
+                    />
+                    {hiddenTagCount > 0 ? (
+                      <TextButton onClick={() => setAllTagsVisible(!allTagsVisible)}>
+                        {allTagsVisible ? 'Show fewer' : `Show all ${book.tags.length}`}
+                      </TextButton>
+                    ) : null}
+                  </div>
+                </>
+              ) : (
+                <p className="m-0 text-ink-3">No genres or tags yet.</p>
+              )}
             </Section>
 
             <Section title="Reading history">
@@ -320,6 +383,8 @@ export function BookDetailsPage() {
           <aside className="flex max-w-full flex-[1_1_360px] flex-col gap-4 lg:max-w-[460px]">
             <BookFilesPanel
               bookId={book.id}
+              searchOpen={epubSearchOpen}
+              onSearchOpenChange={setEpubSearchOpen}
               searchBook={{
                 id: book.id,
                 title: book.primaryTitle,
@@ -350,23 +415,18 @@ export function BookDetailsPage() {
               {book.notes ? (
                 <p className="m-0 whitespace-pre-line text-ink-2">{book.notes}</p>
               ) : (
-                <p className="m-0 text-ink-3">No notes yet.</p>
+                <p className="m-0 text-ink-3">
+                  No notes yet.{' '}
+                  <Link
+                    className="text-ink underline decoration-line-focus underline-offset-[3px] hover:decoration-ink"
+                    state={editState}
+                    to={`/books/${book.id}/edit#notes`}
+                  >
+                    Add one
+                  </Link>
+                </p>
               )}
             </SidePanel>
-            <section className="flex flex-col items-start gap-2 rounded-panel border border-danger-line p-4">
-              <h2 className="m-0 text-base font-semibold text-danger-ink">Delete book</h2>
-              <p className="m-0 text-[13px] text-ink-3">
-                Removes the book, its reading history, EPUB files and cover.
-              </p>
-              <Button
-                variant="danger"
-                size="sm"
-                disabled={deleteMutation.isPending}
-                onClick={() => setDeleteConfirmOpen(true)}
-              >
-                Delete…
-              </Button>
-            </section>
           </aside>
         </div>
       </div>
@@ -546,6 +606,10 @@ function RatingValue({ rating }: { rating?: number | null | undefined }) {
       <span className="sr-only">Rated {value} out of 10</span>
     </>
   )
+}
+
+function libraryHref(field: string, value: string) {
+  return `/books?${new URLSearchParams({ query: setFieldFilter('', field, value) }).toString()}`
 }
 
 function historyTitle(entry: { chapterLabel?: string | null; chapterNumber?: number | null }) {

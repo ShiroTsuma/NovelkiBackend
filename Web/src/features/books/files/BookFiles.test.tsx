@@ -175,7 +175,7 @@ describe('EPUB file UX', () => {
   it('downloads only chosen EPUBs separately, issuing fresh tickets per click', async () => {
     const user = userEvent.setup()
     renderWithProviders(<BookFilesPanel bookId="book-1" />)
-    await user.click(await screen.findByRole('button', { name: 'Download…' }))
+    await user.click(await screen.findByRole('button', { name: 'Download all' }))
     await user.click(screen.getByLabelText('Select Volume 2'))
     await user.click(screen.getByLabelText('Separate EPUBs'))
     await user.click(screen.getByRole('button', { name: 'Continue' }))

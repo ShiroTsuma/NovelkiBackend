@@ -13,25 +13,25 @@ Nothing may disappear without a `[~]` note.
 ## Book details (`/books/:id`) — rebuilt in 6a9ff2b
 
 - [x] Back link returns to the exact filtered list URL (`bookListReturnTo` state)
-- [x] Cover: click opens the lightbox when a cover exists; otherwise "Search cover" / "Search again" queues a cover search (not for manual uploads or URLs)
-- [x] Cover status and failure hint; technical download errors are replaced by a friendly message
+- [x] Cover: click opens the lightbox when a cover exists; otherwise "Search cover" / "Search again" queues a cover search (not for manual uploads or URLs). `[~]` without a cover a type-coloured placeholder shows; the search is also in the ⋯ menu
+- [x] Cover status and failure hint; technical download errors are replaced by a friendly message. `[~]` shown as one line under the cover (pending or failed only)
 - [x] Cover polling every 2 s while the cover status is Pending
 - [x] Cover source shown in the hover footer and lightbox. `[~]` raw enum (`ManualUpload`) is now human text ("Uploaded manually")
-- [x] Content type, title, alternative titles, author
+- [x] Content type, title, alternative titles, author. `[~]` the author links to the library filtered by `author:`
 - [x] Status indicator with `aria-label="Book status: …"`
 - [x] Progress: label, count, total, percentage bar. `[~]` an unknown total shows a dashed bar instead of an empty one; Completed shows "Finished" and a full green bar
 - [x] Rating: ≤5 shown in red. `[~]` a single star and number instead of 10 stars
 - [~] Priority: newly shown on the details page
-- [x] Genres and tags with descriptions on hover or focus. `[~]` tags collapse after 14, with "Show all N tags"
+- [x] Genres and tags with descriptions on hover or focus. `[~]` tags collapse after 14 ("Show all N"); chips link to the library filtered by `genre:` / `tag:`
 - [x] Description clamped, with "Show more" / "Show less" when it overflows; line breaks preserved
 - [x] Links: custom label, then source type, then hostname; open in a new tab
 - [x] Notes
 - [x] Progress history with deltas between entries (+n green / −n red), labels, comments and dates. `[~]` now a timeline
 - [x] Log progress dialog: number validation (non-negative, no exponent, not above total), label ≤100 chars, comment ≤1000 chars, a comment-only save without changing the chapter, toast messages
 - [x] Edit link keeps `bookListReturnTo`
-- [x] Delete with confirmation, then return to the list. `[~]` moved from the header into a danger panel
+- [x] Delete with confirmation, then return to the list. `[~]` in the ⋯ menu next to the actions
 - [x] EPUB panel: file count and size, the dialog for managing, rename, reorder, share, trash and restore, the import dialog, the ZIP or separate download dialog, and per-file download. `[~]` files are listed inline on the page; management opens directly in manage mode
-- [~] Find EPUB (search and download through the crawler, currently mocked): new
+- [~] Find EPUB (search and download through the crawler, currently mocked): new. In the action row and the EPUB panel; a download sent to the background shows its progress in the panel (Details reopens it); files added in the last 7 days get a NEW badge
 
 ## Library list (`/books`) — rebuilt (see commit after 4ab5471)
 

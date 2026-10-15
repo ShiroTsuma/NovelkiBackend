@@ -183,7 +183,8 @@ describe('BookDetailsPage', () => {
     )
 
     await screen.findByText('Lord of Mysteries')
-    await user.click(screen.getByRole('button', { name: 'Delete…' }))
+    await user.click(screen.getByRole('button', { name: 'More actions' }))
+    await user.click(screen.getByRole('menuitem', { name: /^Delete book…/ }))
 
     const dialog = screen.getByRole('dialog', { name: 'Delete book' })
 
@@ -285,11 +286,13 @@ describe('BookDetailsPage', () => {
     expect(screen.getByRole('tooltip')).toHaveTextContent('A personal favorite.')
   })
 
-  it('keeps genres aligned to the top when the tags column is taller', async () => {
+  it('links genres and tags to the library filtered by them, collapsing long tag lists', async () => {
     vi.mocked(api.getBook).mockResolvedValue({
       ...books[0]!,
-      tags: ['one', 'two', 'three', 'four', 'five', 'six'],
+      genres: ['Slice of Life'],
+      tags: Array.from({ length: 16 }, (_, index) => 'tag' + String(index + 1)),
     })
+    const user = userEvent.setup()
 
     renderWithProviders(
       <Routes>
@@ -298,9 +301,33 @@ describe('BookDetailsPage', () => {
       { route: '/books/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' },
     )
 
-    expect((await screen.findByText('Genres')).parentElement).toHaveClass(
-      'content-start',
-      'self-start',
+    expect(await screen.findByRole('link', { name: 'Slice of Life' })).toHaveAttribute(
+      'href',
+      '/books?query=genre%3A%22slice+of+life%22',
     )
+    expect(screen.getByRole('link', { name: 'tag1' })).toHaveAttribute(
+      'href',
+      '/books?query=tag%3Atag1',
+    )
+    expect(screen.queryByRole('link', { name: 'tag16' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Show all 16' }))
+    expect(screen.getByRole('link', { name: 'tag16' })).toBeInTheDocument()
+  })
+
+  it('opens Find EPUB from the action row and keeps delete in the more menu', async () => {
+    vi.mocked(api.getBook).mockResolvedValue(books[0]!)
+    const user = userEvent.setup()
+
+    renderWithProviders(
+      <Routes>
+        <Route element={<BookDetailsPage />} path="/books/:id" />
+      </Routes>,
+      { route: '/books/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' },
+    )
+
+    await screen.findByText('Lord of Mysteries')
+    expect(screen.queryByRole('button', { name: 'Delete…' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Find EPUB' }))
+    expect(screen.getByRole('dialog', { name: 'Find EPUB' })).toBeInTheDocument()
   })
 })

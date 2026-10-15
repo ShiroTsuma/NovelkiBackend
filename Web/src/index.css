@@ -1468,8 +1468,8 @@ select.ui-control {
 }
 
 .book-cover-artwork {
-  border: 1px solid var(--qs-border);
-  border-radius: var(--qs-panel-radius);
+  border: 1px solid var(--color-line);
+  border-radius: 10px;
   background: var(--qs-surface-raised);
 }
 

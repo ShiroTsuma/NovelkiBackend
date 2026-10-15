@@ -2,8 +2,13 @@ import type { BookFile } from '@/api/bookFiles'
 
 export function FileContents({
   file,
+  className = 'file-contents',
+  suffix = '',
 }: {
   file: Pick<BookFile, 'title' | 'firstContentLabel' | 'lastContentLabel'>
+  className?: string
+  /** Text after the range (e.g. a separator), only rendered with the range. */
+  suffix?: string
 }) {
   if (!file.firstContentLabel || !file.lastContentLabel) return null
   function shorten(label: string) {
@@ -20,8 +25,9 @@ export function FileContents({
   const first = shorten(file.firstContentLabel)
   const last = shorten(file.lastContentLabel)
   return (
-    <p className="file-contents" title={`${file.firstContentLabel} → ${file.lastContentLabel}`}>
+    <p className={className} title={`${file.firstContentLabel} → ${file.lastContentLabel}`}>
       {first === last ? first : `${first} → ${last}`}
+      {suffix}
     </p>
   )
 }

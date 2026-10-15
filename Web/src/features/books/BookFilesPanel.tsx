@@ -1,14 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import {
-  ArrowDown,
-  ArrowUp,
-  Download,
-  Pencil,
-  RotateCcw,
-  Search,
-  Trash2,
-  Upload,
-} from 'lucide-react'
+import { ArrowDown, ArrowUp, Download, Pencil, RotateCcw, Search, Trash2 } from 'lucide-react'
 import { useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -22,6 +13,8 @@ import {
 import { buttonVariants, controlClass } from '@/components/app/designTokens'
 import { Button } from '@/components/ui/Button'
 import { EpubSearchDialog, type EpubSearchBook } from '@/features/epubSearch/EpubSearchDialog'
+import { useEpubDownload } from '@/features/epubSearch/queries'
+import { isDownloadFinished, type EpubDownloadJob } from '@/features/epubSearch/types'
 import { FileModal } from './files/FileDialogs'
 import { fileError } from './files/fileJobs'
 import { FileDownloadDialog } from './files/FileDownloadDialog'
@@ -43,20 +36,34 @@ function useBookFiles(bookId?: string, snapshotId?: string) {
   })
 }
 
+/** Files added within this many days get a NEW badge in the panel. */
+const newFileDays = 7
+
 export function BookFilesPanel({
   bookId,
   searchBook,
+  searchOpen: controlledSearchOpen,
+  onSearchOpenChange,
 }: {
   bookId: string
-  /** Book details for "Find EPUB"; the button is hidden without them. */
+  /** Book details for "Find & download"; the button is hidden without them. */
   searchBook?: Omit<EpubSearchBook, 'existingFileCount'> | undefined
+  /** Lets the page open Find EPUB from elsewhere (the details hero). */
+  searchOpen?: boolean | undefined
+  onSearchOpenChange?: ((open: boolean) => void) | undefined
 }) {
   const queryClient = useQueryClient()
   const query = useBookFiles(bookId)
   const [manageOpen, setManageOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [downloadOpen, setDownloadOpen] = useState(false)
-  const [searchOpen, setSearchOpen] = useState(false)
+  const [ownSearchOpen, setOwnSearchOpen] = useState(false)
+  const searchOpen = controlledSearchOpen ?? ownSearchOpen
+  // The search dialog stays mounted once opened, so a download keeps running
+  // (and reports back) after "Run in background".
+  const [searchMounted, setSearchMounted] = useState(false)
+  const [downloadJobId, setDownloadJobId] = useState<string | null>(null)
+  const job = useEpubDownload(downloadJobId).data ?? null
   const [downloading, setDownloading] = useState<string>()
   const [error, setError] = useState('')
   const list = query.data && 'files' in query.data ? query.data : undefined
@@ -67,6 +74,16 @@ export function BookFilesPanel({
       ? Math.min(100, (list.usedStorageBytes / list.maxStorageBytes) * 100)
       : 0
   const headingId = `epub-heading-${bookId}`
+  const [now] = useState(() => Date.now())
+
+  if (searchOpen && !searchMounted) {
+    setSearchMounted(true)
+  }
+
+  function setSearchOpen(open: boolean) {
+    setOwnSearchOpen(open)
+    onSearchOpenChange?.(open)
+  }
 
   function refreshFiles() {
     void queryClient.invalidateQueries({ queryKey: ['book-files'] })
@@ -95,6 +112,8 @@ export function BookFilesPanel({
   else if (files.length > 0)
     summary = `${files.length} ${files.length === 1 ? 'file' : 'files'} · ${formatFileSize(totalBytes)}`
 
+  const runningJob = job && !isDownloadFinished(job.status) ? job : null
+
   return (
     <>
       <section
@@ -108,38 +127,54 @@ export function BookFilesPanel({
           <span className="text-[13px] text-ink-3 tabular-nums">{summary}</span>
         </div>
 
+        {runningJob ? (
+          <RunningDownload job={runningJob} onDetails={() => setSearchOpen(true)} />
+        ) : null}
+
         {files.length > 0 ? (
           <ul className="m-0 list-none border-t border-line p-0">
-            {files.map((file) => (
-              <li
-                key={file.id}
-                className="flex items-center gap-3 border-b border-line-soft px-4 py-3 last:border-b-0"
-              >
-                <span
-                  aria-hidden="true"
-                  className="flex h-10 w-8 shrink-0 items-center justify-center rounded border border-line-strong bg-raised text-[10px] font-bold tracking-wide text-ink-2"
+            {files.map((file) => {
+              const isNew = now - new Date(file.createdAt).getTime() < newFileDays * 86_400_000
+              return (
+                <li
+                  key={file.id}
+                  className="flex items-center gap-3 border-b border-line-soft px-4 py-3 last:border-b-0"
                 >
-                  EPUB
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate font-semibold">{file.title}</div>
-                  <div className="flex flex-wrap gap-x-1.5 text-[13px] text-ink-3 tabular-nums">
-                    <FileContents file={file} />
-                    <span>{formatFileSize(file.sizeBytes)}</span>
-                    {file.isShared ? <span>· Shared</span> : null}
+                  <span
+                    aria-hidden="true"
+                    className="flex h-10 w-8 shrink-0 items-center justify-center rounded border border-line-strong bg-raised text-[10px] font-bold tracking-wide text-ink-2"
+                  >
+                    EPUB
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex min-w-0 items-center gap-2 font-semibold">
+                      <span className="truncate">{file.title}</span>
+                      {isNew ? (
+                        <span className="shrink-0 rounded bg-status-finished-soft px-1.5 text-[11px] font-bold tracking-[0.04em] text-status-finished-ink">
+                          NEW
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="flex flex-wrap items-baseline gap-x-1.5 text-[13px] text-ink-3 tabular-nums">
+                      <FileContents className="m-0 font-mono text-xs" file={file} suffix=" ·" />
+                      <span className="whitespace-nowrap">
+                        {formatFileSize(file.sizeBytes)}
+                        {file.isShared ? ' · Shared' : null}
+                      </span>
+                    </div>
                   </div>
-                </div>
-                <Button
-                  variant="outline"
-                  size="iconSm"
-                  aria-label={`Download ${file.title}`}
-                  disabled={downloading === file.id}
-                  onClick={() => void downloadOne(file)}
-                >
-                  <Download aria-hidden="true" className="size-4" />
-                </Button>
-              </li>
-            ))}
+                  <Button
+                    variant="outline"
+                    size="iconSm"
+                    aria-label={`Download ${file.title}`}
+                    disabled={downloading === file.id}
+                    onClick={() => void downloadOne(file)}
+                  >
+                    <Download aria-hidden="true" className="size-4" />
+                  </Button>
+                </li>
+              )
+            })}
           </ul>
         ) : null}
         {query.isSuccess && files.length === 0 ? (
@@ -158,22 +193,16 @@ export function BookFilesPanel({
           {searchBook ? (
             <Button variant="primary" size="sm" onClick={() => setSearchOpen(true)}>
               <Search aria-hidden="true" className="size-4" />
-              Find EPUB
+              Find &amp; download
             </Button>
           ) : null}
-          <Button
-            variant="secondary"
-            size="sm"
-            title="Upload EPUB or ZIP files"
-            onClick={() => setImportOpen(true)}
-          >
-            <Upload aria-hidden="true" className="size-4" />
-            Upload
+          <Button variant="secondary" size="sm" onClick={() => setImportOpen(true)}>
+            Upload EPUB / ZIP
           </Button>
           <span className="flex-1" />
           {files.length > 1 ? (
             <Button variant="ghost" size="sm" onClick={() => setDownloadOpen(true)}>
-              Download…
+              Download all
             </Button>
           ) : null}
           <Button variant="ghost" size="sm" onClick={() => setManageOpen(true)}>
@@ -210,15 +239,63 @@ export function BookFilesPanel({
       {downloadOpen ? (
         <FileDownloadDialog files={files} onClose={() => setDownloadOpen(false)} />
       ) : null}
-      {searchBook && searchOpen ? (
+      {searchBook && searchMounted ? (
         <EpubSearchDialog
-          open
+          open={searchOpen}
           book={{ ...searchBook, existingFileCount: files.length }}
           onClose={() => setSearchOpen(false)}
+          onDownloadStarted={setDownloadJobId}
           onDownloadFinished={refreshFiles}
         />
       ) : null}
     </>
+  )
+}
+
+/** A Find EPUB download still running after its dialog was closed. */
+function RunningDownload({ job, onDetails }: { job: EpubDownloadJob; onDetails: () => void }) {
+  const percent = job.chaptersTotal > 0 ? (job.chaptersDone / job.chaptersTotal) * 100 : 0
+  const current = job.files.find((file) => file.status !== 'added') ?? job.files.at(-1)
+  return (
+    <div className="mx-4 mb-3 flex flex-col gap-2 rounded-field border border-line bg-sunk p-3">
+      <div className="flex items-center gap-2">
+        <Download aria-hidden="true" className="size-4 shrink-0 text-ink-2" />
+        <span className="min-w-0 flex-1 truncate font-medium">
+          Downloading from {job.sourceName}
+        </span>
+        <button
+          type="button"
+          className="border-0 bg-transparent p-0 text-[13px] text-ink-2 underline decoration-line-focus underline-offset-[3px] hover:text-ink"
+          onClick={onDetails}
+        >
+          Details
+        </button>
+      </div>
+      <div className="text-[13px] text-ink-3 tabular-nums">
+        {[
+          current
+            ? `${current.title} · chapters ${current.firstChapter}–${current.lastChapter}`
+            : null,
+          `${job.chaptersDone} of ${job.chaptersTotal}`,
+          'new files appear here when built',
+        ]
+          .filter(Boolean)
+          .join(' · ')}
+      </div>
+      <div
+        role="progressbar"
+        aria-label="EPUB download"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(percent)}
+        className="h-1.5 overflow-hidden rounded-full bg-line"
+      >
+        <div
+          className="progress-working h-full rounded-full bg-accent"
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+    </div>
   )
 }
 

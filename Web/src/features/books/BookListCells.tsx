@@ -56,15 +56,56 @@ export function CardCover({ book }: { book: BookListItemDto }) {
           src={url}
         />
       ) : (
-        <>
-          <span className="absolute top-2.5 left-2.5 text-[11px] font-semibold tracking-[0.06em] uppercase opacity-85">
-            {book.contentType}
-          </span>
-          <span className="absolute right-3 bottom-12 left-3 line-clamp-4 font-display text-xl leading-tight font-bold break-words">
-            {book.primaryTitle}
-          </span>
-        </>
+        <TypeCoverPlaceholder
+          contentType={book.contentType}
+          title={book.primaryTitle}
+          titleClassName="bottom-12 text-xl"
+          compact
+        />
       )}
+    </span>
+  )
+}
+
+/**
+ * Cover stand-in for books without one: the type colour, the type label and
+ * the title in the display face. Fills its (relative) parent.
+ */
+export function TypeCoverPlaceholder({
+  contentType,
+  title,
+  titleClassName = 'bottom-4 text-[22px]',
+  compact = false,
+}: {
+  contentType: string
+  title: string
+  /** Position and size of the title (it sits above card footers in the grid). */
+  titleClassName?: string
+  /** Card size: tighter insets (10px / 12px instead of 12px / 16px). */
+  compact?: boolean
+}) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn('absolute inset-0 block text-left', typeCoverClass(contentType))}
+    >
+      <span
+        className={cn(
+          'absolute text-[11px] font-semibold tracking-[0.06em] uppercase opacity-85',
+          compact ? 'top-2.5 left-2.5' : 'top-3 left-3',
+        )}
+      >
+        {contentType}
+      </span>
+      <span
+        className={cn(
+          'absolute font-display leading-[1.15] font-bold break-words',
+          compact ? 'right-3 left-3 line-clamp-4' : 'right-4 left-4 line-clamp-5',
+          titleClassName,
+        )}
+      >
+        {title}
+      </span>
     </span>
   )
 }

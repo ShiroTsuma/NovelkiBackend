@@ -47,11 +47,14 @@ export function EpubSearchDialog({
   book,
   open,
   onClose,
+  onDownloadStarted,
   onDownloadFinished,
 }: {
   book: EpubSearchBook
   open: boolean
   onClose: () => void
+  /** Called with the job id when a download starts (the panel shows its progress). */
+  onDownloadStarted?: ((jobId: string) => void) | undefined
   onDownloadFinished?: ((job: EpubDownloadJob) => void) | undefined
 }) {
   const read = book.chaptersRead ?? 0
@@ -112,6 +115,7 @@ export function EpubSearchDialog({
         onSuccess: (started) => {
           setJobId(started.id)
           setStep('download')
+          onDownloadStarted?.(started.id)
         },
       },
     )

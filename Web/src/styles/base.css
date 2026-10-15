@@ -83,3 +83,26 @@
     }
   }
 }
+
+/* Moving stripes on a progress bar while work is running. */
+@keyframes progress-stripes {
+  to {
+    background-position: 24px 0;
+  }
+}
+
+.progress-working {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgb(0 0 0 / 0.14) 0 6px,
+    transparent 6px 12px
+  );
+  background-size: 24px 24px;
+  animation: progress-stripes 1s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress-working {
+    animation: none;
+  }
+}

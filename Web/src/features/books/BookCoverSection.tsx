@@ -1,5 +1,5 @@
 import { X, ZoomIn } from 'lucide-react'
-import { useEffect } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import type { BookCoverSummaryDto } from '@/api/types'
 import { buttonVariants } from '@/components/app/designTokens'
 import { useBodyScrollLock } from '@/components/app/useBodyScrollLock'
@@ -21,6 +21,8 @@ type BookCoverArtworkProps = {
   removeLabel?: string | undefined
   emptyActionLabel?: string | undefined
   hoverFooter?: string | undefined
+  /** Replaces the default empty state (e.g. a type-coloured placeholder). */
+  placeholder?: ReactNode
 }
 
 type CoverLightboxProps = {
@@ -47,6 +49,7 @@ export function BookCoverArtwork({
   removeLabel = 'Remove cover',
   emptyActionLabel,
   hoverFooter,
+  placeholder,
 }: BookCoverArtworkProps) {
   const { permitted: loadPermitted, setTarget: setLoadTarget } = useCoverLoadPermission(
     loading === 'lazy',
@@ -72,18 +75,20 @@ export function BookCoverArtwork({
       src={resolvedImageUrl}
     />
   ) : (
-    <div className="grid place-items-center gap-2 px-6 text-center text-slate-500">
-      <div className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">
-        No Cover
-      </div>
-      <div className="text-sm">{emptyLabel}</div>
-      {hint ? <div className="whitespace-pre-line text-xs text-slate-400">{hint}</div> : null}
-      {emptyActionLabel ? (
-        <div className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white">
-          {emptyActionLabel}
+    (placeholder ?? (
+      <div className="grid place-items-center gap-2 px-6 text-center text-slate-500">
+        <div className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">
+          No Cover
         </div>
-      ) : null}
-    </div>
+        <div className="text-sm">{emptyLabel}</div>
+        {hint ? <div className="whitespace-pre-line text-xs text-slate-400">{hint}</div> : null}
+        {emptyActionLabel ? (
+          <div className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white">
+            {emptyActionLabel}
+          </div>
+        ) : null}
+      </div>
+    ))
   )
 
   if (!interactive) {

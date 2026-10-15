@@ -1,5 +1,16 @@
 import { useEffect, useEffectEvent, useId, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { Link } from 'react-router-dom'
+
+type PillVariant = 'table' | 'detail' | 'genre' | 'tag'
+
+const pillClasses: Record<PillVariant, string> = {
+  table: 'book-table-badge rounded px-2 py-1 text-xs',
+  detail: 'rounded bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700',
+  genre:
+    'inline-flex h-[30px] items-center rounded-pill border border-line-strong bg-raised px-3 font-medium text-ink hover:bg-selected hover:text-ink',
+  tag: 'inline-flex h-7 items-center rounded-pill border border-line px-2.5 text-[13px] text-ink-2 hover:border-line-strong hover:text-ink',
+}
 
 type MetadataSummaryProps = {
   primary: string
@@ -55,13 +66,16 @@ export function DescribedMetadataPills({
   totalCount,
   empty = '-',
   variant = 'table',
+  linkTo,
 }: {
   values: string[]
   descriptions?: Record<string, string | null | undefined>
   maxVisible?: number
   totalCount?: number
   empty?: ReactNode
-  variant?: 'table' | 'detail'
+  variant?: PillVariant
+  /** Makes each pill a link (e.g. to the library filtered by it). */
+  linkTo?: ((value: string) => string) | undefined
 }) {
   if (!values.length) {
     return empty
@@ -77,11 +91,14 @@ export function DescribedMetadataPills({
     .join('\n')
 
   return (
-    <div className={`flex flex-wrap ${variant === 'detail' ? 'gap-2' : 'gap-1'}`}>
+    <div
+      className={`flex flex-wrap ${variant === 'table' ? 'gap-1' : variant === 'detail' ? 'gap-2' : 'gap-1.5'}`}
+    >
       {visibleValues.map((value) => (
         <DescribedMetadataPill
           description={descriptions[value]}
           key={value}
+          to={linkTo?.(value)}
           value={value}
           variant={variant}
         />
@@ -107,18 +124,23 @@ function DescribedMetadataPill({
   value,
   description,
   variant,
+  to,
 }: {
   value: string
   description?: string | null | undefined
-  variant: 'table' | 'detail'
+  variant: PillVariant
+  to?: string | undefined
 }) {
-  const triggerClassName =
-    variant === 'detail'
-      ? 'rounded bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700'
-      : 'book-table-badge rounded px-2 py-1 text-xs'
+  const triggerClassName = pillClasses[variant]
 
   if (!description) {
-    const plainPill = <span className={triggerClassName}>{value}</span>
+    const plainPill = to ? (
+      <Link className={triggerClassName} to={to}>
+        {value}
+      </Link>
+    ) : (
+      <span className={triggerClassName}>{value}</span>
+    )
     return variant === 'detail' ? <span className="group relative">{plainPill}</span> : plainPill
   }
 
@@ -126,7 +148,8 @@ function DescribedMetadataPill({
     <MetadataTooltip
       ariaLabel={`${value}: ${description}`}
       content={description}
-      triggerClassName={`${triggerClassName} cursor-help underline decoration-dotted decoration-1 underline-offset-[3px]`}
+      to={to}
+      triggerClassName={`${triggerClassName} ${to ? '' : 'cursor-help'} underline decoration-dotted decoration-1 underline-offset-[3px]`}
     >
       {value}
     </MetadataTooltip>
@@ -140,14 +163,17 @@ function MetadataTooltip({
   children,
   content,
   triggerClassName,
+  to,
 }: {
   ariaLabel: string
   children: ReactNode
   content: string
   triggerClassName: string
+  /** Renders the trigger as a link instead of a button. */
+  to?: string | undefined
 }) {
   const tooltipId = useId()
-  const triggerRef = useRef<HTMLButtonElement | null>(null)
+  const triggerRef = useRef<HTMLElement | null>(null)
   const [isOpen, setIsOpen] = useState(false)
   const [position, setPosition] = useState({ left: 0, top: 0, below: false, maxHeight: 320 })
   const wide = content.length > 240
@@ -205,19 +231,39 @@ function MetadataTooltip({
 
   return (
     <>
-      <button
-        aria-describedby={isOpen ? tooltipId : undefined}
-        aria-label={ariaLabel}
-        className={triggerClassName}
-        ref={triggerRef}
-        type="button"
-        onBlur={() => setIsOpen(false)}
-        onFocus={showTooltip}
-        onMouseEnter={showTooltip}
-        onMouseLeave={() => setIsOpen(false)}
-      >
-        {children}
-      </button>
+      {to ? (
+        <Link
+          aria-describedby={isOpen ? tooltipId : undefined}
+          aria-label={ariaLabel}
+          className={triggerClassName}
+          ref={(element) => {
+            triggerRef.current = element
+          }}
+          to={to}
+          onBlur={() => setIsOpen(false)}
+          onFocus={showTooltip}
+          onMouseEnter={showTooltip}
+          onMouseLeave={() => setIsOpen(false)}
+        >
+          {children}
+        </Link>
+      ) : (
+        <button
+          aria-describedby={isOpen ? tooltipId : undefined}
+          aria-label={ariaLabel}
+          className={triggerClassName}
+          ref={(element) => {
+            triggerRef.current = element
+          }}
+          type="button"
+          onBlur={() => setIsOpen(false)}
+          onFocus={showTooltip}
+          onMouseEnter={showTooltip}
+          onMouseLeave={() => setIsOpen(false)}
+        >
+          {children}
+        </button>
+      )}
       {isOpen && typeof document !== 'undefined'
         ? createPortal(
             <span
