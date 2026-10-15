@@ -50,7 +50,7 @@ Nothing may disappear without a `[~]` note.
 
 ### View controls
 - [x] Table / cards toggle, persisted in localStorage
-- [x] Cards per row control, persisted; responsive count on small screens; card page sizes aligned to whole rows. `[~]` phones show 2 cards per row instead of 1
+- [x] Card density control, persisted; card page sizes aligned to whole rows. `[~]` card size S / M / L instead of cards per row (the count follows the screen width; an old per-row choice maps to the nearest size); phones show 2 cards per row instead of 1
 - [x] Column settings popup: table columns can be reordered and toggled; card fields can be toggled; popup position adapts to desktop and mobile
 
 ### Table
@@ -71,7 +71,7 @@ Nothing may disappear without a `[~]` note.
 - [x] Rating overlay only when rated; ≤5 in red
 - [x] Status overlay with status colours. `[~]` Completed gets a FINISHED stamp and a full green bar instead of the golden glow; every card has a progress strip
 - [x] Fields: title, alternative titles, author, progress, type (each can be toggled)
-- [x] Card text scales with cards per row; every card stays inside its grid track
+- [x] Card text scales with card size; every card stays inside its grid track
 
 ### Paging and navigation
 - [x] Page numbers with gap popovers to jump to a page (validation, focus on open, one popover at a time). `[~]` First / Last arrows removed (the first and last pages are always listed); Previous / Next are text buttons

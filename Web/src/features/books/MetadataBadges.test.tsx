@@ -63,7 +63,7 @@ describe('DescribedMetadataPills', () => {
       />,
     )
 
-    expect(screen.getByLabelText('23 more: known-hidden')).toHaveTextContent('+23 more')
+    expect(screen.getByLabelText('23 more: known-hidden')).toHaveTextContent(/^\+23$/)
     await user.hover(screen.getByLabelText('23 more: known-hidden'))
     expect(screen.getByRole('tooltip')).toHaveTextContent('known-hidden +22 more')
   })

@@ -14,7 +14,6 @@ import { api } from '@/api/client'
 import { HttpError } from '@/api/http'
 import type { BookImportFinalizeResult, BookListItemDto, BookSummaryDto } from '@/api/types'
 import { extractAnalyticsDateFilters } from '@/features/analytics/dateQueryFilters'
-import { inputClass } from '@/components/app/designTokens'
 import { buttonStyles } from '@/components/ui/buttonStyles'
 import { Menu } from '@/components/ui/Menu'
 import { cn } from '@/lib/utils'
@@ -47,15 +46,17 @@ import {
   useBookListUrlState,
 } from './bookListState'
 import {
-  cardsPerRowOptions,
+  cardSizeOptions,
+  getCardColumnCount,
+  getCardSizeScale,
   getCardDetailRowClass,
   getCardPageSizeOptions,
   getCardRowMinHeightClasses,
   getCardTextSizeClasses,
   getClosestPageSize,
   getCardGridColumns,
-  useCardsPerRow,
-  useResponsiveCardsPerRow,
+  useCardSize,
+  type CardSize,
 } from './bookCardLayout'
 import {
   formatAverageRating,
@@ -72,6 +73,7 @@ const bookColumnsStorageKey = 'novelki.books.columns.v1'
 const bookCardFieldsStorageKey = 'novelki.books.card-fields.v1'
 const bookLayoutStorageKey = 'novelki.books.layout.v1'
 const cardsPerRowStorageKey = 'novelki.books.cards-per-row.v1'
+const cardSizeStorageKey = 'novelki.books.card-size.v1'
 const pageSizeStorageKey = 'novelki.books.page-size.v1'
 const bookSearchDelayMs = 220
 
@@ -81,7 +83,7 @@ const bookColumns: ColumnDefinition<BookListItemDto>[] = [
     label: 'Title',
     defaultVisible: true,
     sortBy: 'title',
-    widthClass: 'w-80',
+    widthClass: 'w-64',
     grow: true,
     render: (book) => <TitleCell book={book} />,
   },
@@ -114,7 +116,7 @@ const bookColumns: ColumnDefinition<BookListItemDto>[] = [
     label: 'Progress',
     defaultVisible: true,
     sortBy: 'progress',
-    widthClass: 'w-[15.5rem]',
+    widthClass: 'w-[14.5rem]',
     render: (book) => <ProgressCell book={book} />,
   },
   {
@@ -161,10 +163,11 @@ const bookColumns: ColumnDefinition<BookListItemDto>[] = [
     id: 'genres',
     label: 'Genres',
     defaultVisible: false,
-    widthClass: 'w-40',
+    widthClass: 'w-48',
     render: (book) => (
       <DescribedMetadataPills
         descriptions={book.genreDescriptions}
+        maxVisible={2}
         totalCount={book.genresCount}
         values={book.genres}
       />
@@ -174,10 +177,11 @@ const bookColumns: ColumnDefinition<BookListItemDto>[] = [
     id: 'tags',
     label: 'Tags',
     defaultVisible: false,
-    widthClass: 'w-40',
+    widthClass: 'w-52',
     render: (book) => (
       <DescribedMetadataPills
         descriptions={book.tagDescriptions}
+        maxVisible={2}
         totalCount={book.tagsCount}
         values={book.tags}
       />
@@ -266,15 +270,16 @@ export function BooksPage() {
   )
   const [viewMode, setViewMode] = useViewMode(bookLayoutStorageKey)
   const isPhone = useMediaQuery('(max-width: 639px)')
-  const [cardsPerRow, setCardsPerRow] = useCardsPerRow(cardsPerRowStorageKey)
-  const effectiveCardsPerRow = useResponsiveCardsPerRow(cardsPerRow)
+  const [cardSize, setCardSize] = useCardSize(cardSizeStorageKey, cardsPerRowStorageKey)
+  const [listWidth, setListElement] = useElementWidth()
+  const cardColumns = getCardColumnCount(cardSize, listWidth, isPhone)
   const [lastImportResult, setLastImportResult] = useState<BookImportFinalizeResult | null>(null)
   const [importDialogOpen, setImportDialogOpen] = useState(false)
   const [epubExportOpen, setEpubExportOpen] = useState(false)
   const [epubImportOpen, setEpubImportOpen] = useState(false)
   const [importMode, setImportMode] = useState<'csv' | 'full'>('csv')
   const pageSizeOptions =
-    viewMode === 'cards' ? getCardPageSizeOptions(effectiveCardsPerRow) : bookListPageSizeOptions
+    viewMode === 'cards' ? getCardPageSizeOptions(cardColumns) : bookListPageSizeOptions
   const {
     pageSize: requestedPageSize,
     query,
@@ -572,7 +577,12 @@ export function BooksPage() {
         <QuickFilters query={query} onQueryChange={updateQuery} />
       </div>
 
-      <section aria-label="Books" className="flex min-w-0 flex-col gap-4" id="book-list-results">
+      <section
+        aria-label="Books"
+        className="flex min-w-0 flex-col gap-4"
+        id="book-list-results"
+        ref={setListElement}
+      >
         <div className="flex flex-wrap items-center justify-end gap-2">
           <div className="mr-auto flex items-baseline gap-3">
             <span className="text-ink-2 tabular-nums" role="status">
@@ -600,7 +610,7 @@ export function BooksPage() {
             }}
           />
           {viewMode === 'cards' ? (
-            <CardsPerRowControl value={cardsPerRow} onChange={setCardsPerRow} />
+            <CardSizeControl value={cardSize} onChange={setCardSize} />
           ) : null}
           <ViewModeToggle value={viewMode} onChange={setViewMode} />
           <div className="hidden sm:block">
@@ -642,7 +652,8 @@ export function BooksPage() {
         ) : (
           <BookCardGrid
             books={books}
-            cardsPerRow={effectiveCardsPerRow}
+            cardScale={isPhone ? 4 : getCardSizeScale(cardSize)}
+            cardSize={cardSize}
             fields={visibleCardFields}
             isLoading={booksQuery.isLoading}
           />
@@ -825,32 +836,69 @@ function BookCompactList({ books, isLoading }: { books: BookListItemDto[]; isLoa
   )
 }
 
-function CardsPerRowControl({
+const cardSizeLabels: Record<CardSize, { short: string; long: string }> = {
+  small: { short: 'S', long: 'Small cards' },
+  medium: { short: 'M', long: 'Medium cards' },
+  large: { short: 'L', long: 'Large cards' },
+}
+
+/** Card size: the grid fits as many cards of this size as the width allows. */
+function CardSizeControl({
   value,
   onChange,
 }: {
-  value: number
-  onChange: (value: number) => void
+  value: CardSize
+  onChange: (value: CardSize) => void
 }) {
   return (
-    <label className="hidden items-center gap-2 text-ink-3 lg:flex">
-      <span>Per row</span>
-      <span className="relative inline-flex">
-        <select
-          aria-label="Cards per row"
-          className={`${inputClass} ui-control--compact-select h-9 min-h-9 py-0`}
-          value={value}
-          onChange={(event) => onChange(Number(event.target.value))}
-        >
-          {cardsPerRowOptions.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
-      </span>
-    </label>
+    <div className="hidden items-center gap-2 text-ink-3 sm:flex">
+      <span>Size</span>
+      <div
+        aria-label="Card size"
+        className="flex gap-0.5 rounded-field border border-line bg-surface p-[3px]"
+        role="group"
+      >
+        {cardSizeOptions.map((size) => (
+          <button
+            aria-label={cardSizeLabels[size].long}
+            aria-pressed={value === size}
+            className={cn(
+              'flex h-[30px] min-w-8 items-center justify-center rounded-[7px] border-0 px-2.5 text-sm',
+              value === size
+                ? 'bg-selected font-semibold text-ink'
+                : 'bg-transparent font-medium text-ink-2 hover:text-ink',
+            )}
+            key={size}
+            title={cardSizeLabels[size].long}
+            type="button"
+            onClick={() => onChange(size)}
+          >
+            {cardSizeLabels[size].short}
+          </button>
+        ))}
+      </div>
+    </div>
   )
+}
+
+/** Width of an element, kept up to date with a ResizeObserver. */
+function useElementWidth() {
+  const [element, setElement] = useState<HTMLElement | null>(null)
+  const [width, setWidth] = useState(() =>
+    typeof window === 'undefined' ? 1376 : Math.max(0, window.innerWidth - 64),
+  )
+
+  useEffect(() => {
+    if (!element) return undefined
+    if (typeof ResizeObserver === 'undefined') return undefined
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry) setWidth(entry.contentRect.width)
+    })
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [element])
+
+  return [width, setElement] as const
 }
 
 export function ViewModeToggle({
@@ -907,12 +955,15 @@ export function BookAdvancedSearch({
 
 function BookCardGrid({
   books,
-  cardsPerRow,
+  cardScale: cardsPerRow,
+  cardSize,
   fields,
   isLoading,
 }: {
   books: BookListItemDto[]
-  cardsPerRow: number
+  /** Cards-per-row equivalent for text and row heights. */
+  cardScale: number
+  cardSize: CardSize
   fields: ColumnDefinition<BookListItemDto>[]
   isLoading: boolean
 }) {
@@ -953,8 +1004,8 @@ function BookCardGrid({
 
   return (
     <div
-      className="book-card-grid grid min-w-0 grid-cols-2 gap-x-5 gap-y-7 md:grid-cols-3 lg:[grid-template-columns:var(--card-columns)]"
-      style={{ '--card-columns': getCardGridColumns(cardsPerRow) } as CSSProperties}
+      className="book-card-grid grid min-w-0 grid-cols-2 gap-x-5 gap-y-7 sm:[grid-template-columns:var(--card-columns)]"
+      style={{ '--card-columns': getCardGridColumns(cardSize) } as CSSProperties}
     >
       {books.map((book) => {
         const finished = isCompletedStatus(book.status)

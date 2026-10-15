@@ -5,7 +5,8 @@ import { Link } from 'react-router-dom'
 type PillVariant = 'table' | 'detail' | 'genre' | 'tag'
 
 const pillClasses: Record<PillVariant, string> = {
-  table: 'book-table-badge rounded px-2 py-1 text-xs',
+  table:
+    'inline-block h-6 max-w-[9rem] min-w-0 truncate rounded-pill border border-line bg-raised px-2 text-xs leading-[22px] text-ink-2',
   detail: 'rounded bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700',
   genre:
     'inline-flex h-[30px] items-center rounded-pill border border-line-strong bg-raised px-3 font-medium text-ink hover:bg-selected hover:text-ink',
@@ -92,7 +93,7 @@ export function DescribedMetadataPills({
 
   return (
     <div
-      className={`flex flex-wrap ${variant === 'table' ? 'gap-1' : variant === 'detail' ? 'gap-2' : 'gap-1.5'}`}
+      className={`flex ${variant === 'table' ? 'min-w-0 flex-nowrap items-center gap-1 overflow-hidden' : variant === 'detail' ? 'flex-wrap gap-2' : 'flex-wrap gap-1.5'}`}
     >
       {visibleValues.map((value) => (
         <DescribedMetadataPill
@@ -110,10 +111,11 @@ export function DescribedMetadataPills({
           triggerClassName={
             variant === 'detail'
               ? 'rounded bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700'
-              : 'book-table-badge rounded px-2 py-1 text-xs font-medium'
+              : 'inline-block h-6 shrink-0 rounded-pill border border-line bg-transparent px-2 text-xs leading-[22px] font-medium text-ink-3 hover:text-ink'
           }
         >
-          +{hiddenCount} more
+          +{hiddenCount}
+          {variant === 'table' ? null : ' more'}
         </MetadataTooltip>
       ) : null}
     </div>

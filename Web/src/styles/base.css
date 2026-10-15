@@ -7,6 +7,8 @@
 @layer base {
   :root {
     color-scheme: dark;
+    /* Page width: full up to the 1440px design size, then 85% of the screen, at most 2400px. */
+    --page-max-width: max(1440px, min(85vw, 2400px));
   }
 
   *::-webkit-scrollbar-thumb {

@@ -657,7 +657,7 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
         noValidate
         onSubmit={(event) => void form.handleSubmit((values) => mutation.mutate(values))(event)}
       >
-        <div className="flex max-w-[1440px] flex-col gap-2">
+        <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-2">
           <Link
             className="inline-flex w-fit items-center gap-1.5 text-ink-2 hover:text-ink"
             state={admin ? undefined : { bookListReturnTo }}
@@ -672,7 +672,7 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
         </div>
 
         {mode === 'create' && !admin ? (
-          <div className="flex max-w-[1440px] flex-wrap items-center gap-3 rounded-xl border border-dashed border-line-focus bg-surface px-4 py-3.5">
+          <div className="mx-auto flex w-full max-w-[1440px] flex-wrap items-center gap-3 rounded-xl border border-dashed border-line-focus bg-surface px-4 py-3.5">
             <Link2 aria-hidden="true" className="size-5 shrink-0 text-ink" />
             <div className="min-w-[240px] flex-1">
               <div className="font-semibold">Fill from a page</div>
@@ -687,7 +687,7 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
           </div>
         ) : null}
 
-        <div className="flex max-w-[1440px] flex-wrap items-start gap-8">
+        <div className="mx-auto flex w-full max-w-[1440px] flex-wrap items-start gap-8">
           <div className="min-w-0 flex-[999_1_560px] rounded-panel border border-line bg-surface">
             <FormSection title="Identity">
               <Field error={errors.primaryTitle?.message} label="Title" required>
@@ -1147,25 +1147,27 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
           </aside>
         </div>
 
-        <div className="sticky bottom-[76px] z-20 -mx-4 flex flex-wrap items-center gap-3 border-t border-line bg-sunk/95 px-4 py-3.5 backdrop-blur-md md:bottom-0 md:-mx-8 md:px-8">
-          <span className="inline-flex items-center gap-2 text-ink-2" role="status">
-            <span
-              aria-hidden="true"
-              className={cn('size-2 rounded-full', isDirty ? 'bg-accent' : 'bg-line-strong')}
-            />
-            {dirtyText}
-          </span>
-          <span className="flex-1" />
-          <Link
-            className={buttonStyles({ variant: 'outline' })}
-            state={admin ? undefined : { bookListReturnTo }}
-            to={backHref}
-          >
-            Cancel
-          </Link>
-          <Button disabled={mutation.isPending} type="submit" variant="primary">
-            {saveText}
-          </Button>
+        <div className="sticky bottom-[76px] z-20 -mx-4 border-t border-line bg-sunk/95 px-4 py-3.5 backdrop-blur-md md:bottom-0 md:-mx-8 md:px-8">
+          <div className="mx-auto flex w-full max-w-[1440px] flex-wrap items-center gap-3">
+            <span className="inline-flex items-center gap-2 text-ink-2" role="status">
+              <span
+                aria-hidden="true"
+                className={cn('size-2 rounded-full', isDirty ? 'bg-accent' : 'bg-line-strong')}
+              />
+              {dirtyText}
+            </span>
+            <span className="flex-1" />
+            <Link
+              className={buttonStyles({ variant: 'outline' })}
+              state={admin ? undefined : { bookListReturnTo }}
+              to={backHref}
+            >
+              Cancel
+            </Link>
+            <Button disabled={mutation.isPending} type="submit" variant="primary">
+              {saveText}
+            </Button>
+          </div>
         </div>
       </form>
 

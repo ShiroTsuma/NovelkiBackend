@@ -14,8 +14,8 @@ import {
   getCardRowMinHeightClasses,
   getCardTextSizeClasses,
   getClosestPageSize,
-  getResponsiveCardsPerRow,
-  readCardsPerRow,
+  getCardColumnCount,
+  readCardSize,
 } from './bookCardLayout'
 import { formatAverageRating } from './bookFormatters'
 import { formatProgress } from './bookProgress'
@@ -477,7 +477,9 @@ describe('BooksPage', () => {
 
     renderWithProviders(<BooksPage />, { route: '/books' })
 
-    expect(await screen.findByLabelText('23 more: known-hidden')).toHaveTextContent('+23 more')
+    expect(await screen.findByLabelText('24 more: visible-three, known-hidden')).toHaveTextContent(
+      /^\+24$/,
+    )
   })
 
   it('offers export and import in one Import / Export menu', async () => {
@@ -643,7 +645,7 @@ describe('BooksPage', () => {
     )
   })
 
-  it('lets the user change cards per row and persists the preference', async () => {
+  it('lets the user pick a card size, persists it and fills whole rows per page', async () => {
     vi.mocked(api.getBooks).mockResolvedValue(paginated(books))
     const user = userEvent.setup()
 
@@ -651,22 +653,28 @@ describe('BooksPage', () => {
 
     await screen.findByText('Lord of Mysteries')
     await user.click(screen.getByRole('button', { name: /cards/i }))
-    await user.selectOptions(screen.getByRole('combobox', { name: /cards per row/i }), '6')
+    expect(screen.getByRole('button', { name: 'Medium cards' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    await user.click(screen.getByRole('button', { name: 'Small cards' }))
 
-    expect(window.localStorage.getItem('novelki.books.cards-per-row.v1')).toBe('6')
+    expect(window.localStorage.getItem('novelki.books.card-size.v1')).toBe('small')
     expect(
       container
         .querySelector<HTMLElement>('.book-card-grid')
         ?.style.getPropertyValue('--card-columns'),
-    ).toBe(getCardGridColumns(6))
+    ).toBe(getCardGridColumns('small'))
+    const columns = getCardColumnCount('small', window.innerWidth - 64, false)
+    const options = getCardPageSizeOptions(columns)
     await waitFor(() =>
-      expect(api.getBooks).toHaveBeenLastCalledWith(expect.objectContaining({ take: 24 })),
+      expect(api.getBooks).toHaveBeenLastCalledWith(
+        expect.objectContaining({ take: getClosestPageSize(20, options) }),
+      ),
     )
-    expect(screen.getByRole('combobox', { name: /per page/i })).toHaveValue('24')
-    expect(screen.getByRole('combobox', { name: /per page/i })).toHaveTextContent('24')
-    expect(screen.getByRole('combobox', { name: /per page/i })).toHaveTextContent('54')
-    expect(screen.getByRole('combobox', { name: /per page/i })).toHaveTextContent('102')
-    expect(screen.getByRole('combobox', { name: /per page/i })).toHaveTextContent('498')
+    for (const option of options) {
+      expect(screen.getByRole('combobox', { name: /per page/i })).toHaveTextContent(String(option))
+    }
   })
 
   it('keeps every dense card constrained to its grid track', async () => {
@@ -677,7 +685,7 @@ describe('BooksPage', () => {
 
     await screen.findByText('Lord of Mysteries')
     await user.click(screen.getByRole('button', { name: /cards/i }))
-    await user.selectOptions(screen.getByRole('combobox', { name: /cards per row/i }), '8')
+    await user.click(screen.getByRole('button', { name: 'Small cards' }))
 
     const cards = Array.from(container.querySelectorAll('.book-card'))
     expect(cards).toHaveLength(books.length)
@@ -1274,10 +1282,21 @@ describe('BooksPage', () => {
     expect(formatAverageRating(null)).toBe('-')
   })
 
-  it('falls back to four cards per row for invalid stored values', () => {
-    window.localStorage.setItem('novelki.books.cards-per-row.v1', '99')
-
-    expect(readCardsPerRow('novelki.books.cards-per-row.v1')).toBe(4)
+  it('reads the card size, mapping an older cards-per-row choice', () => {
+    window.localStorage.removeItem('novelki.books.card-size.v1')
+    window.localStorage.setItem('novelki.books.cards-per-row.v1', '8')
+    expect(readCardSize('novelki.books.card-size.v1', 'novelki.books.cards-per-row.v1')).toBe(
+      'small',
+    )
+    window.localStorage.setItem('novelki.books.cards-per-row.v1', '4')
+    expect(readCardSize('novelki.books.card-size.v1', 'novelki.books.cards-per-row.v1')).toBe(
+      'large',
+    )
+    window.localStorage.setItem('novelki.books.card-size.v1', 'nonsense')
+    window.localStorage.removeItem('novelki.books.cards-per-row.v1')
+    expect(readCardSize('novelki.books.card-size.v1', 'novelki.books.cards-per-row.v1')).toBe(
+      'medium',
+    )
   })
 
   it('keeps card page sizes aligned to complete rows', () => {
@@ -1298,11 +1317,12 @@ describe('BooksPage', () => {
     }
   })
 
-  it('uses adaptive card counts until the cards-per-row control becomes effective', () => {
-    expect(getResponsiveCardsPerRow(8, 412)).toBe(2)
-    expect(getResponsiveCardsPerRow(8, 900)).toBe(3)
-    expect(getResponsiveCardsPerRow(8, 1024)).toBe(8)
-    expect(getResponsiveCardsPerRow(3, 1440)).toBe(3)
+  it('counts the columns that fit, with two on phones', () => {
+    expect(getCardColumnCount('large', 2000, true)).toBe(2)
+    expect(getCardColumnCount('medium', 1376, false)).toBe(5)
+    expect(getCardColumnCount('small', 1376, false)).toBe(7)
+    expect(getCardColumnCount('large', 2176, false)).toBe(7)
+    expect(getCardColumnCount('large', 200, false)).toBe(1)
   })
 
   it('scales card text sizes with the cards-per-row setting', () => {

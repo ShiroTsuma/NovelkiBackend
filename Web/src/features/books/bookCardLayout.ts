@@ -1,45 +1,51 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { bookListPageSizeOptions, defaultBookListPageSize } from './bookListState'
 
-export const cardsPerRowOptions = [2, 3, 4, 5, 6, 7, 8] as const
+export const cardSizeOptions = ['small', 'medium', 'large'] as const
+export type CardSize = (typeof cardSizeOptions)[number]
 
-export function useCardsPerRow(storageKey: string) {
-  const [cardsPerRow, setCardsPerRowState] = useState<number>(() => readCardsPerRow(storageKey))
+/** Smallest card width for each size; the grid adds columns while they fit. */
+const cardMinWidthPx: Record<CardSize, number> = { small: 170, medium: 220, large: 290 }
+const cardGapPx = 20
 
-  function setCardsPerRow(next: number) {
-    const normalized = normalizeCardsPerRow(next)
-    setCardsPerRowState(normalized)
-    window.localStorage.setItem(storageKey, String(normalized))
-  }
-
-  return [cardsPerRow, setCardsPerRow] as const
+/** The cards-per-row number the text and row-height scales below are tuned for. */
+export function getCardSizeScale(size: CardSize) {
+  return size === 'small' ? 8 : size === 'medium' ? 6 : 4
 }
 
-export function getResponsiveCardsPerRow(cardsPerRow: number, viewportWidth: number) {
-  if (viewportWidth < 640) {
-    return 2
+export function useCardSize(storageKey: string, legacyCardsPerRowKey: string) {
+  const [cardSize, setCardSizeState] = useState<CardSize>(() =>
+    readCardSize(storageKey, legacyCardsPerRowKey),
+  )
+
+  function setCardSize(next: CardSize) {
+    setCardSizeState(next)
+    window.localStorage.setItem(storageKey, next)
   }
 
-  if (viewportWidth < 1024) {
-    return 3
-  }
-
-  return normalizeCardsPerRow(cardsPerRow)
+  return [cardSize, setCardSize] as const
 }
 
-export function useResponsiveCardsPerRow(cardsPerRow: number) {
-  const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth)
+/** Reads the saved size; an older "cards per row" choice maps to the nearest size. */
+export function readCardSize(storageKey: string, legacyCardsPerRowKey: string): CardSize {
+  const stored = window.localStorage.getItem(storageKey)
+  if (cardSizeOptions.includes(stored as CardSize)) {
+    return stored as CardSize
+  }
+  const legacy = Number(window.localStorage.getItem(legacyCardsPerRowKey))
+  if (!legacy) return 'medium'
+  return legacy <= 4 ? 'large' : legacy <= 6 ? 'medium' : 'small'
+}
 
-  useEffect(() => {
-    function updateViewportWidth() {
-      setViewportWidth(window.innerWidth)
-    }
+/** grid-template-columns for the card grid (tablet and up). */
+export function getCardGridColumns(size: CardSize) {
+  return `repeat(auto-fill, minmax(min(${String(cardMinWidthPx[size])}px, 100%), 1fr))`
+}
 
-    window.addEventListener('resize', updateViewportWidth)
-    return () => window.removeEventListener('resize', updateViewportWidth)
-  }, [])
-
-  return getResponsiveCardsPerRow(cardsPerRow, viewportWidth)
+/** How many columns the grid shows at this width (phones always show two). */
+export function getCardColumnCount(size: CardSize, containerWidth: number, isPhone: boolean) {
+  if (isPhone) return 2
+  return Math.max(1, Math.floor((containerWidth + cardGapPx) / (cardMinWidthPx[size] + cardGapPx)))
 }
 
 export function getCardTextSizeClasses(cardsPerRow: number) {
@@ -166,13 +172,8 @@ function getCardProgressRowHeight(cardsPerRow: number) {
   return '1.25rem'
 }
 
-export function readCardsPerRow(storageKey: string) {
-  const stored = Number(window.localStorage.getItem(storageKey) ?? 4)
-  return normalizeCardsPerRow(stored)
-}
-
 function normalizeCardsPerRow(value: number) {
-  return cardsPerRowOptions.includes(value as (typeof cardsPerRowOptions)[number]) ? value : 4
+  return Number.isInteger(value) && value >= 1 && value <= 12 ? value : 4
 }
 
 export function getCardPageSizeOptions(cardsPerRow: number) {
@@ -196,20 +197,4 @@ export function getClosestPageSize(pageSize: number, options: readonly number[])
       Math.abs(option - pageSize) < Math.abs(closest - pageSize) ? option : closest,
     options[0] ?? defaultBookListPageSize,
   )
-}
-
-/** Content width at the 1440px design size (1440 minus two 32px gutters). */
-const referenceContentWidthPx = 1376
-const cardGapPx = 20
-
-/**
- * Desktop card columns for a "cards per row" choice. Up to the 1440px design
- * size it gives exactly that many cards; wider screens fit more columns of the
- * same card size instead of stretching the cards.
- */
-export function getCardGridColumns(cardsPerRow: number) {
-  const perRow = normalizeCardsPerRow(cardsPerRow)
-  const designWidth = Math.floor((referenceContentWidthPx - (perRow - 1) * cardGapPx) / perRow)
-  const fitWidth = `calc((100% - ${String((perRow - 1) * cardGapPx)}px) / ${String(perRow)})`
-  return `repeat(auto-fill, minmax(min(${String(designWidth)}px, ${fitWidth}), 1fr))`
 }
