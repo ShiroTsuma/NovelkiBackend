@@ -84,7 +84,7 @@ describe('BooksPage', () => {
     const { container } = renderWithProviders(<BooksPage />, { route: '/books' })
 
     await screen.findByText('Lord of Mysteries')
-    expect(container.querySelector('table')).toHaveStyle({ minWidth: '83rem' })
+    expect(container.querySelector('table')).toHaveStyle({ minWidth: '85rem' })
     expect(container.querySelectorAll('col')).toHaveLength(9)
     expect(screen.getByRole('columnheader', { name: /actions/i })).toHaveClass('sticky', 'right-0')
     expect(screen.queryByRole('columnheader', { name: /^id$/i })).not.toBeInTheDocument()
@@ -126,7 +126,7 @@ describe('BooksPage', () => {
     const scroller = table?.parentElement
     const section = table?.closest('section')
 
-    expect(table).toHaveStyle({ minWidth: '147rem' })
+    expect(table).toHaveStyle({ minWidth: '149rem' })
     expect(container.querySelectorAll('col')).toHaveLength(16)
     expect(scroller).toHaveClass('max-w-full', 'overflow-x-auto')
     expect(section).toHaveClass('min-w-0', 'overflow-hidden')
@@ -485,7 +485,6 @@ describe('BooksPage', () => {
       'pl-3.5',
       'pr-4',
     )
-    expect(screen.getByRole('link', { name: /add book/i })).toHaveClass('gap-2.5', 'pl-3.5', 'pr-4')
   })
 
   it('exports the current filtered and sorted books to csv', async () => {
@@ -792,17 +791,9 @@ describe('BooksPage', () => {
     await screen.findByText('Lord of Mysteries')
     await user.click(screen.getByRole('button', { name: /cards/i }))
 
-    expect(screen.getByLabelText('Book status: Reading')).toHaveClass(
-      'book-details-status',
-      'book-details-status--reading',
-      'book-details-status--card',
-    )
-    expect(screen.getByLabelText('Book status: Completed')).toHaveClass(
-      'book-details-status',
-      'book-details-status--completed',
-      'book-details-status--card',
-    )
-    expect(screen.getByLabelText('Book status: Reading')).toHaveTextContent('StatusReading')
+    expect(screen.getByLabelText('Book status: Reading')).toHaveClass('bg-status-reading-soft')
+    expect(screen.getByLabelText('Book status: Completed')).toHaveClass('bg-status-finished')
+    expect(screen.getByLabelText('Book status: Reading')).toHaveTextContent('Reading')
   })
 
   it('gives completed cards a dedicated golden glow treatment', async () => {
@@ -858,7 +849,7 @@ describe('BooksPage', () => {
 
     expect(screen.queryByText('Cuttlefish')).not.toBeInTheDocument()
     expect(screen.getByText('LOTM')).toBeInTheDocument()
-    expect(screen.getAllByText('Novel')[0]).toHaveClass('font-semibold', 'italic')
+    expect(screen.getAllByText('Novel')[0]).toHaveClass('truncate', 'text-ink-3')
     expect(window.localStorage.getItem('novelki.books.card-fields.v1')).toContain(
       '"alternativeTitles"',
     )
@@ -897,7 +888,7 @@ describe('BooksPage', () => {
     renderWithProviders(<BooksPage />, { route: '/books' })
 
     await screen.findByText('Lord of Mysteries')
-    await user.click(screen.getByRole('button', { name: /total chapters|total/i }))
+    await user.click(screen.getByRole('button', { name: /^(total chapters|total)/i }))
 
     await waitFor(() =>
       expect(api.getBooks).toHaveBeenLastCalledWith(

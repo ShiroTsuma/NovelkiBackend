@@ -47,7 +47,7 @@ export function BookDataTable<T extends { id: string }>({
           ))}
           <col className="w-32" />
         </colgroup>
-        <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-500">
+        <thead className="bg-surface text-xs font-semibold tracking-wider text-ink-3 uppercase">
           <tr>
             {columns.map((column) => (
               <ColumnHeader
@@ -58,7 +58,7 @@ export function BookDataTable<T extends { id: string }>({
                 onSort={onSort}
               />
             ))}
-            <th className="sticky right-0 z-10 border-l border-slate-200 bg-slate-100 px-3 py-3 text-right">
+            <th className="sticky right-0 z-10 border-b border-l border-line bg-surface px-3 py-3 text-right">
               {actionHeader}
             </th>
           </tr>
@@ -66,14 +66,14 @@ export function BookDataTable<T extends { id: string }>({
         <tbody>
           {isLoading ? (
             <tr>
-              <td className="px-4 py-8 text-center text-slate-500" colSpan={columns.length + 1}>
+              <td className="px-4 py-8 text-center text-ink-3" colSpan={columns.length + 1}>
                 {loadingMessage}
               </td>
             </tr>
           ) : null}
           {items.map((item) => (
             <tr
-              className="book-table-row group border-t border-slate-100"
+              className="book-table-row group border-t border-line-soft hover:bg-hover"
               data-testid={`book-table-row-${item.id}`}
               key={item.id}
             >
@@ -86,7 +86,7 @@ export function BookDataTable<T extends { id: string }>({
 
                 return (
                   <td
-                    className="book-table-cell px-3 py-3 text-slate-600"
+                    className="book-table-cell px-3 py-2.5 align-middle text-ink-2"
                     data-testid={`book-table-cell-${item.id}-${column.id}`}
                     key={column.id}
                   >
@@ -97,7 +97,7 @@ export function BookDataTable<T extends { id: string }>({
                 )
               })}
               <td
-                className="book-table-actions-cell sticky right-0 z-10 border-l border-slate-200 bg-white px-3 py-3"
+                className="book-table-actions-cell sticky right-0 z-10 border-l border-line-soft bg-sunk px-3 py-2.5 group-hover:bg-hover"
                 data-testid={`book-table-actions-cell-${item.id}`}
               >
                 <div className="flex justify-end gap-2 whitespace-nowrap">
@@ -108,7 +108,7 @@ export function BookDataTable<T extends { id: string }>({
           ))}
           {items.length === 0 ? (
             <tr>
-              <td className="px-4 py-8 text-center text-slate-500" colSpan={columns.length + 1}>
+              <td className="px-4 py-8 text-center text-ink-3" colSpan={columns.length + 1}>
                 {emptyMessage}
               </td>
             </tr>

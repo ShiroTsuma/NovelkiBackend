@@ -1,15 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import {
-  ChevronDown,
-  Download,
-  Edit,
-  Eye,
-  LayoutGrid,
-  List,
-  Plus,
-  Star,
-  Upload,
-} from 'lucide-react'
+import { ChevronDown, Download, Edit, Eye, LayoutGrid, List, Star, Upload } from 'lucide-react'
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -22,13 +12,17 @@ import type {
   BookSummaryTypeCountDto,
 } from '@/api/types'
 import { extractAnalyticsDateFilters } from '@/features/analytics/dateQueryFilters'
-import { buttonClass, inputClass, secondaryButtonClass } from '@/components/app/designTokens'
-import { PageHeader, Surface } from '@/components/app/DesignSystem'
+import { inputClass, secondaryButtonClass } from '@/components/app/designTokens'
+import { Surface } from '@/components/app/DesignSystem'
+import { buttonStyles } from '@/components/ui/buttonStyles'
+import { cn } from '@/lib/utils'
 import { BookDataTable } from './BookDataTable'
 import { BookCoverArtwork } from './BookCoverSection'
 import { isLowRating } from './bookRating'
-import { BookStatusPill } from './BookStatusPill'
 import { BookSearchInput } from './BookSearchInput'
+import { CoverThumb, ProgressCell, RatingCell, StatusCell } from './BookListCells'
+import { getStatusTone, statusToneClasses } from './bookStatus'
+import { QuickFilters, StatusTabs } from './BookListControls'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
 import { formatProgress } from './bookProgress'
 import { saveBookListScrollPosition, takeBookListScrollPosition } from './bookListNavigation'
@@ -84,7 +78,7 @@ const bookColumns: ColumnDefinition<BookListItemDto>[] = [
     label: 'Title',
     defaultVisible: true,
     sortBy: 'title',
-    widthClass: 'w-72',
+    widthClass: 'w-80',
     render: (book) => <TitleCell book={book} />,
   },
   {
@@ -92,7 +86,7 @@ const bookColumns: ColumnDefinition<BookListItemDto>[] = [
     label: 'Author',
     defaultVisible: true,
     sortBy: 'author',
-    widthClass: 'w-44',
+    widthClass: 'w-40',
     render: (book) => <AuthorCell book={book} />,
   },
   {
@@ -100,15 +94,15 @@ const bookColumns: ColumnDefinition<BookListItemDto>[] = [
     label: 'Status',
     defaultVisible: true,
     sortBy: 'status',
-    widthClass: 'w-32',
-    render: (book) => book.status,
+    widthClass: 'w-36',
+    render: (book) => <StatusCell status={book.status} />,
   },
   {
     id: 'type',
     label: 'Type',
     defaultVisible: true,
     sortBy: 'type',
-    widthClass: 'w-24',
+    widthClass: 'w-20',
     render: (book) => book.contentType,
   },
   {
@@ -116,8 +110,8 @@ const bookColumns: ColumnDefinition<BookListItemDto>[] = [
     label: 'Progress',
     defaultVisible: true,
     sortBy: 'progress',
-    widthClass: 'w-32',
-    render: formatProgress,
+    widthClass: 'w-48',
+    render: (book) => <ProgressCell book={book} />,
   },
   {
     id: 'totalChapters',
@@ -133,7 +127,7 @@ const bookColumns: ColumnDefinition<BookListItemDto>[] = [
     defaultVisible: true,
     sortBy: 'rating',
     widthClass: 'w-16',
-    render: (book) => book.rating ?? '-',
+    render: (book) => <RatingCell rating={book.rating} />,
   },
   {
     id: 'priority',
@@ -156,8 +150,8 @@ const bookColumns: ColumnDefinition<BookListItemDto>[] = [
     label: 'Updated',
     defaultVisible: true,
     sortBy: 'lastModified',
-    widthClass: 'w-40',
-    render: (book) => formatDate(book.lastModified || book.created),
+    widthClass: 'w-28',
+    render: (book) => formatShortDate(book.lastModified || book.created),
   },
   {
     id: 'genres',
@@ -440,11 +434,19 @@ export function BooksPage() {
   }
 
   return (
-    <div className="grid gap-5">
-      <PageHeader
-        description="List, search, and quick navigation through your library."
-        title="Books"
-        actions={
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-5">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="m-0 font-display text-[40px] leading-tight font-bold tracking-tight">
+            Library
+          </h1>
+          <p className="m-0 mt-1.5 text-[15px] text-ink-2 tabular-nums">
+            {booksQuery.data
+              ? `${formatBookCount(total)} ${total === 1 ? 'book matches' : 'books match'}`
+              : 'List, search, and quick navigation through your library.'}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
           <>
             <button
               aria-controls="books-summary-panel"
@@ -594,13 +596,9 @@ export function BooksPage() {
                 </div>
               ) : null}
             </div>
-            <Link className={`${buttonClass} ${topActionButtonSpacingClass}`} to="/books/new">
-              <Plus className="h-4 w-4" />
-              Add book
-            </Link>
           </>
-        }
-      />
+        </div>
+      </div>
 
       {lastImportResult ? (
         <Surface className="grid gap-2 p-4">
@@ -631,13 +629,24 @@ export function BooksPage() {
         />
       ) : null}
 
-      <BookSearchInput value={query} onChange={updateQuery} />
+      <StatusTabs query={query} onQueryChange={updateQuery} />
 
-      <Surface className="min-w-0 overflow-hidden" id="book-list-results">
-        <div className="flex flex-wrap items-center justify-end gap-2 border-b border-slate-200 px-4 py-3">
+      <div className="grid gap-2.5">
+        <BookSearchInput value={query} onChange={updateQuery} />
+        <QuickFilters query={query} onQueryChange={updateQuery} />
+      </div>
+
+      <section
+        aria-label="Books"
+        className="min-w-0 overflow-hidden rounded-panel border border-line bg-sunk"
+        id="book-list-results"
+      >
+        <div className="flex flex-wrap items-center justify-end gap-2 border-b border-line px-4 py-3">
           {(isWaitingForSearch || booksQuery.isFetching || cycleSortMutation.isPending) &&
           !booksQuery.isLoading ? (
-            <span className="mr-auto text-xs font-medium text-slate-500">Searching...</span>
+            <span className="mr-auto text-[13px] font-medium text-ink-3" role="status">
+              Searching...
+            </span>
           ) : null}
           {viewMode === 'cards' ? (
             <CardsPerRowControl value={cardsPerRow} onChange={setCardsPerRow} />
@@ -664,16 +673,16 @@ export function BooksPage() {
                 <BookDetailsLink
                   ariaLabel={`View ${book.primaryTitle}`}
                   bookId={book.id}
-                  className={`${secondaryButtonClass} ui-icon-button`}
+                  className={buttonStyles({ variant: 'outline', size: 'iconSm' })}
                 >
-                  <Eye className="h-4 w-4" />
+                  <Eye aria-hidden="true" className="size-4" />
                 </BookDetailsLink>
                 <BookEditLink
                   ariaLabel={`Edit ${book.primaryTitle}`}
                   bookId={book.id}
-                  className={`${secondaryButtonClass} ui-icon-button`}
+                  className={buttonStyles({ variant: 'outline', size: 'iconSm' })}
                 >
-                  <Edit className="h-4 w-4" />
+                  <Edit aria-hidden="true" className="size-4" />
                 </BookEditLink>
               </div>
             )}
@@ -705,7 +714,7 @@ export function BooksPage() {
           visiblePages={pagination.visiblePages}
           onGoToPage={pagination.onGoToPage}
         />
-      </Surface>
+      </section>
       {epubExportOpen && (
         <FileExportDialog query={requestQuery} onClose={() => setEpubExportOpen(false)} />
       )}
@@ -991,14 +1000,12 @@ function BookCardGrid({
   isLoading: boolean
 }) {
   if (isLoading) {
-    return <div className="px-4 py-8 text-center text-slate-500">Loading...</div>
+    return <div className="px-4 py-8 text-center text-ink-3">Loading...</div>
   }
 
   if (!books.length) {
     return (
-      <div className="px-4 py-8 text-center text-slate-500">
-        No books match the current filters.
-      </div>
+      <div className="px-4 py-8 text-center text-ink-3">No books match the current filters.</div>
     )
   }
 
@@ -1009,6 +1016,7 @@ function BookCardGrid({
   const showAuthor = hasCardField(fields, 'author')
   const showProgress = hasCardField(fields, 'progress')
   const showType = hasCardField(fields, 'type')
+  const showStatus = hasCardField(fields, 'status')
   const cardDetailsClass = getCardDetailRowClass({
     cardsPerRow,
     showAlternativeTitles,
@@ -1020,113 +1028,155 @@ function BookCardGrid({
 
   return (
     <div
-      className={`book-card-grid grid min-w-0 gap-4 p-4 sm:grid-cols-2 ${getDesktopCardsPerRowClass(cardsPerRow)}`}
+      className={`book-card-grid grid min-w-0 gap-x-5 gap-y-7 p-4 grid-cols-2 ${getDesktopCardsPerRowClass(cardsPerRow)}`}
     >
-      {books.map((book) => (
-        <Surface
-          as="article"
-          className={`book-card min-w-0 w-full max-w-full ${isCompletedStatus(book.status) ? 'book-card--completed' : ''}`}
-          key={book.id}
-          tone="muted"
-        >
-          <BookDetailsLink
-            bookId={book.id}
-            className="grid min-w-0 w-full max-w-full overflow-hidden"
+      {books.map((book) => {
+        const finished = isCompletedStatus(book.status)
+        const tone = getStatusTone(book.status)
+        return (
+          <article
+            className={cn(
+              'book-card flex min-w-0 w-full max-w-full flex-col',
+              finished && 'book-card--completed',
+            )}
+            data-status-tone={tone}
+            key={book.id}
           >
-            <div className="relative min-w-0 max-w-full overflow-hidden">
-              <BookCoverArtwork
-                className="book-card__cover min-w-0 w-full max-w-full"
-                cover={book.cover}
-                emptyLabel="No cover"
-                loading="lazy"
-                preferredVariant="thumbnail"
-                title={book.primaryTitle}
-              />
-              {hasCardField(fields, 'rating') && book.rating != null ? (
-                <span
-                  aria-label={`Rating ${book.rating} out of 10`}
-                  className={`book-card-rating absolute right-3 top-3 ${isLowRating(book.rating) ? 'book-card-rating--low' : ''}`}
-                >
-                  <Star aria-hidden="true" className="book-card-rating__star h-3.5 w-3.5" />
-                  <span className="book-card-rating__value">{book.rating}</span>
-                  <span aria-hidden="true" className="book-card-rating__scale">
-                    /10
-                  </span>
-                </span>
-              ) : null}
-              {hasCardField(fields, 'status') ? (
-                <BookStatusPill
-                  className="absolute bottom-3 right-3 min-w-0 max-w-[calc(100%-1.5rem)]"
-                  status={book.status}
-                  variant="card"
-                />
-              ) : null}
-            </div>
-            <div
-              className={`grid min-w-0 max-w-full gap-1 overflow-hidden p-3 ${cardDetailsClass}`}
+            <BookDetailsLink
+              bookId={book.id}
+              className="group grid min-w-0 w-full max-w-full overflow-hidden text-ink hover:text-ink"
             >
-              {showTitle ? (
-                <div className="min-w-0 max-w-full overflow-hidden min-h-10">
-                  <h2
-                    className={`min-w-0 max-w-full line-clamp-2 break-words font-semibold text-slate-950 ${cardText.title}`}
-                    title={book.primaryTitle}
+              <div className="relative min-w-0 max-w-full overflow-hidden rounded-[10px] bg-raised">
+                <BookCoverArtwork
+                  className="book-card__cover min-w-0 w-full max-w-full rounded-[10px] border-0 transition-transform duration-200 group-hover:scale-[1.02]"
+                  cover={book.cover}
+                  emptyLabel="No cover"
+                  loading="lazy"
+                  preferredVariant="thumbnail"
+                  title={book.primaryTitle}
+                />
+                {finished ? (
+                  <span className="pointer-events-none absolute top-4 -right-1 rotate-[8deg] rounded border-2 border-status-finished bg-ground/85 px-2.5 py-1 text-xs font-bold tracking-[0.12em] text-status-finished-ink">
+                    FINISHED
+                  </span>
+                ) : null}
+                {hasCardField(fields, 'rating') && book.rating != null ? (
+                  <span
+                    aria-label={`Rating ${book.rating} out of 10`}
+                    className={cn(
+                      'book-card-rating absolute top-2.5 left-2.5 inline-flex items-center gap-1 rounded-full bg-ground/85 px-2 py-0.5 text-xs font-semibold tabular-nums backdrop-blur',
+                      isLowRating(book.rating)
+                        ? 'book-card-rating--low text-danger-ink'
+                        : 'text-ink',
+                    )}
                   >
-                    {book.primaryTitle}
-                  </h2>
-                </div>
-              ) : null}
-              {showAlternativeTitles ? (
-                <div className="min-w-0 max-w-full overflow-hidden min-h-10">
-                  <p
-                    className={`min-w-0 max-w-full line-clamp-2 break-words text-slate-500 ${cardText.meta}`}
-                    title={formatListTooltip(book.alternativeTitles, book.alternativeTitlesCount)}
-                  >
-                    {formatList(book.alternativeTitles)}
-                  </p>
-                </div>
-              ) : null}
-              {showAuthor ? (
-                <div className={`min-w-0 max-w-full overflow-hidden ${cardRowMinHeights.author}`}>
-                  <p
-                    className={`min-w-0 max-w-full truncate text-slate-500 ${cardText.meta}`}
-                    title={book.author ?? 'Unknown author'}
-                  >
-                    {book.author ?? 'Unknown author'}
-                  </p>
-                </div>
-              ) : null}
-              {showProgress || showType ? (
-                <div
-                  className={`flex min-w-0 max-w-full items-end justify-between gap-3 overflow-hidden ${cardRowMinHeights.progress}`}
+                    <Star
+                      aria-hidden="true"
+                      className={cn(
+                        'book-card-rating__star size-3',
+                        isLowRating(book.rating)
+                          ? 'fill-danger text-danger'
+                          : 'fill-star text-star',
+                      )}
+                    />
+                    {book.rating}
+                    <span aria-hidden="true" className="font-normal text-ink-3">
+                      /10
+                    </span>
+                  </span>
+                ) : null}
+                {showStatus ? (
+                  <span className="absolute inset-x-0 bottom-0 flex items-center bg-ground/80 px-2.5 py-2 backdrop-blur">
+                    <StatusCell status={book.status} />
+                  </span>
+                ) : null}
+                <span
+                  aria-hidden="true"
+                  className="absolute inset-x-0 bottom-0 h-[3px] bg-white/10"
                 >
-                  <div className="min-w-0 flex-1">
-                    {showProgress ? (
-                      <p
-                        className={`truncate font-medium text-slate-700 ${cardText.meta}`}
-                        title={formatProgress(book)}
-                      >
-                        {formatProgress(book)}
-                      </p>
-                    ) : null}
+                  <span
+                    className={cn('block h-full', statusToneClasses[tone].bar)}
+                    style={{ width: `${getProgressPercent(book) ?? 0}%` }}
+                  />
+                </span>
+              </div>
+              <div
+                className={`grid min-w-0 max-w-full gap-0.5 overflow-hidden pt-2.5 ${cardDetailsClass}`}
+              >
+                {showTitle ? (
+                  <div className="min-h-10 min-w-0 max-w-full overflow-hidden">
+                    <h2
+                      className={`m-0 line-clamp-2 min-w-0 max-w-full font-sans font-semibold break-words text-ink ${cardText.title}`}
+                      title={book.primaryTitle}
+                    >
+                      {book.primaryTitle}
+                    </h2>
                   </div>
-                  <div className="min-w-0 max-w-[50%] flex-1 text-right">
-                    {showType ? (
-                      <p
-                        className={`min-w-0 max-w-full truncate font-semibold italic tracking-wide text-slate-700 ${cardText.meta}`}
-                        title={book.contentType}
-                      >
-                        {book.contentType}
-                      </p>
-                    ) : null}
+                ) : null}
+                {showAlternativeTitles ? (
+                  <div className="min-h-10 min-w-0 max-w-full overflow-hidden">
+                    <p
+                      className={`m-0 line-clamp-2 min-w-0 max-w-full break-words text-ink-3 ${cardText.meta}`}
+                      title={formatListTooltip(book.alternativeTitles, book.alternativeTitlesCount)}
+                    >
+                      {formatList(book.alternativeTitles)}
+                    </p>
                   </div>
-                </div>
-              ) : null}
-            </div>
-          </BookDetailsLink>
-        </Surface>
-      ))}
+                ) : null}
+                {showAuthor ? (
+                  <div className={`min-w-0 max-w-full overflow-hidden ${cardRowMinHeights.author}`}>
+                    <p
+                      className={`m-0 min-w-0 max-w-full truncate text-ink-2 ${cardText.meta}`}
+                      title={book.author ?? 'Unknown author'}
+                    >
+                      {book.author ?? 'Unknown author'}
+                    </p>
+                  </div>
+                ) : null}
+                {showProgress || showType ? (
+                  <div
+                    className={`flex min-w-0 max-w-full items-end justify-between gap-3 overflow-hidden ${cardRowMinHeights.progress}`}
+                  >
+                    <div className="min-w-0 flex-1">
+                      {showProgress ? (
+                        <p
+                          className={cn(
+                            `m-0 truncate font-semibold tabular-nums ${cardText.meta}`,
+                            finished ? 'text-status-finished-ink' : 'text-ink',
+                          )}
+                          title={formatProgress(book)}
+                        >
+                          {finished ? 'Finished' : formatProgress(book)}
+                        </p>
+                      ) : null}
+                    </div>
+                    <div className="min-w-0 max-w-[50%] flex-1 text-right">
+                      {showType ? (
+                        <p
+                          className={`m-0 min-w-0 max-w-full truncate text-ink-3 ${cardText.meta}`}
+                          title={book.contentType}
+                        >
+                          {book.contentType}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </BookDetailsLink>
+          </article>
+        )
+      })}
     </div>
   )
+}
+
+function getProgressPercent(book: BookListItemDto) {
+  if (isCompletedStatus(book.status)) return 100
+  const current = book.currentChapterNumber
+  const total = book.totalChapters
+  if (typeof current !== 'number' || typeof total !== 'number' || total <= 0) return null
+  return Math.min(100, (current / total) * 100)
 }
 
 function hasCardField(fields: ColumnDefinition<BookListItemDto>[], id: string) {
@@ -1134,16 +1184,19 @@ function hasCardField(fields: ColumnDefinition<BookListItemDto>[], id: string) {
 }
 
 function TitleCell({ book }: { book: BookListItemDto }) {
-  const alternativeCount = book.alternativeTitlesCount
-
   return (
-    <MetadataSummary
-      alternatives={book.alternativeTitles}
-      countNoun="alternative title"
-      primary={book.primaryTitle}
-      primaryClassName="block min-w-0 truncate font-medium text-slate-950"
-      totalCount={alternativeCount}
-    />
+    <div className="flex min-w-0 items-center gap-3">
+      <CoverThumb book={book} />
+      <div className="min-w-0 flex-1">
+        <MetadataSummary
+          alternatives={book.alternativeTitles}
+          countNoun="alternative title"
+          primary={book.primaryTitle}
+          primaryClassName="block min-w-0 truncate text-[15px] font-semibold text-ink"
+          totalCount={book.alternativeTitlesCount}
+        />
+      </div>
+    </div>
   )
 }
 
@@ -1266,6 +1319,10 @@ function TruncatedCellText({ value }: { value?: string | null | undefined }) {
       {text}
     </span>
   )
+}
+
+function formatShortDate(value: string) {
+  return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(new Date(value))
 }
 
 function buildAnalyticsHref(query: string) {

@@ -228,13 +228,17 @@ export function ColumnHeader<T>({
 
   const sortBy = column.sortBy
   if (!sortBy) {
-    return <th className={`${column.widthClass ?? ''} px-4 py-3`}>{column.label}</th>
+    return (
+      <th className={`${column.widthClass ?? ''} border-b border-line px-3 py-3`}>
+        {column.label}
+      </th>
+    )
   }
 
   return (
-    <th className={`${column.widthClass ?? ''} px-4 py-3`}>
+    <th className={`${column.widthClass ?? ''} border-b border-line px-3 py-2`}>
       <button
-        className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs font-semibold uppercase tracking-wide text-slate-500 hover:bg-slate-200 hover:text-slate-950"
+        className="-ml-2 inline-flex h-8 items-center gap-1 rounded-control px-2 text-xs font-semibold tracking-wider text-ink-3 uppercase hover:bg-raised hover:text-ink"
         type="button"
         onClick={() => onSort(sortBy)}
       >

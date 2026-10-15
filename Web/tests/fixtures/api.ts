@@ -8,6 +8,8 @@ export const layoutBooks = [
     primaryTitle: 'Lord of Mysteries',
     description: 'A long fantasy mystery.',
     alternativeTitles: ['LOTM'],
+    alternativeTitlesCount: 1,
+    authorOtherNames: [],
     authorId: 'author-1',
     author: 'Cuttlefish',
     contentType: 'Novel',
@@ -34,6 +36,8 @@ export const layoutBooks = [
     primaryTitle:
       'A Very Long Book Title That Should Stay Inside Its Card Container Without Pushing Actions Away',
     alternativeTitles: [],
+    alternativeTitlesCount: 0,
+    authorOtherNames: [],
     author: 'Toika',
     contentType: 'Novel',
     status: 'Completed',

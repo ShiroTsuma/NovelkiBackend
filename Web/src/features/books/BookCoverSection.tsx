@@ -1,8 +1,9 @@
 import { X, ZoomIn } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import type { BookCoverSummaryDto } from '@/api/types'
 import { buttonVariants } from '@/components/app/designTokens'
 import { useBodyScrollLock } from '@/components/app/useBodyScrollLock'
+import { useCoverLoadPermission } from './useCoverLoadPermission'
 import { useResolvedCoverImage } from './useResolvedCoverImage'
 
 type BookCoverArtworkProps = {
@@ -29,38 +30,6 @@ type CoverLightboxProps = {
   emptyLabel?: string | undefined
   footer?: string | undefined
   onClose: () => void
-}
-
-const COVER_LAZY_LOAD_MARGIN = '600px 0px'
-
-function useCoverLoadPermission(lazy: boolean) {
-  const [target, setTarget] = useState<HTMLElement | null>(null)
-  const [intersected, setIntersected] = useState(false)
-  const observerUnavailable = typeof IntersectionObserver === 'undefined'
-  const permitted = !lazy || intersected || observerUnavailable
-
-  useEffect(() => {
-    if (permitted || !target) {
-      return
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (!entries.some((entry) => entry.isIntersecting)) {
-          return
-        }
-
-        setIntersected(true)
-        observer.disconnect()
-      },
-      { rootMargin: COVER_LAZY_LOAD_MARGIN },
-    )
-    observer.observe(target)
-
-    return () => observer.disconnect()
-  }, [permitted, target])
-
-  return { permitted, setTarget }
 }
 
 export function BookCoverArtwork({
