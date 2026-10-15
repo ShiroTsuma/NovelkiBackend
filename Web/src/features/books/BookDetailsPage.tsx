@@ -162,7 +162,7 @@ export function BookDetailsPage() {
 
   return (
     <>
-      <div className="mx-auto flex w-full max-w-[1360px] flex-col gap-7 pb-14">
+      <div className="flex w-full max-w-[1920px] flex-col gap-7 pb-14">
         <Link
           className="inline-flex w-fit items-center gap-1.5 text-ink-2 hover:text-ink"
           to={bookListReturnTo}
@@ -476,7 +476,7 @@ export function BookDetailsPage() {
 
 function PageMessage({ children }: { children: ReactNode }) {
   return (
-    <div className="mx-auto w-full max-w-[1360px] rounded-panel border border-line bg-surface p-6 text-ink-2">
+    <div className="w-full max-w-[1920px] rounded-panel border border-line bg-surface p-6 text-ink-2">
       {children}
     </div>
   )

@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { BooksPage } from './BooksPage'
 import {
   getCardDetailRowClass,
+  getCardGridColumns,
   getCardPageSizeOptions,
   getCardRowMinHeightClasses,
   getCardTextSizeClasses,
@@ -653,7 +654,11 @@ describe('BooksPage', () => {
     await user.selectOptions(screen.getByRole('combobox', { name: /cards per row/i }), '6')
 
     expect(window.localStorage.getItem('novelki.books.cards-per-row.v1')).toBe('6')
-    expect(container.querySelector('.lg\\:grid-cols-6')).toBeTruthy()
+    expect(
+      container
+        .querySelector<HTMLElement>('.book-card-grid')
+        ?.style.getPropertyValue('--card-columns'),
+    ).toBe(getCardGridColumns(6))
     await waitFor(() =>
       expect(api.getBooks).toHaveBeenLastCalledWith(expect.objectContaining({ take: 24 })),
     )

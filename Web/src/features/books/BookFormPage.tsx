@@ -652,12 +652,12 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
   return (
     <>
       <form
-        className="mx-auto flex w-full max-w-[1360px] flex-col gap-6"
+        className="flex w-full flex-col gap-6"
         data-testid="book-form"
         noValidate
         onSubmit={(event) => void form.handleSubmit((values) => mutation.mutate(values))(event)}
       >
-        <div className="flex flex-col gap-2">
+        <div className="flex max-w-[1440px] flex-col gap-2">
           <Link
             className="inline-flex w-fit items-center gap-1.5 text-ink-2 hover:text-ink"
             state={admin ? undefined : { bookListReturnTo }}
@@ -672,7 +672,7 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
         </div>
 
         {mode === 'create' && !admin ? (
-          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-line-focus bg-surface px-4 py-3.5">
+          <div className="flex max-w-[1440px] flex-wrap items-center gap-3 rounded-xl border border-dashed border-line-focus bg-surface px-4 py-3.5">
             <Link2 aria-hidden="true" className="size-5 shrink-0 text-ink" />
             <div className="min-w-[240px] flex-1">
               <div className="font-semibold">Fill from a page</div>
@@ -687,7 +687,7 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
           </div>
         ) : null}
 
-        <div className="flex flex-wrap items-start gap-8">
+        <div className="flex max-w-[1440px] flex-wrap items-start gap-8">
           <div className="min-w-0 flex-[999_1_560px] rounded-panel border border-line bg-surface">
             <FormSection title="Identity">
               <Field error={errors.primaryTitle?.message} label="Title" required>

@@ -1,6 +1,13 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronDown, Download, LayoutGrid, List, MoreHorizontal, Star } from 'lucide-react'
-import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type MouseEvent,
+  type ReactNode,
+} from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { api } from '@/api/client'
@@ -46,7 +53,7 @@ import {
   getCardRowMinHeightClasses,
   getCardTextSizeClasses,
   getClosestPageSize,
-  getDesktopCardsPerRowClass,
+  getCardGridColumns,
   useCardsPerRow,
   useResponsiveCardsPerRow,
 } from './bookCardLayout'
@@ -946,7 +953,8 @@ function BookCardGrid({
 
   return (
     <div
-      className={`book-card-grid grid min-w-0 grid-cols-2 gap-x-5 gap-y-7 md:grid-cols-3 ${getDesktopCardsPerRowClass(cardsPerRow)}`}
+      className="book-card-grid grid min-w-0 grid-cols-2 gap-x-5 gap-y-7 md:grid-cols-3 lg:[grid-template-columns:var(--card-columns)]"
+      style={{ '--card-columns': getCardGridColumns(cardsPerRow) } as CSSProperties}
     >
       {books.map((book) => {
         const finished = isCompletedStatus(book.status)

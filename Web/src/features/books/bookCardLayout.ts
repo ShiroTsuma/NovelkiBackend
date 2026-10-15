@@ -198,17 +198,18 @@ export function getClosestPageSize(pageSize: number, options: readonly number[])
   )
 }
 
-export function getDesktopCardsPerRowClass(cardsPerRow: number) {
-  const normalized = normalizeCardsPerRow(cardsPerRow)
-  const classMap: Record<number, string> = {
-    2: 'lg:grid-cols-2',
-    3: 'lg:grid-cols-3',
-    4: 'lg:grid-cols-4',
-    5: 'lg:grid-cols-5',
-    6: 'lg:grid-cols-6',
-    7: 'lg:grid-cols-7',
-    8: 'lg:grid-cols-8',
-  }
+/** Content width at the 1440px design size (1440 minus two 32px gutters). */
+const referenceContentWidthPx = 1376
+const cardGapPx = 20
 
-  return classMap[normalized]
+/**
+ * Desktop card columns for a "cards per row" choice. Up to the 1440px design
+ * size it gives exactly that many cards; wider screens fit more columns of the
+ * same card size instead of stretching the cards.
+ */
+export function getCardGridColumns(cardsPerRow: number) {
+  const perRow = normalizeCardsPerRow(cardsPerRow)
+  const designWidth = Math.floor((referenceContentWidthPx - (perRow - 1) * cardGapPx) / perRow)
+  const fitWidth = `calc((100% - ${String((perRow - 1) * cardGapPx)}px) / ${String(perRow)})`
+  return `repeat(auto-fill, minmax(min(${String(designWidth)}px, ${fitWidth}), 1fr))`
 }

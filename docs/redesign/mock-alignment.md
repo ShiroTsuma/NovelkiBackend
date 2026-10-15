@@ -31,7 +31,7 @@ If a screen differs from the mock and this file doesn't say why, that's a bug.
 | Search field with token pills and a Filters / Query toggle | do: pills are derived from the query text (the only state). Clicking a pill excludes it (`-`) or includes it again, × removes it. Query is the text editor with syntax suggestions in mono; when focus leaves it, the bar goes back to pills |
 | Quick filter chips showing their syntax | do |
 | "+ Save current as view" | do: views are stored in localStorage (per browser) until the API can store them |
-| Page width and padding: 1360px, 32px gutter | do (the old 1792px container is gone) |
+| Page width: the 1440px artboards fill the screen (their 1360px cap never shows) | do: the header and the list use the full width with a 32px gutter. Details cap at 1920px and the form at 1440px (long fields and text read badly wider), both left-aligned under the header. On wide screens cards keep their 1440px size and more columns appear |
 | Result toolbar: match count, Sort menu, Table / Cards switch, column settings | do: the toolbar sits on the page, not in a panel; Sort is a menu (no native select). "Open in Stats" link added next to the count (keeps the old summary-to-analytics link); cards per row next to the switch in cards view (existing feature) |
 | Table in its own box (radius 12, sunk background), widths from the mock, title takes the rest | do. Sort arrows show on hover and on the sorted column |
 | Table title cell: cover, title link, author and "· N alt titles" | do (the count lists the titles on hover; author keeps the other-names tooltip) |

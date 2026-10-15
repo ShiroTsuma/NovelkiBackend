@@ -79,7 +79,7 @@ export function AppShell() {
         Skip to content
       </a>
       <header className="sticky top-0 z-40 border-b border-line bg-ground/95 backdrop-blur-md">
-        <div className="mx-auto flex min-h-16 max-w-[1360px] items-center gap-x-7 gap-y-3 px-4 md:px-8">
+        <div className="flex min-h-16 w-full items-center gap-x-7 gap-y-3 px-4 md:px-8">
           <Link
             to="/books"
             className="flex items-center gap-2.5 font-display text-xl font-bold text-ink hover:text-ink"
@@ -166,7 +166,7 @@ export function AppShell() {
 
       <main
         id="main-content"
-        className="mx-auto w-full max-w-[1360px] px-4 pt-6 pb-[calc(76px+2rem)] md:px-8 md:pb-14"
+        className="w-full px-4 pt-6 pb-[calc(76px+2rem)] md:px-8 md:pb-14"
       >
         <Outlet />
       </main>
