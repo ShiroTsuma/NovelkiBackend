@@ -9,7 +9,7 @@ import { api } from '@/api/client'
 import { HttpError } from '@/api/http'
 import type { AuthorDto, BookCoverDto, BookHtmlParseResult, BookMutationRequest } from '@/api/types'
 import { buttonVariants } from '@/components/app/designTokens'
-import { DialogPanel, PageHeader, Surface } from '@/components/app/DesignSystem'
+import { DialogPanel, Surface } from '@/components/app/DesignSystem'
 import { useBodyScrollLock } from '@/components/app/useBodyScrollLock'
 import { buttonClass, inputClass, secondaryButtonClass } from '@/components/app/designTokens'
 import { FormField } from '@/components/app/FormField'
@@ -550,7 +550,7 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
 
   if (isLoadingDictionaries || isLoadingBook) {
     return (
-      <Surface className="p-6 text-slate-500" tone="muted">
+      <Surface className="p-6 text-ink-3" tone="muted">
         Loading form...
       </Surface>
     )
@@ -564,23 +564,40 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
         noValidate
         onSubmit={(event) => void form.handleSubmit((values) => mutation.mutate(values))(event)}
       >
-        <PageHeader
-          actions={
-            mode === 'create' && !admin ? (
-              <button
-                className={secondaryButtonClass}
-                type="button"
-                onClick={() => setHtmlParseDialogOpen(true)}
-              >
-                <FileCode2 className="h-4 w-4" />
-                Parse HTML
-              </button>
-            ) : undefined
-          }
-          description={pageDescription}
-          eyebrow={admin ? 'Administration' : 'Library editor'}
-          title={admin ? 'Admin edit' : mode === 'create' ? 'Add book' : 'Edit book'}
-        />
+        <div className="flex flex-col gap-2">
+          <Link
+            className="inline-flex w-fit items-center gap-1.5 text-ink-2 hover:text-ink"
+            state={admin ? undefined : { bookListReturnTo }}
+            to={backHref}
+          >
+            <ArrowLeft aria-hidden="true" className="size-4" />
+            {admin ? 'Administration' : mode === 'edit' ? 'Book' : 'Library'}
+          </Link>
+          <h1 className="m-0 font-display text-4xl leading-tight font-bold tracking-tight">
+            {admin ? 'Admin edit' : mode === 'create' ? 'Add book' : 'Edit book'}
+          </h1>
+          <p className="m-0 max-w-2xl text-ink-2">{pageDescription}</p>
+        </div>
+
+        {mode === 'create' && !admin ? (
+          <div className="flex flex-wrap items-center gap-3 rounded-panel border border-dashed border-line-focus bg-surface px-4 py-3.5">
+            <FileCode2 aria-hidden="true" className="size-5 shrink-0 text-ink-2" />
+            <div className="min-w-[240px] flex-1">
+              <div className="font-semibold">Fill from a page</div>
+              <div className="text-[13px] text-ink-3">
+                Paste a book page's HTML and pick which title, author, genres, tags, description and
+                cover to use.
+              </div>
+            </div>
+            <button
+              className={secondaryButtonClass}
+              type="button"
+              onClick={() => setHtmlParseDialogOpen(true)}
+            >
+              Parse HTML
+            </button>
+          </div>
+        ) : null}
 
         <div className="book-form-layout">
           <Surface className="book-form-section book-form-identity">
@@ -623,13 +640,13 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
                       className="ui-popover absolute z-20 mt-1 max-h-64 w-full overflow-auto"
                     >
                       {authorSearchPending && !authorSuggestionsQuery.data?.length ? (
-                        <div className="px-3 py-2 text-sm text-slate-400">Searching authors...</div>
+                        <div className="px-3 py-2 text-sm text-ink-3">Searching authors...</div>
                       ) : null}
                       {authorSuggestionsQuery.data?.map((author) => {
                         const matchedAlias = findMatchingAlias(author, authorName)
                         return (
                           <button
-                            className="grid w-full gap-0.5 px-3 py-2 text-left text-sm text-slate-100 hover:bg-slate-800"
+                            className="grid w-full gap-0.5 px-3 py-2 text-left text-sm text-ink hover:bg-hover"
                             key={author.id}
                             type="button"
                             onMouseDown={(event) => event.preventDefault()}
@@ -637,12 +654,12 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
                           >
                             <span className="flex items-center justify-between gap-2 font-medium">
                               <span>{formatAuthorDisplay(author.primaryName, matchedAlias)}</span>
-                              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-3">
                                 {author.isPublic ? 'Public' : 'Private'}
                               </span>
                             </span>
                             {author.otherNames.length ? (
-                              <span className="text-xs text-slate-400">
+                              <span className="text-xs text-ink-3">
                                 {author.otherNames.slice(0, 3).join(', ')}
                               </span>
                             ) : null}
@@ -650,7 +667,7 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
                         )
                       })}
                       {!authorSearchPending && authorSuggestionsQuery.data?.length === 0 ? (
-                        <div className="px-3 py-2 text-sm text-slate-400">
+                        <div className="px-3 py-2 text-sm text-ink-3">
                           No author found. A new one will be created.
                         </div>
                       ) : null}
@@ -769,7 +786,7 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
                   <h3>Progress</h3>
                 </div>
                 <div className="grid gap-4 md:grid-cols-3">
-                  <FormField error={errors.currentChapterNumber?.message} label="Current chapter *">
+                  <FormField error={errors.currentChapterNumber?.message} label="Chapters read *">
                     <input
                       aria-label="Current chapter"
                       aria-invalid={errors.currentChapterNumber ? 'true' : undefined}
@@ -782,7 +799,7 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
                       }
                     />
                   </FormField>
-                  <FormField error={errors.currentChapterLabel?.message} label="Chapter label">
+                  <FormField error={errors.currentChapterLabel?.message} label="Label in source">
                     <input className={inputClass} {...form.register('currentChapterLabel')} />
                   </FormField>
                   <FormField error={errors.totalChapters?.message} label="Total chapters">
@@ -1196,7 +1213,7 @@ function ChipBox({
           {suggestions.map((item, index) => (
             <button
               aria-selected={activeIndex === index}
-              className={`w-full px-3 py-2 text-left text-sm text-slate-100 hover:bg-slate-800 ${activeIndex === index ? 'bg-slate-800' : ''}`}
+              className={`w-full px-3 py-2 text-left text-sm text-ink hover:bg-hover ${activeIndex === index ? 'bg-selected' : ''}`}
               id={`${listboxId}-option-${index}`}
               key={item.key}
               role="option"
@@ -1206,7 +1223,7 @@ function ChipBox({
             >
               <span className="font-medium">{item.label}</span>
               {item.description ? (
-                <span className="mt-0.5 block text-xs text-slate-400">{item.description}</span>
+                <span className="mt-0.5 block text-xs text-ink-3">{item.description}</span>
               ) : null}
             </button>
           ))}
@@ -1224,10 +1241,10 @@ function ChipBox({
             </button>
           ) : null}
           {suggestionsPending && !suggestions.length ? (
-            <div className="px-3 py-2 text-sm text-slate-400">Searching...</div>
+            <div className="px-3 py-2 text-sm text-ink-3">Searching...</div>
           ) : null}
           {!suggestionsPending && !suggestions.length && !canCreate ? (
-            <div className="px-3 py-2 text-sm text-slate-400">No results.</div>
+            <div className="px-3 py-2 text-sm text-ink-3">No results.</div>
           ) : null}
         </div>
       ) : null}
@@ -1289,7 +1306,7 @@ function CoverSourceDialog({
         <div className="flex items-start justify-between gap-4">
           <div className="grid gap-1">
             <h2 className="text-lg font-semibold text-white">Add cover</h2>
-            <p className="text-sm text-slate-400">{introText}</p>
+            <p className="text-sm text-ink-3">{introText}</p>
           </div>
           <button
             aria-label="Close cover dialog"
@@ -1308,7 +1325,7 @@ function CoverSourceDialog({
                 <Upload className="h-4 w-4" />
               </div>
               <div className="text-base font-semibold">Upload image</div>
-              <div className="text-sm text-slate-400">Use JPG, PNG, or WebP from disk.</div>
+              <div className="text-sm text-ink-3">Use JPG, PNG, or WebP from disk.</div>
               <input
                 accept="image/jpeg,image/png,image/webp"
                 className="sr-only"
@@ -1328,7 +1345,7 @@ function CoverSourceDialog({
                 <Link2 className="h-4 w-4" />
               </div>
               <div className="text-base font-semibold">Paste image URL</div>
-              <div className="text-sm text-slate-400">
+              <div className="text-sm text-ink-3">
                 The original URL is also added to book links.
               </div>
             </button>
@@ -1461,7 +1478,7 @@ function DescriptionHelp({ value }: { value?: string | null | undefined }) {
     return null
   }
 
-  return <p className="text-xs font-normal text-slate-500">{value}</p>
+  return <p className="text-xs font-normal text-ink-3">{value}</p>
 }
 
 function RatingStars({ value, onChange }: { value: string; onChange: (value: string) => void }) {
@@ -1510,7 +1527,7 @@ function RatingStars({ value, onChange }: { value: string; onChange: (value: str
               }}
             >
               <Star
-                className={`h-5 w-5 ${active ? 'fill-amber-400 text-amber-400' : 'text-[var(--qs-subtle)]'}`}
+                className={`h-5 w-5 ${active ? 'fill-star text-star' : 'text-[var(--qs-subtle)]'}`}
               />
             </button>
           )

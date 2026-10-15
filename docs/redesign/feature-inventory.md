@@ -89,3 +89,20 @@ Nothing may disappear without a `[~]` note.
 - [x] The page grid is width-constrained, so nothing overflows the viewport on phones
 
 Known follow-ups: the summary panel and the export and import menus still use the old component styles, mapped to the new palette.
+
+## Add / edit book form (`/books/new`, `/books/:id/edit`, `/admin/books/:id/edit`)
+
+- [x] Modes: create, edit and admin edit. Back link goes to the book, the library or admin
+- [x] Loads types, statuses and genres; in create mode the first type and status are preselected; focuses the title once ready
+- [x] Primary title (required) with validation messages
+- [x] Author combobox: debounced search (2+ characters), alias matching ("Name (Alias)"), Public/Private label, "No author found. A new one will be created.", exact match picked on blur, resolved again on save
+- [x] Type and status selects, each with a description help line. `[~]` the native select is restyled with a custom chevron
+- [x] Progress: current chapter (integer sanitising, required), label, total chapters (decimal, validated against current). `[~]` visible labels now read "Chapters read" and "Label in source" (aria labels unchanged)
+- [x] Priority 1–5 (integer); rating as 10 stars with hover preview, click again to clear, "?/10" readout. `[~]` star colour now comes from the token
+- [x] Genre chips from the dictionary; tag chips with server suggestions
+- [x] Description, alternative titles (one per line), links (one URL per line), private notes
+- [x] Cover: click to preview, or open the source dialog (upload JPG/PNG/WebP, or a URL); draft cover held until save; remove existing cover on save; status, source and failure info. Create mode stages the upload through the durable outbox
+- [x] Parse HTML (create mode only): parse page HTML, choose fields, merge into the form, including the cover URL and canonical link. `[~]` moved into a "Fill from a page" banner
+- [x] Save: create or update, with cover upload, URL or remove, plus the cover source link; toasts for added, updated and cover warnings; navigates to the book or admin
+- [x] Save bar: fixed at the bottom on phones and tablets, in the side rail on desktop. `[~]` the rail is sticky on desktop, and on phones the bar sits above the tab bar
+- [~] Section numbers ("01", "02", "03") hidden; section titles kept for headings and tests
