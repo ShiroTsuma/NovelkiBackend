@@ -25,7 +25,7 @@ If a screen differs from the mock and this file doesn't say why, that's a bug.
 | Serif "Library" title | do |
 | Subtitle "142 books · 13 finished · 36,388 chapters read" | do: whole-library summary (plus average rating) |
 | One "Import / Export" menu | do: one menu with Export and Import sections |
-| Status tabs with counts and a  hint | do: counts come from the summary of the query without its status token |
+| Status tabs with counts and a `status:` hint | do: counts come from the summary of the query without its status token |
 | Search field with token pills and a Filters / Query toggle | do: Filters shows the pills (display only, derived from the text); Query is the existing search input. The query text is the only state |
 | Quick filter chips showing their syntax | do |
 | "+ Save current as view" | do: views are stored in localStorage (per browser) until the API can store them |
