@@ -1,9 +1,8 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { api } from '@/api/client'
 import { HttpError } from '@/api/http'
-import { expectReadableTextContrast } from '@/test/contrast'
 import { bookListItems, books, dictionaries, paginated, statuses } from '@/test/fixtures'
 import { renderWithProviders } from '@/test/render'
 import { toast } from 'sonner'
@@ -41,6 +40,15 @@ vi.mock('sonner', () => ({
     error: vi.fn(),
   },
 }))
+
+/** Switches the query bar to its text view (it opens on pills when the URL has a query). */
+function getSearchInput() {
+  const queryButton = screen.queryByRole('button', { name: 'Query' })
+  if (queryButton?.getAttribute('aria-pressed') === 'false') {
+    fireEvent.click(queryButton)
+  }
+  return screen.getByRole<HTMLInputElement>('combobox', { name: /search books/i })
+}
 
 describe('BooksPage', () => {
   beforeEach(() => {
@@ -125,7 +133,7 @@ describe('BooksPage', () => {
     const scroller = table?.parentElement
     const section = table?.closest('section')
 
-    expect(table).toHaveStyle({ minWidth: '152rem' })
+    expect(table).toHaveStyle({ minWidth: '150.5rem' })
     expect(container.querySelectorAll('col')).toHaveLength(16)
     expect(scroller).toHaveClass('max-w-full', 'overflow-x-auto')
     expect(section).toHaveClass('min-w-0', 'overflow-hidden')
@@ -146,7 +154,7 @@ describe('BooksPage', () => {
     renderWithProviders(<BooksPage />, { route: '/books' })
 
     await screen.findByText('Lord of Mysteries')
-    const searchInput = screen.getByRole('combobox', { name: /search books/i })
+    const searchInput = getSearchInput()
     await user.click(searchInput)
     expect(screen.getByRole('option', { name: /^title:#/i })).toBeInTheDocument()
     expect(screen.getByRole('option', { name: /^description:#/i })).toBeInTheDocument()
@@ -166,12 +174,12 @@ describe('BooksPage', () => {
     renderWithProviders(<BooksPage />, { route: '/books' })
 
     await screen.findByText('Lord of Mysteries')
-    const searchInput = screen.getByRole('combobox', { name: /search books/i })
+    const searchInput = getSearchInput()
     await user.click(searchInput)
     await user.click(screen.getByRole('option', { name: /^title:#/i }))
     expect(searchInput).toHaveValue('title:""')
     expect(searchInput).toHaveFocus()
-    expect((searchInput as HTMLInputElement).selectionStart).toBe('title:"'.length)
+    expect(searchInput.selectionStart).toBe('title:"'.length)
     expect(screen.getByRole('option', { name: /^\* wildcard/i })).toHaveTextContent(
       'Matches any sequence of characters',
     )
@@ -188,7 +196,7 @@ describe('BooksPage', () => {
     renderWithProviders(<BooksPage />, { route: '/books' })
 
     await screen.findByText('Lord of Mysteries')
-    const searchInput = screen.getByRole('combobox', { name: /search books/i })
+    const searchInput = getSearchInput()
     await user.clear(searchInput)
     await user.type(searchInput, 'status:plan to read ')
 
@@ -208,7 +216,7 @@ describe('BooksPage', () => {
 
     renderWithProviders(<BooksPage />, { route: '/books?query=status%3AReading' })
 
-    const searchInput = await screen.findByRole('combobox', { name: /search books/i })
+    const searchInput = getSearchInput()
     await user.click(screen.getByRole('button', { name: /clear search and filters/i }))
 
     expect(searchInput).toHaveValue('')
@@ -229,7 +237,7 @@ describe('BooksPage', () => {
     renderWithProviders(<BooksPage />, { route: '/books' })
 
     await screen.findByText('Lord of Mysteries')
-    const searchInput = screen.getByRole('combobox', { name: /search books/i })
+    const searchInput = getSearchInput()
     await user.type(searchInput, 'status:comp')
     await waitFor(() =>
       expect(api.getBookSearchSuggestions).toHaveBeenCalledWith(
@@ -258,7 +266,7 @@ describe('BooksPage', () => {
     renderWithProviders(<BooksPage />, { route: '/books?query=author%3A%22perf%22' })
 
     await screen.findByText('Lord of Mysteries')
-    await user.click(screen.getByRole('combobox', { name: /search books/i }))
+    await user.click(getSearchInput())
     await waitFor(() =>
       expect(api.getBookSearchSuggestions).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -285,7 +293,7 @@ describe('BooksPage', () => {
     renderWithProviders(<BooksPage />, { route: '/books?query=author%3A%22Perf%22' })
 
     await screen.findByText('Lord of Mysteries')
-    await user.click(screen.getByRole('combobox', { name: /search books/i }))
+    await user.click(getSearchInput())
     await waitFor(() =>
       expect(api.getBookSearchSuggestions).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -316,7 +324,7 @@ describe('BooksPage', () => {
     })
 
     await screen.findByText('Lord of Mysteries')
-    const searchInput = screen.getByRole('combobox', { name: /search books/i })
+    const searchInput = getSearchInput()
     await user.click(searchInput)
     await waitFor(() =>
       expect(api.getBookSearchSuggestions).toHaveBeenCalledWith(
@@ -344,7 +352,7 @@ describe('BooksPage', () => {
     renderWithProviders(<BooksPage />, { route: '/books?query=tag%3Afavorite' })
 
     await screen.findByText('Lord of Mysteries')
-    const searchInput = screen.getByRole('combobox', { name: /search books/i })
+    const searchInput = getSearchInput()
     await user.click(searchInput)
     await user.click(screen.getByRole('option', { name: /^Exclude tag:favorite/i }))
     expect(searchInput).toHaveValue('-tag:favorite')
@@ -360,7 +368,7 @@ describe('BooksPage', () => {
     renderWithProviders(<BooksPage />, { route: '/books?query=title%3ALordofMysteries' })
 
     await screen.findByText('Lord of Mysteries')
-    const searchInput = screen.getByRole<HTMLInputElement>('combobox', { name: /search books/i })
+    const searchInput = getSearchInput()
     searchInput.focus()
     searchInput.setSelectionRange('title:Lord'.length, 'title:Lord'.length)
     await user.keyboard(' ')
@@ -409,7 +417,10 @@ describe('BooksPage', () => {
 
     renderWithProviders(<BooksPage />, { route: '/books?take=50&query=Fantasy' })
 
-    await user.click(await screen.findByLabelText('Edit Lord of Mysteries'))
+    await user.click(
+      await screen.findByRole('button', { name: 'More actions for Lord of Mysteries' }),
+    )
+    await user.click(screen.getByRole('menuitem', { name: 'Edit book' }))
 
     expect(
       window.sessionStorage.getItem(
@@ -468,26 +479,18 @@ describe('BooksPage', () => {
     expect(await screen.findByLabelText('23 more: known-hidden')).toHaveTextContent('+23 more')
   })
 
-  it('keeps top action buttons with balanced icon spacing', async () => {
+  it('offers export and import in one Import / Export menu', async () => {
     vi.mocked(api.getBooks).mockResolvedValue(paginated(bookListItems))
+    const user = userEvent.setup()
 
     renderWithProviders(<BooksPage />, { route: '/books' })
 
     await screen.findByText('Lord of Mysteries')
-    const topButtons = screen.getAllByRole('button')
-    expect(topButtons.findIndex((button) => /summary/i.test(button.textContent))).toBeLessThan(
-      topButtons.findIndex((button) => /^export$/i.test(button.textContent.trim())),
-    )
-    expect(screen.getByRole('button', { name: /^export$/i })).toHaveClass(
-      'gap-2.5',
-      'pl-3.5',
-      'pr-4',
-    )
-    expect(screen.getByRole('button', { name: /^import$/i })).toHaveClass(
-      'gap-2.5',
-      'pl-3.5',
-      'pr-4',
-    )
+    expect(screen.queryByRole('button', { name: /^summary$/i })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Import / Export' }))
+    const menu = screen.getByRole('menu', { name: 'Import / Export' })
+    expect(within(menu).getByText('Export')).toBeInTheDocument()
+    expect(within(menu).getByText('Import')).toBeInTheDocument()
   })
 
   it('exports the current filtered and sorted books to csv', async () => {
@@ -505,8 +508,8 @@ describe('BooksPage', () => {
     })
 
     await screen.findByText('Lord of Mysteries')
-    await user.click(screen.getByRole('button', { name: /^export$/i }))
-    await user.click(screen.getByRole('menuitem', { name: /^csv/i }))
+    await user.click(screen.getByRole('button', { name: 'Import / Export' }))
+    await user.click(screen.getAllByRole('menuitem', { name: /^csv/i })[0]!)
 
     await waitFor(() =>
       expect(api.downloadBooksExport).toHaveBeenCalledWith({
@@ -531,17 +534,14 @@ describe('BooksPage', () => {
     renderWithProviders(<BooksPage />, { route: '/books' })
 
     await screen.findByText('Lord of Mysteries')
-    await user.click(screen.getByRole('button', { name: /^export$/i }))
-    let menuItems = screen.getAllByRole('menuitem')
+    await user.click(screen.getByRole('button', { name: 'Import / Export' }))
+    const menuItems = screen.getAllByRole('menuitem')
     expect(menuItems[0]).toHaveTextContent(/^CSV/)
     expect(menuItems[1]).toHaveTextContent(/^Full backup/)
+    expect(menuItems[3]).toHaveTextContent(/^CSV/)
+    expect(menuItems[4]).toHaveTextContent(/^Full backup/)
 
-    await user.click(screen.getByRole('button', { name: /^import$/i }))
-    menuItems = screen.getAllByRole('menuitem')
-    expect(menuItems[0]).toHaveTextContent(/^CSV/)
-    expect(menuItems[1]).toHaveTextContent(/^Full backup/)
-
-    await user.click(menuItems[1]!)
+    await user.click(menuItems[4]!)
     expect(
       screen.getByRole('heading', { name: /import books from full backup/i }),
     ).toBeInTheDocument()
@@ -563,147 +563,80 @@ describe('BooksPage', () => {
     renderWithProviders(<BooksPage />, { route: '/books' })
 
     await screen.findByText('Lord of Mysteries')
-    await user.click(screen.getByRole('button', { name: /^export$/i }))
-    await user.click(screen.getByRole('menuitem', { name: /^full backup/i }))
+    await user.click(screen.getByRole('button', { name: 'Import / Export' }))
+    await user.click(screen.getAllByRole('menuitem', { name: /^full backup/i })[0]!)
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith('Too many requests. Try again in 30 minutes.')
     })
   })
 
-  it('does not fetch books summary before the panel is expanded', async () => {
+  it('shows whole-library stats under the title', async () => {
     vi.mocked(api.getBooks).mockResolvedValue(paginated(books))
     vi.mocked(api.getBooksSummary).mockResolvedValue(createSummary())
 
-    renderWithProviders(<BooksPage />, {
-      route: '/books?query=author%3AToika&sortBy=title&sortDirection=asc',
-    })
+    renderWithProviders(<BooksPage />, { route: '/books?query=author%3AToika' })
 
-    await screen.findByText('Lord of Mysteries')
-    expect(api.getBooksSummary).not.toHaveBeenCalled()
-  })
-
-  it('expands the summary panel above search and fetches summary by query only', async () => {
-    vi.mocked(api.getBooks).mockResolvedValue(paginated(books))
-    vi.mocked(api.getBooksSummary).mockResolvedValue(createSummary())
-    const user = userEvent.setup()
-
-    renderWithProviders(<BooksPage />, {
-      route: '/books?query=author%3AToika&sortBy=title&sortDirection=asc',
-    })
-
-    await screen.findByText('Lord of Mysteries')
-    await user.click(screen.getByRole('button', { name: /summary/i }))
-
-    expect(await screen.findByRole('heading', { name: /library summary/i })).toBeInTheDocument()
-    expect(api.getBooksSummary).toHaveBeenCalledWith({ query: 'author:Toika' })
-    expect(screen.getByText('Total books')).toBeInTheDocument()
-    expect(screen.getByText('Average rating')).toBeInTheDocument()
-    const summarySection = screen
-      .getByRole('heading', { name: /library summary/i })
-      .closest('section')
-    expect(summarySection).not.toBeNull()
-    expect(screen.getByText('Status distribution')).toBeInTheDocument()
-    expect(screen.getByText('Book types')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /open analytics/i })).toBeInTheDocument()
-    const searchInput = screen.getByRole('combobox', { name: /search books/i })
     expect(
-      (summarySection?.compareDocumentPosition(searchInput) ?? 0) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy()
+      await screen.findByText('2 books · 1 finished · 468 chapters read · avg rating 9.0'),
+    ).toBeInTheDocument()
+    expect(api.getBooksSummary).toHaveBeenCalledWith({ query: '' })
   })
 
-  it('shows a summary empty state when no books match the current filters', async () => {
-    vi.mocked(api.getBooks).mockResolvedValue(paginated([]))
-    vi.mocked(api.getBooksSummary).mockResolvedValue({
-      totalBooks: 0,
-      ratedBooks: 0,
-      unratedBooks: 0,
-      averageRating: null,
-      currentChapters: 0,
-      booksWithKnownCurrentChapter: 0,
-      booksWithoutKnownCurrentChapter: 0,
-      statusCounts: [],
-      typeCounts: [],
-      genreCounts: [],
-      ratingCounts: [],
-    })
-    const user = userEvent.setup()
-
-    renderWithProviders(<BooksPage />, { route: '/books?query=author%3AMissing' })
-
-    await screen.findByText('No books match the current filters.')
-    await user.click(screen.getByRole('button', { name: /summary/i }))
-
-    expect(await screen.findByRole('heading', { name: /library summary/i })).toBeInTheDocument()
-    expect(screen.getAllByText('No books match the current filters.')).toHaveLength(2)
-    expect(screen.getAllByText('0')).toHaveLength(4)
-  })
-
-  it('links summary to analytics with the current complex query', async () => {
+  it('counts each status tab against the rest of the query', async () => {
     vi.mocked(api.getBooks).mockResolvedValue(paginated(books))
     vi.mocked(api.getBooksSummary).mockResolvedValue(createSummary())
-    const user = userEvent.setup()
+
+    renderWithProviders(<BooksPage />, {
+      route: '/books?query=status%3Areading%20author%3AToika',
+    })
+
+    await screen.findByText('Lord of Mysteries')
+    await waitFor(() => expect(api.getBooksSummary).toHaveBeenCalledWith({ query: 'author:Toika' }))
+    const completed = await screen.findByRole('button', { name: /Completed\s*1/ })
+    expect(completed).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.getByRole('button', { name: /Reading\s*1/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(screen.getByRole('button', { name: /Dropped\s*0/ })).toBeInTheDocument()
+  })
+
+  it('links to Stats with the current complex query', async () => {
+    vi.mocked(api.getBooks).mockResolvedValue(paginated(books))
+    vi.mocked(api.getBooksSummary).mockResolvedValue(createSummary())
 
     renderWithProviders(<BooksPage />, {
       route: '/books?query=author%3AToika%20title%3A%22Lord%20of%20Mysteries%22',
     })
 
-    await screen.findByText('Lord of Mysteries')
-    await user.click(screen.getByRole('button', { name: /summary/i }))
-
-    const link = await screen.findByRole('link', { name: /open analytics/i })
-    expect(link).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: 'Open in Stats' })).toHaveAttribute(
       'href',
       '/analytics?query=author%3AToika+title%3A%22Lord+of+Mysteries%22',
     )
-    expect(screen.getByText('Status distribution')).toBeInTheDocument()
-    expect(screen.getByText('Book types')).toBeInTheDocument()
-    expect(screen.queryByText('Estimated reading time')).not.toBeInTheDocument()
   })
 
-  it('moves date query filters into analytics from/to parameters', async () => {
+  it('moves date query filters into the Stats from/to parameters', async () => {
     vi.mocked(api.getBooks).mockResolvedValue(paginated(books))
     vi.mocked(api.getBooksSummary).mockResolvedValue(createSummary())
-    const user = userEvent.setup()
 
     renderWithProviders(<BooksPage />, {
       route: '/books?query=author%3AToika%20created%3A%3D2026%20updated%3A%3C%3D07.2026',
     })
 
-    await screen.findByText('Lord of Mysteries')
-    await user.click(screen.getByRole('button', { name: /summary/i }))
-
-    expect(await screen.findByRole('link', { name: /open analytics/i })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: 'Open in Stats' })).toHaveAttribute(
       'href',
       '/analytics?query=author%3AToika&from=2026-01-01&to=2026-08-01',
     )
   })
 
-  it('keeps summary book type labels readable against their calculated background', async () => {
+  it('links to Stats without a query', async () => {
     vi.mocked(api.getBooks).mockResolvedValue(paginated(books))
     vi.mocked(api.getBooksSummary).mockResolvedValue(createSummary())
-    const user = userEvent.setup()
 
     renderWithProviders(<BooksPage />, { route: '/books' })
 
-    await screen.findByText('Lord of Mysteries')
-    await user.click(screen.getByRole('button', { name: /summary/i }))
-
-    expectReadableTextContrast((await screen.findAllByText('Novel'))[0]!)
-  })
-
-  it('links summary to analytics without a query', async () => {
-    vi.mocked(api.getBooks).mockResolvedValue(paginated(books))
-    vi.mocked(api.getBooksSummary).mockResolvedValue(createSummary())
-    const user = userEvent.setup()
-
-    renderWithProviders(<BooksPage />, { route: '/books' })
-
-    await screen.findByText('Lord of Mysteries')
-    await user.click(screen.getByRole('button', { name: /summary/i }))
-
-    expect(await screen.findByRole('link', { name: /open analytics/i })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: 'Open in Stats' })).toHaveAttribute(
       'href',
       '/analytics',
     )
@@ -1088,7 +1021,7 @@ describe('BooksPage', () => {
     await screen.findByText('Lord of Mysteries')
     expect(screen.getByRole('button', { name: '1' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('button', { name: '2' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /last page/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '11' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /jump between pages/i })).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '2' }))
@@ -1361,23 +1294,23 @@ describe('BooksPage', () => {
   })
 
   it('uses adaptive card counts until the cards-per-row control becomes effective', () => {
-    expect(getResponsiveCardsPerRow(8, 412)).toBe(1)
-    expect(getResponsiveCardsPerRow(8, 900)).toBe(2)
+    expect(getResponsiveCardsPerRow(8, 412)).toBe(2)
+    expect(getResponsiveCardsPerRow(8, 900)).toBe(3)
     expect(getResponsiveCardsPerRow(8, 1024)).toBe(8)
     expect(getResponsiveCardsPerRow(3, 1440)).toBe(3)
   })
 
   it('scales card text sizes with the cards-per-row setting', () => {
     expect(getCardTextSizeClasses(4)).toEqual({
-      title: 'text-lg',
-      meta: 'text-base',
+      title: 'text-[15px]',
+      meta: 'text-[13px]',
     })
     expect(getCardTextSizeClasses(6)).toEqual({
-      title: 'text-base',
-      meta: 'text-sm',
+      title: 'text-sm',
+      meta: 'text-xs',
     })
     expect(getCardTextSizeClasses(8)).toEqual({
-      title: 'text-sm',
+      title: 'text-[13px]',
       meta: 'text-xs',
     })
   })

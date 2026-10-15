@@ -13,6 +13,7 @@ vi.mock('@/features/auth/useAuth', () => ({
   useAuth: () => ({
     isAdmin: authState.isAdmin,
     logout: vi.fn(),
+    token: null,
   }),
 }))
 
@@ -41,8 +42,27 @@ describe('AppShell', () => {
       'aria-pressed',
       'false',
     )
-    expect(screen.getByRole('button', { name: /log out/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Add book' })).toHaveAttribute('href', '/books/new')
+    expect(screen.getByRole('button', { name: 'Jump to book or page' })).toBeInTheDocument()
+  })
+
+  it('logs out from the account menu', async () => {
+    const user = userEvent.setup()
+    renderAt('/books')
+    await user.click(screen.getByRole('button', { name: 'Account menu' }))
+    expect(screen.getByRole('menuitem', { name: 'Log out' })).toBeInTheDocument()
+  })
+
+  it('opens the jump palette with Ctrl+K and lists pages', async () => {
+    const user = userEvent.setup()
+    renderAt('/books')
+    await user.keyboard('{Control>}k{/Control}')
+    const dialog = screen.getByRole('dialog', { name: 'Jump to book or page' })
+    expect(dialog).toBeInTheDocument()
+    await user.type(screen.getByRole('combobox', { name: 'Jump to book or page' }), 'sta')
+    expect(screen.getByRole('option', { name: /Stats/ })).toBeInTheDocument()
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog', { name: 'Jump to book or page' })).not.toBeInTheDocument()
   })
 
   it('lists the four destinations in both navigations', () => {

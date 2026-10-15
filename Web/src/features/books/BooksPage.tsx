@@ -1,20 +1,15 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ChevronDown, Download, Edit, LayoutGrid, List, Star, Upload } from 'lucide-react'
+import { ChevronDown, Download, LayoutGrid, List, MoreHorizontal, Star } from 'lucide-react'
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
-import { Link, useLocation, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { api } from '@/api/client'
 import { HttpError } from '@/api/http'
-import type {
-  BookImportFinalizeResult,
-  BookListItemDto,
-  BookSummaryDto,
-  BookSummaryTypeCountDto,
-} from '@/api/types'
+import type { BookImportFinalizeResult, BookListItemDto, BookSummaryDto } from '@/api/types'
 import { extractAnalyticsDateFilters } from '@/features/analytics/dateQueryFilters'
-import { inputClass, secondaryButtonClass } from '@/components/app/designTokens'
-import { Surface } from '@/components/app/DesignSystem'
+import { inputClass } from '@/components/app/designTokens'
 import { buttonStyles } from '@/components/ui/buttonStyles'
+import { Menu } from '@/components/ui/Menu'
 import { cn } from '@/lib/utils'
 import { BookDataTable } from './BookDataTable'
 import { isLowRating } from './bookRating'
@@ -22,8 +17,10 @@ import { BookSearchInput } from './BookSearchInput'
 import { CardCover, CoverThumb, ProgressCell, RatingCell, StatusCell } from './BookListCells'
 import { ProgressDialog } from './ProgressDialog'
 import { getStatusTone, statusToneClasses } from './bookStatus'
-import { ActiveFilterPills, QuickFilters, SortMenu, StatusTabs } from './BookListControls'
+import { QueryBar, QuickFilters, SortMenu, StatusTabs } from './BookListControls'
+import { setStatusFilter } from './queryTokens'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
+import { useMediaQuery } from '@/lib/useMediaQuery'
 import { formatProgress } from './bookProgress'
 import { saveBookListScrollPosition, takeBookListScrollPosition } from './bookListNavigation'
 import { ColumnSettingsPopup, TotalChaptersColumnLabel } from './bookListColumns'
@@ -69,7 +66,6 @@ const bookCardFieldsStorageKey = 'novelki.books.card-fields.v1'
 const bookLayoutStorageKey = 'novelki.books.layout.v1'
 const cardsPerRowStorageKey = 'novelki.books.cards-per-row.v1'
 const pageSizeStorageKey = 'novelki.books.page-size.v1'
-const topActionButtonSpacingClass = 'gap-2.5 pl-3.5 pr-4'
 const bookSearchDelayMs = 220
 
 const bookColumns: ColumnDefinition<BookListItemDto>[] = [
@@ -261,15 +257,14 @@ export function BooksPage() {
     bookCardFields,
   )
   const [viewMode, setViewMode] = useViewMode(bookLayoutStorageKey)
+  const isPhone = useMediaQuery('(max-width: 639px)')
   const [cardsPerRow, setCardsPerRow] = useCardsPerRow(cardsPerRowStorageKey)
   const effectiveCardsPerRow = useResponsiveCardsPerRow(cardsPerRow)
   const [lastImportResult, setLastImportResult] = useState<BookImportFinalizeResult | null>(null)
   const [importDialogOpen, setImportDialogOpen] = useState(false)
-  const [importMenuOpen, setImportMenuOpen] = useState(false)
   const [epubExportOpen, setEpubExportOpen] = useState(false)
   const [epubImportOpen, setEpubImportOpen] = useState(false)
   const [importMode, setImportMode] = useState<'csv' | 'full'>('csv')
-  const [summaryOpen, setSummaryOpen] = useState(false)
   const pageSizeOptions =
     viewMode === 'cards' ? getCardPageSizeOptions(effectiveCardsPerRow) : bookListPageSizeOptions
   const {
@@ -310,10 +305,16 @@ export function BooksPage() {
     placeholderData: keepPreviousData,
     staleTime: 30_000,
   })
-  const summaryQuery = useQuery({
-    queryKey: ['books-summary', debouncedRequestQuery],
-    queryFn: () => api.getBooksSummary({ query: debouncedRequestQuery }),
-    enabled: summaryOpen,
+  const libraryStatsQuery = useQuery({
+    queryKey: ['books-summary', ''],
+    queryFn: () => api.getBooksSummary({ query: '' }),
+    staleTime: 60_000,
+  })
+  const statusScopeQuery = setStatusFilter(debouncedRequestQuery, null)
+  const statusSummaryQuery = useQuery({
+    queryKey: ['books-summary', statusScopeQuery],
+    queryFn: () => api.getBooksSummary({ query: statusScopeQuery }),
+    placeholderData: keepPreviousData,
     staleTime: 30_000,
   })
   const cycleSortMutation = useMutation({
@@ -393,7 +394,6 @@ export function BooksPage() {
       )
     },
   })
-  const [exportMenuOpen, setExportMenuOpen] = useState(false)
   function setSort(nextSortBy: string) {
     if (isCyclicSort(nextSortBy)) {
       cycleSortMutation.mutate({
@@ -433,6 +433,14 @@ export function BooksPage() {
     toast.success(`Imported ${result.importedCount} books. Skipped ${result.skippedCount}.`)
   }
 
+  const statusCounts = getStatusCounts(statusSummaryQuery.data)
+  const libraryStats = libraryStatsQuery.data
+  const analyticsHref = buildAnalyticsHref(requestQuery)
+  const books = booksQuery.data?.data ?? []
+  const searching =
+    (isWaitingForSearch || booksQuery.isFetching || cycleSortMutation.isPending) &&
+    !booksQuery.isLoading
+
   return (
     <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-5">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -440,203 +448,101 @@ export function BooksPage() {
           <h1 className="m-0 font-display text-[40px] leading-tight font-bold tracking-tight">
             Library
           </h1>
-          <p className="m-0 mt-1.5 text-[15px] text-ink-2 tabular-nums">
-            Search with the filter syntax, switch status with the tabs, log progress from any row.
+          <p className="m-0 mt-2 text-[15px] text-ink-2 tabular-nums">
+            {libraryStats ? formatLibraryStats(libraryStats) : ' '}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <>
-            <button
-              aria-controls="books-summary-panel"
-              aria-expanded={summaryOpen}
-              className={`${secondaryButtonClass} ${topActionButtonSpacingClass}`}
-              type="button"
-              onClick={() => setSummaryOpen((current) => !current)}
-            >
-              <span>Summary</span>
-              <ChevronDown className={`h-4 w-4 transition ${summaryOpen ? 'rotate-180' : ''}`} />
-            </button>
-            <div className="relative">
-              <button
-                aria-expanded={exportMenuOpen}
-                aria-haspopup="menu"
-                className={`${secondaryButtonClass} ${topActionButtonSpacingClass}`}
-                type="button"
-                onClick={() => {
-                  setImportMenuOpen(false)
-                  setExportMenuOpen((current) => !current)
-                }}
-              >
-                <Download className="h-4 w-4" />
-                Export
-                <ChevronDown
-                  className={`h-4 w-4 transition ${exportMenuOpen ? 'rotate-180' : ''}`}
-                />
-              </button>
-              {exportMenuOpen ? (
-                <div
-                  className="ui-popover absolute right-0 z-20 mt-2 grid min-w-56 overflow-hidden p-1"
-                  role="menu"
-                >
-                  <button
-                    className="rounded-[var(--qs-control-radius)] px-3 py-2 text-left text-sm font-semibold text-[var(--qs-text)] hover:bg-[var(--qs-surface-muted)] disabled:opacity-60"
-                    disabled={exportMutation.isPending}
-                    role="menuitem"
-                    type="button"
-                    onClick={() => {
-                      setExportMenuOpen(false)
-                      exportMutation.mutate()
-                    }}
-                  >
-                    {exportMutation.isPending ? 'Exporting CSV...' : 'CSV'}
-                    <span className="mt-0.5 block text-xs font-normal text-[var(--qs-muted)]">
-                      Books matching the current filters
-                    </span>
-                  </button>
-                  <button
-                    className="rounded-[var(--qs-control-radius)] px-3 py-2 text-left text-sm font-semibold text-[var(--qs-text)] hover:bg-[var(--qs-surface-muted)] disabled:opacity-60"
-                    disabled={fullExportMutation.isPending}
-                    role="menuitem"
-                    type="button"
-                    onClick={() => {
-                      setExportMenuOpen(false)
-                      fullExportMutation.mutate()
-                    }}
-                  >
-                    {fullExportMutation.isPending ? 'Creating full backup...' : 'Full backup (ZIP)'}
-                    <span className="mt-0.5 block text-xs font-normal text-[var(--qs-muted)]">
-                      CSV plus stored cover files; EPUBs exported separately
-                    </span>
-                  </button>
-                  <button
-                    className="px-3 py-3 text-left text-sm font-semibold hover:bg-[var(--qs-surface-muted)]"
-                    role="menuitem"
-                    type="button"
-                    onClick={() => {
-                      setExportMenuOpen(false)
-                      setEpubExportOpen(true)
-                    }}
-                  >
-                    EPUB files (ZIP)
-                    <span className="mt-0.5 block text-xs font-normal text-[var(--qs-muted)]">
-                      Choose books and files; includes a restore manifest
-                    </span>
-                  </button>
-                </div>
-              ) : null}
-            </div>
-            <div className="relative">
-              <button
-                aria-expanded={importMenuOpen}
-                aria-haspopup="menu"
-                className={`${secondaryButtonClass} ${topActionButtonSpacingClass}`}
-                type="button"
-                onClick={() => {
-                  setExportMenuOpen(false)
-                  setImportMenuOpen((current) => !current)
-                }}
-              >
-                <Upload className="h-4 w-4" />
-                Import
-                <ChevronDown
-                  className={`h-4 w-4 transition ${importMenuOpen ? 'rotate-180' : ''}`}
-                />
-              </button>
-              {importMenuOpen ? (
-                <div
-                  className="ui-popover absolute right-0 z-20 mt-2 grid min-w-56 overflow-hidden p-1"
-                  role="menu"
-                >
-                  <button
-                    className="rounded-[var(--qs-control-radius)] px-3 py-2 text-left text-sm font-semibold text-[var(--qs-text)] hover:bg-[var(--qs-surface-muted)]"
-                    role="menuitem"
-                    type="button"
-                    onClick={() => {
-                      setImportMenuOpen(false)
-                      setImportMode('csv')
-                      setImportDialogOpen(true)
-                    }}
-                  >
-                    CSV
-                    <span className="mt-0.5 block text-xs font-normal text-[var(--qs-muted)]">
-                      Import book data from a CSV file
-                    </span>
-                  </button>
-                  <button
-                    className="rounded-[var(--qs-control-radius)] px-3 py-2 text-left text-sm font-semibold text-[var(--qs-text)] hover:bg-[var(--qs-surface-muted)]"
-                    role="menuitem"
-                    type="button"
-                    onClick={() => {
-                      setImportMenuOpen(false)
-                      setImportMode('full')
-                      setImportDialogOpen(true)
-                    }}
-                  >
-                    Full backup (ZIP)
-                    <span className="mt-0.5 block text-xs font-normal text-[var(--qs-muted)]">
-                      Restore book data and stored covers
-                    </span>
-                  </button>
-                  <button
-                    className="px-3 py-3 text-left text-sm font-semibold hover:bg-[var(--qs-surface-muted)]"
-                    role="menuitem"
-                    type="button"
-                    onClick={() => {
-                      setImportMenuOpen(false)
-                      setEpubImportOpen(true)
-                    }}
-                  >
-                    EPUB archive
-                    <span className="mt-0.5 block text-xs font-normal text-[var(--qs-muted)]">
-                      Restore EPUBs to existing books
-                    </span>
-                  </button>
-                </div>
-              ) : null}
-            </div>
-          </>
-        </div>
+        <Menu
+          label="Import / Export"
+          triggerClassName={cn(buttonStyles({ variant: 'secondary' }), 'gap-2')}
+          triggerContent={
+            <>
+              <Download aria-hidden="true" className="size-4" />
+              Import / Export
+              <ChevronDown aria-hidden="true" className="size-3.5" />
+            </>
+          }
+          widthClassName="w-72"
+          sections={[
+            {
+              title: 'Export',
+              items: [
+                {
+                  label: exportMutation.isPending ? 'Exporting CSV…' : 'CSV',
+                  description: 'Books matching the current filters and sort',
+                  disabled: exportMutation.isPending,
+                  onSelect: () => exportMutation.mutate(),
+                },
+                {
+                  label: fullExportMutation.isPending
+                    ? 'Creating full backup…'
+                    : 'Full backup (ZIP)',
+                  description: 'CSV plus stored cover files; EPUBs exported separately',
+                  disabled: fullExportMutation.isPending,
+                  onSelect: () => fullExportMutation.mutate(),
+                },
+                {
+                  label: 'EPUB files (ZIP)',
+                  description: 'Choose books and files; includes a restore manifest',
+                  onSelect: () => setEpubExportOpen(true),
+                },
+              ],
+            },
+            {
+              title: 'Import',
+              items: [
+                {
+                  label: 'CSV',
+                  description: 'Import book data from a CSV file',
+                  onSelect: () => {
+                    setImportMode('csv')
+                    setImportDialogOpen(true)
+                  },
+                },
+                {
+                  label: 'Full backup (ZIP)',
+                  description: 'Restore book data and stored covers',
+                  onSelect: () => {
+                    setImportMode('full')
+                    setImportDialogOpen(true)
+                  },
+                },
+                {
+                  label: 'EPUB archive',
+                  description: 'Restore EPUBs to existing books',
+                  onSelect: () => setEpubImportOpen(true),
+                },
+              ],
+            },
+          ]}
+        />
       </div>
 
       {lastImportResult ? (
-        <Surface className="grid gap-2 p-4">
-          <div className="text-sm font-semibold text-slate-950">Last import</div>
-          <p className="text-sm text-slate-600">
+        <section className="grid gap-2 rounded-panel border border-line bg-surface p-4">
+          <h2 className="m-0 text-sm font-semibold">Last import</h2>
+          <p className="m-0 text-sm text-ink-2">
             Imported: {lastImportResult.importedCount}. Skipped: {lastImportResult.skippedCount}.
           </p>
           {lastImportResult.errors.length ? (
-            <div className="grid gap-1 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+            <div className="grid gap-1 rounded-control border border-status-hold bg-status-hold-soft p-3 text-sm text-status-hold-ink">
               {lastImportResult.errors.slice(0, 10).map((error) => (
-                <p key={error}>{error}</p>
+                <p className="m-0" key={error}>
+                  {error}
+                </p>
               ))}
               {lastImportResult.errors.length > 10 ? (
-                <p>More errors: {lastImportResult.errors.length - 10}</p>
+                <p className="m-0">More errors: {lastImportResult.errors.length - 10}</p>
               ) : null}
             </div>
           ) : null}
-        </Surface>
+        </section>
       ) : null}
 
-      {summaryOpen ? (
-        <BookSummaryPanel
-          analyticsHref={buildAnalyticsHref(requestQuery)}
-          id="books-summary-panel"
-          isError={summaryQuery.isError}
-          isLoading={summaryQuery.isLoading}
-          summary={summaryQuery.data}
-        />
-      ) : null}
-
-      <StatusTabs query={query} onQueryChange={updateQuery} />
+      <StatusTabs counts={statusCounts} query={query} onQueryChange={updateQuery} />
 
       <div className="grid gap-2.5">
-        <BookSearchInput
-          appearance="compact"
-          showHelp={false}
-          value={query}
-          onChange={updateQuery}
-        />
-        <ActiveFilterPills query={query} onQueryChange={updateQuery} />
+        <QueryBar query={query} onQueryChange={updateQuery} />
         <QuickFilters query={query} onQueryChange={updateQuery} />
       </div>
 
@@ -646,14 +552,21 @@ export function BooksPage() {
         id="book-list-results"
       >
         <div className="flex flex-wrap items-center justify-end gap-2 border-b border-line px-4 py-3">
-          <span className="mr-auto text-ink-2 tabular-nums" role="status">
-            {(isWaitingForSearch || booksQuery.isFetching || cycleSortMutation.isPending) &&
-            !booksQuery.isLoading
-              ? 'Searching...'
-              : booksQuery.data
-                ? `${formatBookCount(total)} ${total === 1 ? 'book matches' : 'books match'}`
-                : ''}
-          </span>
+          <div className="mr-auto flex items-baseline gap-3">
+            <span className="text-ink-2 tabular-nums" role="status">
+              {searching
+                ? 'Searching...'
+                : booksQuery.data
+                  ? `${formatBookCount(total)} ${total === 1 ? 'book matches' : 'books match'}`
+                  : ''}
+            </span>
+            <Link
+              className="hidden text-[13px] text-ink-3 underline decoration-line-focus underline-offset-4 hover:text-ink sm:inline"
+              to={analyticsHref}
+            >
+              Open in Stats
+            </Link>
+          </div>
           <SortMenu
             sortBy={sortBy}
             onSortChange={(option) => {
@@ -668,33 +581,31 @@ export function BooksPage() {
             <CardsPerRowControl value={cardsPerRow} onChange={setCardsPerRow} />
           ) : null}
           <ViewModeToggle value={viewMode} onChange={setViewMode} />
-          <ColumnSettingsPopup
-            allowReorder={allowSettingsReorder}
-            columns={settingsColumns}
-            description={settingsDescription}
-            preferences={settingsPreferences}
-            title={settingsTitle}
-            onChange={setSettingsPreferences}
-          />
+          <div className="hidden sm:block">
+            <ColumnSettingsPopup
+              allowReorder={allowSettingsReorder}
+              columns={settingsColumns}
+              description={settingsDescription}
+              preferences={settingsPreferences}
+              title={settingsTitle}
+              onChange={setSettingsPreferences}
+            />
+          </div>
         </div>
-        {viewMode === 'table' ? (
+        {viewMode === 'table' && isPhone ? (
+          <BookCompactList books={books} isLoading={booksQuery.isLoading} />
+        ) : viewMode === 'table' ? (
           <BookDataTable
+            actionsWidthRem={9.5}
             columns={visibleColumns}
             emptyMessage="No books match the current filters."
-            actionsWidthRem={11}
             isCyclicSort={isCyclicSort}
             isLoading={booksQuery.isLoading}
-            items={booksQuery.data?.data ?? []}
+            items={books}
             renderActions={(book) => (
-              <div className="flex justify-end gap-2">
+              <div className="flex justify-end gap-1.5">
                 <ProgressDialog book={book} triggerSize="sm" triggerVariant="secondary" />
-                <BookEditLink
-                  ariaLabel={`Edit ${book.primaryTitle}`}
-                  bookId={book.id}
-                  className={buttonStyles({ variant: 'outline', size: 'iconSm' })}
-                >
-                  <Edit aria-hidden="true" className="size-4" />
-                </BookEditLink>
+                <BookRowMenu book={book} />
               </div>
             )}
             sortBy={sortBy}
@@ -704,7 +615,7 @@ export function BooksPage() {
           />
         ) : (
           <BookCardGrid
-            books={booksQuery.data?.data ?? []}
+            books={books}
             cardsPerRow={effectiveCardsPerRow}
             fields={visibleCardFields}
             isLoading={booksQuery.isLoading}
@@ -753,6 +664,131 @@ export function BooksPage() {
   )
 }
 
+function getStatusCounts(summary: BookSummaryDto | undefined) {
+  if (!summary) return undefined
+  const counts: Record<string, number> = { all: summary.totalBooks }
+  for (const item of summary.statusCounts) {
+    counts[item.status.trim().toLowerCase()] = item.count
+  }
+  for (const status of ['reading', 'completed', 'plan to read', 'on hold', 'dropped', 'unknown']) {
+    counts[status] ??= 0
+  }
+  return counts
+}
+
+function formatLibraryStats(stats: BookSummaryDto) {
+  const finished =
+    stats.statusCounts.find((item) => item.status.trim().toLowerCase() === 'completed')?.count ?? 0
+  return [
+    `${formatBookCount(stats.totalBooks)} ${stats.totalBooks === 1 ? 'book' : 'books'}`,
+    `${formatBookCount(finished)} finished`,
+    `${formatChapterCount(stats.currentChapters)} chapters read`,
+    stats.averageRating != null ? `avg rating ${formatAverageRating(stats.averageRating)}` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+}
+
+/** Row "⋯" menu: the actions that don't need their own button. */
+function BookRowMenu({ book }: { book: BookListItemDto }) {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const returnTo = `${location.pathname}${location.search}`
+
+  function open(path: string) {
+    saveBookListScrollPosition(returnTo, window.scrollY)
+    void navigate(path, { state: { bookListReturnTo: returnTo } })
+  }
+
+  return (
+    <Menu
+      label={`More actions for ${book.primaryTitle}`}
+      triggerClassName={buttonStyles({ variant: 'ghost', size: 'iconSm' })}
+      triggerContent={<MoreHorizontal aria-hidden="true" className="size-4" />}
+      widthClassName="w-48"
+      sections={[
+        {
+          items: [
+            { label: 'Open details', onSelect: () => open(`/books/${book.id}`) },
+            { label: 'Edit book', onSelect: () => open(`/books/${book.id}/edit`) },
+          ],
+        },
+      ]}
+    />
+  )
+}
+
+/** Phone layout of the table view: compact rows as in the mock. */
+function BookCompactList({ books, isLoading }: { books: BookListItemDto[]; isLoading: boolean }) {
+  if (isLoading) {
+    return <div className="px-4 py-8 text-center text-ink-3">Loading...</div>
+  }
+  if (!books.length) {
+    return (
+      <div className="px-4 py-8 text-center text-ink-3">No books match the current filters.</div>
+    )
+  }
+  return (
+    <ul className="m-0 list-none px-4 py-1" aria-label="Books (compact)">
+      {books.map((book) => {
+        const tone = getStatusTone(book.status)
+        const percent = getProgressPercent(book)
+        return (
+          <li
+            className="flex items-center gap-3 border-b border-line-soft py-2.5 last:border-b-0"
+            key={book.id}
+          >
+            <CoverThumb book={book} className="h-[72px] w-12" />
+            <div className="min-w-0 flex-1">
+              <BookDetailsLink
+                bookId={book.id}
+                className="line-clamp-2 text-[15px] leading-snug font-semibold text-ink hover:text-ink"
+              >
+                {book.primaryTitle}
+              </BookDetailsLink>
+              <div className="mt-1 flex items-center gap-1.5 text-[13px] tabular-nums">
+                <span
+                  aria-label={`Book status: ${book.status}`}
+                  className={cn('size-1.5 shrink-0 rounded-full', statusToneClasses[tone].bar)}
+                  role="img"
+                />
+                <span className="font-semibold text-ink">
+                  {isCompletedStatus(book.status) ? 'Finished' : getCardProgressLabel(book)}
+                </span>
+                <span className="truncate text-ink-3">{getCardProgressCount(book)}</span>
+              </div>
+              <div
+                aria-hidden="true"
+                className={cn(
+                  'mt-1.5 h-[3px] overflow-hidden rounded-full',
+                  percent == null
+                    ? 'bg-[repeating-linear-gradient(90deg,var(--color-line)_0_6px,transparent_6px_10px)]'
+                    : 'bg-line',
+                )}
+              >
+                {percent != null ? (
+                  <div
+                    className={cn('h-full', statusToneClasses[tone].bar)}
+                    style={{ width: `${percent}%` }}
+                  />
+                ) : null}
+              </div>
+            </div>
+            {isCompletedStatus(book.status) ? null : (
+              <ProgressDialog
+                book={book}
+                triggerLabel="Log"
+                triggerSize="sm"
+                triggerVariant="secondary"
+              />
+            )}
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
 function CardsPerRowControl({
   value,
   onChange,
@@ -761,12 +797,12 @@ function CardsPerRowControl({
   onChange: (value: number) => void
 }) {
   return (
-    <label className="hidden items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500 lg:flex">
-      <span>Cards / row</span>
+    <label className="hidden items-center gap-2 text-ink-3 lg:flex">
+      <span>Per row</span>
       <span className="relative inline-flex">
         <select
           aria-label="Cards per row"
-          className={`${inputClass} ui-control--compact-select bg-white text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-white focus:bg-white`}
+          className={`${inputClass} ui-control--compact-select h-9 min-h-9 py-0`}
           value={value}
           onChange={(event) => onChange(Number(event.target.value))}
         >
@@ -833,175 +869,6 @@ export function BookAdvancedSearch({
   )
 }
 
-function BookSummaryPanel({
-  analyticsHref,
-  id,
-  isError,
-  isLoading,
-  summary,
-}: {
-  analyticsHref: string
-  id: string
-  isError: boolean
-  isLoading: boolean
-  summary: BookSummaryDto | undefined
-}) {
-  if (isLoading) {
-    return (
-      <Surface className="grid gap-3 p-4" id={id}>
-        <div>
-          <h2 className="text-sm font-semibold text-slate-950">Library summary</h2>
-          <p className="text-sm text-slate-500">Loading summary...</p>
-        </div>
-      </Surface>
-    )
-  }
-
-  if (isError) {
-    return (
-      <Surface className="grid gap-3 p-4" id={id} tone="danger">
-        <div>
-          <h2 className="text-sm font-semibold text-rose-950">Library summary</h2>
-          <p className="text-sm text-rose-800">Could not load summary.</p>
-        </div>
-      </Surface>
-    )
-  }
-
-  if (!summary) {
-    return null
-  }
-
-  return (
-    <Surface className="grid gap-4 p-4" id={id}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-sm font-semibold text-slate-950">Library summary</h2>
-          <p className="text-sm text-slate-500">
-            Aggregated from all books matching the current filters.
-          </p>
-        </div>
-        <Link
-          className={`${secondaryButtonClass} ${topActionButtonSpacingClass}`}
-          to={analyticsHref}
-        >
-          Open analytics
-        </Link>
-      </div>
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-        <SummaryMetricCard label="Total books" value={formatBookCount(summary.totalBooks)} />
-        <SummaryMetricCard label="Rated" value={formatBookCount(summary.ratedBooks)} />
-        <SummaryMetricCard label="Unrated" value={formatBookCount(summary.unratedBooks)} />
-        <SummaryMetricCard
-          label="Average rating"
-          value={formatAverageRating(summary.averageRating)}
-        />
-        <SummaryMetricCard
-          label="Current chapters"
-          value={formatChapterCount(summary.currentChapters)}
-        />
-      </div>
-      {summary.totalBooks === 0 ? (
-        <Surface as="div" className="px-4 py-3 text-sm text-slate-600" tone="muted">
-          No books match the current filters.
-        </Surface>
-      ) : (
-        <Surface as="div" className="grid gap-4 p-4" tone="muted">
-          <div className="grid gap-4 xl:grid-cols-2">
-            <SummaryCompactSection
-              title="Status distribution"
-              items={summary.statusCounts.map((status) => ({
-                label: status.status,
-                value: formatBookCount(status.count),
-              }))}
-            />
-            <SummaryCompactTypeSection items={summary.typeCounts} />
-          </div>
-        </Surface>
-      )}
-    </Surface>
-  )
-}
-
-function SummaryMetricCard({ label, value }: { label: string; value: string }) {
-  return (
-    <Surface as="div" className="px-4 py-3" tone="elevated">
-      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</div>
-      <div className="mt-1 text-2xl font-semibold text-slate-950">{value}</div>
-    </Surface>
-  )
-}
-
-function SummaryCompactSection({
-  items,
-  title,
-}: {
-  items: { label: string; value: string }[]
-  title: string
-}) {
-  return (
-    <Surface as="div" className="p-4">
-      <div className="mb-3 text-sm font-semibold text-slate-950">{title}</div>
-      <SummaryCountList items={items} />
-    </Surface>
-  )
-}
-
-function SummaryCountList({ items }: { items: { label: string; value: string }[] }) {
-  if (!items.length) {
-    return <div className="text-sm text-slate-500">No data for this tab.</div>
-  }
-
-  return (
-    <div className="grid gap-2">
-      {items.map((item) => (
-        <div
-          className="flex items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
-          key={item.label}
-        >
-          <span className="font-medium text-slate-700">{item.label}</span>
-          <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-700">
-            {item.value}
-          </span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function SummaryCompactTypeSection({ items }: { items: BookSummaryTypeCountDto[] }) {
-  return (
-    <Surface as="div" className="p-4">
-      <div className="mb-3 text-sm font-semibold text-slate-950">Book types</div>
-      <SummaryTypeDetails items={items} />
-    </Surface>
-  )
-}
-
-function SummaryTypeDetails({ items }: { items: BookSummaryTypeCountDto[] }) {
-  if (!items.length) {
-    return <div className="text-sm text-slate-500">No type data for this filter.</div>
-  }
-
-  return (
-    <div className="grid gap-2">
-      {items.map((item) => (
-        <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3" key={item.type}>
-          <div className="flex items-center justify-between gap-3">
-            <div className="font-semibold text-slate-950">{item.type}</div>
-            <div className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-slate-700">
-              {formatBookCount(item.bookCount)} books
-            </div>
-          </div>
-          <div className="mt-2 text-sm text-slate-600">
-            Current chapters: {formatChapterCount(item.currentChapters)}
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
 function BookCardGrid({
   books,
   cardsPerRow,
@@ -1035,15 +902,16 @@ function BookCardGrid({
   const cardDetailsClass = getCardDetailRowClass({
     cardsPerRow,
     showAlternativeTitles,
-    showAuthor,
-    showProgress,
+    showAuthor: showAuthor || showType,
+    // Progress and the Log button sit in their own row below the details grid.
+    showProgress: false,
     showTitle,
-    showType,
+    showType: false,
   })
 
   return (
     <div
-      className={`book-card-grid grid min-w-0 grid-cols-2 gap-x-5 gap-y-7 p-4 ${getDesktopCardsPerRowClass(cardsPerRow)}`}
+      className={`book-card-grid grid min-w-0 grid-cols-2 gap-x-5 gap-y-7 p-4 md:grid-cols-3 ${getDesktopCardsPerRowClass(cardsPerRow)}`}
     >
       {books.map((book) => {
         const finished = isCompletedStatus(book.status)
@@ -1062,7 +930,7 @@ function BookCardGrid({
             <BookDetailsLink
               ariaLabel={book.primaryTitle}
               bookId={book.id}
-              className="group relative block w-full max-w-full min-w-0 overflow-hidden rounded-[10px]"
+              className="group relative block w-full max-w-full min-w-0 overflow-hidden rounded-lg"
             >
               <CardCover book={book} />
               {finished ? (
@@ -1288,41 +1156,6 @@ function BookDetailsLink({
       className={className}
       state={{ bookListReturnTo: returnTo }}
       to={`/books/${bookId}`}
-      onClick={rememberScrollPosition}
-    >
-      {children}
-    </Link>
-  )
-}
-
-function BookEditLink({
-  ariaLabel,
-  bookId,
-  children,
-  className,
-}: {
-  ariaLabel?: string
-  bookId: string
-  children: ReactNode
-  className: string
-}) {
-  const location = useLocation()
-  const returnTo = `${location.pathname}${location.search}`
-
-  function rememberScrollPosition(event: MouseEvent<HTMLAnchorElement>) {
-    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
-      return
-    }
-
-    saveBookListScrollPosition(returnTo, window.scrollY)
-  }
-
-  return (
-    <Link
-      aria-label={ariaLabel}
-      className={className}
-      state={{ bookListReturnTo: returnTo }}
-      to={`/books/${bookId}/edit`}
       onClick={rememberScrollPosition}
     >
       {children}

@@ -37,16 +37,15 @@ Nothing may disappear without a `[~]` note.
 
 ### Header and page actions
 - [~] Page title: now "Library" with a live "N books match" count; the description shows only while loading
-- [x] Summary toggle (lazy: the summary is fetched only when opened) with metrics (total, rated, unrated, average rating, current chapters), status, type and genre breakdowns, an empty state, and a link to analytics that carries the current query (date filters move into the from/to params)
-- [x] Export menu: CSV (current filters and sort), Full backup ZIP (CSV and covers), EPUB files ZIP (export dialog with the current query). API rate-limit detail shown in a toast
-- [x] Import menu: CSV, Full backup ZIP, EPUB archive (restore to existing books)
+- [~] Summary panel replaced: whole-library stats line under the title; per-status counts on the tabs; "Open in Stats" link keeps the query (date filters move to from/to). Status, type and genre breakdowns live on the Stats page
+- [x] Export (CSV with filters and sort, Full backup ZIP, EPUB files ZIP) and Import (CSV, Full backup ZIP, EPUB archive); API rate-limit detail shown in a toast. `[~]` one "Import / Export" menu
 - [x] "Last import" card: imported and skipped counts, up to 10 errors and "More errors: N"
 - [~] Add book: removed from the page actions, because the app header has it on every screen
 
 ### Search
 - [x] Search box with syntax suggestions (fields, operators, frequency-ranked values, exclusion, the remove-token action), a clear button, the caret kept on edit, and a debounce of 220 ms
 - [x] Spaces kept in the input while the API gets a trimmed query
-- [x] Hint text about `:` and `-`
+- [~] Hint text replaced by the Filters / Query bar and quick filters with visible syntax
 - [x] "Searching…" indicator while fetching
 
 ### View controls
@@ -75,7 +74,7 @@ Nothing may disappear without a `[~]` note.
 - [x] Card text scales with cards per row; every card stays inside its grid track
 
 ### Paging and navigation
-- [x] Page numbers with gap popovers to jump to a page (validation, focus on open, one popover at a time)
+- [x] Page numbers with gap popovers to jump to a page (validation, focus on open, one popover at a time). `[~]` First / Last arrows removed (the first and last pages are always listed); Previous / Next are text buttons
 - [x] Page size select, persisted, restored after returning
 - [x] Scrolls to the top of the results when the page changes near the bottom
 - [x] Scroll shortcut buttons (back to top / go down)
@@ -112,3 +111,5 @@ Known follow-ups: the summary panel and the export and import menus still use th
 - [x] Save: create or update, with cover upload, URL or remove, plus the cover source link; toasts for added, updated and cover warnings; navigates to the book or admin
 - [x] Save bar: fixed at the bottom on phones and tablets, in the side rail on desktop. `[~]` the rail is sticky on desktop, and on phones the bar sits above the tab bar
 - [~] Section numbers ("01", "02", "03") hidden; section titles kept for headings and tests
+
+- [~] Saved views (localStorage) and the Ctrl K jump palette are new

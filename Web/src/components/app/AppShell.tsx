@@ -6,15 +6,18 @@ import {
   Eye,
   EyeOff,
   LibraryBig,
-  LogOut,
   Plus,
+  Search,
   Settings2,
   Shield,
   type LucideIcon,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { CommandPalette } from '@/components/app/CommandPalette'
 import { buttonStyles } from '@/components/ui/buttonStyles'
+import { Menu } from '@/components/ui/Menu'
+import { getTokenDisplayName } from '@/features/auth/tokenIdentity'
 import { useAuth } from '@/features/auth/useAuth'
 import { isNsfwEnabled, setNsfwEnabled } from '@/lib/nsfwPreference'
 import { cn } from '@/lib/utils'
@@ -37,11 +40,25 @@ const navItems: NavItem[] = [
 const adminItem: NavItem = { to: '/admin', label: 'Admin', icon: Shield }
 
 export function AppShell() {
-  const { isAdmin, logout } = useAuth()
+  const { isAdmin, logout, token } = useAuth()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [nsfwEnabled, setNsfwEnabledState] = useState(isNsfwEnabled)
+  const [paletteOpen, setPaletteOpen] = useState(false)
   const items = isAdmin ? [...navItems, adminItem] : navItems
+  const displayName = getTokenDisplayName(token ?? null)
+  const initial = (displayName ?? '?').charAt(0).toUpperCase()
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        setPaletteOpen(true)
+      }
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [])
 
   async function handleLogout() {
     await logout()
@@ -80,8 +97,10 @@ export function AppShell() {
                 end={item.end ?? false}
                 className={({ isActive }) =>
                   cn(
-                    'rounded-control px-3.5 py-2.5 font-medium transition-colors',
-                    isActive ? 'bg-raised font-semibold text-ink' : 'text-ink-2 hover:text-ink',
+                    'rounded-control px-3.5 py-2.5 transition-colors',
+                    isActive
+                      ? 'bg-raised font-semibold text-ink'
+                      : 'font-medium text-ink-2 hover:text-ink',
                   )
                 }
               >
@@ -93,12 +112,24 @@ export function AppShell() {
           <div className="flex items-center gap-2">
             <button
               type="button"
+              aria-label="Jump to book or page"
+              aria-keyshortcuts="Control+K Meta+K"
+              onClick={() => setPaletteOpen(true)}
+              className="flex h-10 items-center gap-2.5 rounded-control border border-line bg-surface px-3 text-left text-ink-3 hover:border-line-strong xl:min-w-[240px]"
+            >
+              <Search aria-hidden="true" className="size-4" />
+              <span className="hidden flex-1 xl:inline">Jump to book or page…</span>
+              <kbd className="hidden rounded border border-line-strong px-1.5 py-0.5 font-sans text-xs text-ink-2 xl:inline">
+                Ctrl K
+              </kbd>
+            </button>
+            <button
+              type="button"
               aria-label={nsfwEnabled ? 'Disable NSFW content' : 'Enable NSFW content'}
               aria-pressed={nsfwEnabled}
               onClick={handleNsfwToggle}
               className={cn(
-                buttonStyles({ variant: 'outline' }),
-                'px-3 text-ink-2',
+                'flex h-10 items-center gap-2 rounded-control border border-line bg-transparent px-3 text-ink-2 hover:border-line-strong hover:text-ink',
                 nsfwEnabled && 'border-status-hold text-status-hold-ink',
               )}
             >
@@ -117,15 +148,18 @@ export function AppShell() {
               <Plus aria-hidden="true" className="size-4" strokeWidth={2.4} />
               <span className="hidden sm:inline">Add book</span>
             </Link>
-            <button
-              type="button"
-              aria-label="Log out"
-              onClick={() => void handleLogout()}
-              className={cn(buttonStyles({ variant: 'ghost' }), 'px-3')}
-            >
-              <LogOut aria-hidden="true" className="size-4" />
-              <span className="hidden lg:inline">Log out</span>
-            </button>
+            <Menu
+              label="Account menu"
+              triggerClassName="flex size-10 items-center justify-center rounded-full border border-line-strong bg-raised font-semibold text-ink hover:bg-selected"
+              triggerContent={initial}
+              widthClassName="w-56"
+              sections={[
+                {
+                  title: displayName ?? 'Signed in',
+                  items: [{ label: 'Log out', onSelect: () => void handleLogout() }],
+                },
+              ]}
+            />
           </div>
         </div>
       </header>
@@ -164,6 +198,8 @@ export function AppShell() {
           </NavLink>
         ))}
       </nav>
+
+      <CommandPalette open={paletteOpen} isAdmin={isAdmin} onClose={() => setPaletteOpen(false)} />
     </div>
   )
 }

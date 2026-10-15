@@ -209,7 +209,7 @@ describe('AdminPage', () => {
     expect(await screen.findByText('Shadow Slave')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '1' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('button', { name: '2' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /last page/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '11' })).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '2' }))
 

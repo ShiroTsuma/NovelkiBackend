@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { QuickFilters, StatusTabs } from './BookListControls'
+import { renderWithProviders } from '@/test/render'
+import { QueryBar, QuickFilters, StatusTabs } from './BookListControls'
 
 describe('StatusTabs', () => {
   it('marks the tab that matches the status token', () => {
@@ -41,5 +42,50 @@ describe('QuickFilters', () => {
     )
     await userEvent.click(screen.getByRole('button', { name: /Rated 8\+/ }))
     expect(onQueryChange).toHaveBeenLastCalledWith('dragon')
+  })
+})
+
+describe('QueryBar', () => {
+  it('shows tokens as pills and removes exactly one token', async () => {
+    const onQueryChange = vi.fn()
+    renderWithProviders(<QueryBar query="genre:fantasy -tag:harem" onQueryChange={onQueryChange} />)
+    const pills = screen.getByRole('list', { name: 'Active filters' })
+    expect(within(pills).getAllByRole('listitem')).toHaveLength(2)
+    await userEvent.click(screen.getByRole('button', { name: 'Remove filter -tag:harem' }))
+    expect(onQueryChange).toHaveBeenLastCalledWith('genre:fantasy')
+  })
+
+  it('switches to the raw query editor', async () => {
+    renderWithProviders(<QueryBar query="genre:fantasy" onQueryChange={vi.fn()} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Query' }))
+    expect(screen.getByRole('combobox', { name: /search books/i })).toHaveValue('genre:fantasy')
+    expect(screen.getByRole('combobox', { name: /search books/i })).toHaveFocus()
+  })
+
+  it('starts in the editor when the query is empty', () => {
+    renderWithProviders(<QueryBar query="" onQueryChange={vi.fn()} />)
+    expect(screen.getByRole('combobox', { name: /search books/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Filters' })).toBeDisabled()
+  })
+})
+
+describe('saved views', () => {
+  it('saves the current query, applies it and deletes it', async () => {
+    window.localStorage.removeItem('novelki.books.saved-views.v1')
+    const onQueryChange = vi.fn()
+    const { rerender } = render(
+      <QuickFilters query="genre:fantasy rating:>=8" onQueryChange={onQueryChange} />,
+    )
+    await userEvent.click(screen.getByRole('button', { name: '+ Save current as view' }))
+    await userEvent.type(screen.getByRole('textbox', { name: 'Saved view name' }), 'Good fantasy')
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    rerender(<QuickFilters query="" onQueryChange={onQueryChange} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Good fantasy' }))
+    expect(onQueryChange).toHaveBeenLastCalledWith('genre:fantasy rating:>=8')
+    expect(window.localStorage.getItem('novelki.books.saved-views.v1')).toContain('Good fantasy')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Delete saved view Good fantasy' }))
+    expect(screen.queryByRole('button', { name: 'Good fantasy' })).not.toBeInTheDocument()
   })
 })

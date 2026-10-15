@@ -1,6 +1,5 @@
 import { ArrowDown, ArrowUp, ChevronsUpDown, RefreshCw, Settings2 } from 'lucide-react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { buttonVariants } from '@/components/app/designTokens'
 import {
   defaultColumnPreferences,
   getColumnPopupPosition,
@@ -123,13 +122,14 @@ export function ColumnSettingsPopup<T>({
       <button
         aria-expanded={open}
         aria-haspopup="dialog"
+        aria-label="Columns"
         ref={buttonRef}
-        className={buttonVariants.ghost}
+        className="flex size-9 items-center justify-center rounded-control border border-line bg-transparent text-ink-2 hover:border-line-strong hover:text-ink"
+        title="Choose columns"
         type="button"
         onClick={togglePopup}
       >
-        <Settings2 className="h-4 w-4" />
-        Columns
+        <Settings2 aria-hidden="true" className="size-4" />
       </button>
       {open ? (
         <div

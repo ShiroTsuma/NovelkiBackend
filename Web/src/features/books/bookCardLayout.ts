@@ -17,11 +17,11 @@ export function useCardsPerRow(storageKey: string) {
 
 export function getResponsiveCardsPerRow(cardsPerRow: number, viewportWidth: number) {
   if (viewportWidth < 640) {
-    return 1
+    return 2
   }
 
   if (viewportWidth < 1024) {
-    return 2
+    return 3
   }
 
   return normalizeCardsPerRow(cardsPerRow)
@@ -47,20 +47,20 @@ export function getCardTextSizeClasses(cardsPerRow: number) {
 
   if (normalized <= 4) {
     return {
-      title: 'text-lg',
-      meta: 'text-base',
+      title: 'text-[15px]',
+      meta: 'text-[13px]',
     }
   }
 
   if (normalized <= 6) {
     return {
-      title: 'text-base',
-      meta: 'text-sm',
+      title: 'text-sm',
+      meta: 'text-xs',
     }
   }
 
   return {
-    title: 'text-sm',
+    title: 'text-[13px]',
     meta: 'text-xs',
   }
 }

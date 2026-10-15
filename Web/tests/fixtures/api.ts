@@ -329,6 +329,31 @@ export async function installLayoutApiMocks(page: Page) {
       return
     }
 
+    if (path === 'book/summary') {
+      await route.fulfill({
+        json: {
+          totalBooks: 142,
+          ratedBooks: 19,
+          unratedBooks: 123,
+          averageRating: 7.6,
+          currentChapters: 36388,
+          booksWithKnownCurrentChapter: 140,
+          booksWithoutKnownCurrentChapter: 2,
+          statusCounts: [
+            { status: 'Reading', count: 123 },
+            { status: 'Completed', count: 13 },
+            { status: 'Plan To Read', count: 3 },
+            { status: 'On Hold', count: 1 },
+            { status: 'Unknown', count: 2 },
+          ],
+          typeCounts: [],
+          genreCounts: [],
+          ratingCounts: [],
+        },
+      })
+      return
+    }
+
     if (path === 'book') {
       await route.fulfill({
         json: { skip: 0, take: 20, total: layoutBooks.length, data: layoutBooks },

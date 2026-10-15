@@ -1,24 +1,17 @@
-import {
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
-  ArrowDown,
-  ArrowUp,
-} from 'lucide-react'
+import { ChevronLeft, ChevronRight, ArrowDown, ArrowUp } from 'lucide-react'
 import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import type { Dispatch, RefObject, SetStateAction } from 'react'
 import { inputClass } from '@/components/app/designTokens'
 import { bookListPageSizeOptions } from './bookListState'
 
 const paginationDirectionButtonClass =
-  'inline-flex min-h-10 min-w-10 items-center justify-center rounded-control border border-line bg-transparent px-2.5 text-ink transition hover:border-line-strong hover:bg-hover'
+  'inline-flex min-h-9 min-w-9 items-center justify-center gap-1 rounded-control border border-line bg-transparent px-2.5 text-sm text-ink transition hover:border-line-strong hover:bg-hover'
 
 const paginationPageButtonClass =
-  'pagination-page-button inline-flex min-h-10 min-w-10 items-center justify-center rounded-control bg-transparent px-3 text-sm font-medium text-ink-2 tabular-nums transition hover:bg-hover hover:text-ink'
+  'pagination-page-button inline-flex min-h-9 min-w-9 items-center justify-center rounded-control bg-transparent px-3 text-sm font-medium text-ink-2 tabular-nums transition hover:bg-hover hover:text-ink'
 
 const paginationActivePageButtonClass =
-  'pagination-page-button inline-flex min-h-10 min-w-10 items-center justify-center rounded-control bg-raised px-3 text-sm font-semibold text-ink tabular-nums'
+  'pagination-page-button inline-flex min-h-9 min-w-9 items-center justify-center rounded-control bg-raised px-3 text-sm font-semibold text-ink tabular-nums'
 
 export function BookListFooter({
   activePageGapId,
@@ -77,22 +70,13 @@ export function BookListFooter({
           <div className="flex flex-wrap items-center gap-1.5">
             {canGoBack ? (
               <button
-                aria-label="First page"
-                className={paginationDirectionButtonClass}
-                type="button"
-                onClick={() => onGoToPage(1)}
-              >
-                <ChevronsLeft className="h-4 w-4" />
-              </button>
-            ) : null}
-            {canGoBack ? (
-              <button
                 aria-label="Previous page"
                 className={paginationDirectionButtonClass}
                 type="button"
                 onClick={() => onGoToPage(currentPage - 1)}
               >
-                <ChevronLeft className="h-4 w-4" />
+                <ChevronLeft aria-hidden="true" className="size-4" />
+                <span className="hidden sm:inline">Previous</span>
               </button>
             ) : null}
             {visiblePages.map((item, index) =>
@@ -133,17 +117,8 @@ export function BookListFooter({
                 type="button"
                 onClick={() => onGoToPage(currentPage + 1)}
               >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            ) : null}
-            {canGoForward ? (
-              <button
-                aria-label="Last page"
-                className={paginationDirectionButtonClass}
-                type="button"
-                onClick={() => onGoToPage(totalPages)}
-              >
-                <ChevronsRight className="h-4 w-4" />
+                <span className="hidden sm:inline">Next</span>
+                <ChevronRight aria-hidden="true" className="size-4" />
               </button>
             ) : null}
           </div>
