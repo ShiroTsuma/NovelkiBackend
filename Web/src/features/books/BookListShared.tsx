@@ -1,5 +1,4 @@
 import {
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
@@ -13,13 +12,13 @@ import { inputClass } from '@/components/app/designTokens'
 import { bookListPageSizeOptions } from './bookListState'
 
 const paginationDirectionButtonClass =
-  'inline-flex min-h-11 min-w-11 items-center justify-center rounded-md border border-slate-300 bg-white px-3 text-xl font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-950'
+  'inline-flex min-h-10 min-w-10 items-center justify-center rounded-control border border-line bg-transparent px-2.5 text-ink transition hover:border-line-strong hover:bg-hover'
 
 const paginationPageButtonClass =
-  'pagination-page-button inline-flex min-h-11 min-w-11 items-center justify-center bg-transparent px-3 text-base font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-950'
+  'pagination-page-button inline-flex min-h-10 min-w-10 items-center justify-center rounded-control bg-transparent px-3 text-sm font-medium text-ink-2 tabular-nums transition hover:bg-hover hover:text-ink'
 
 const paginationActivePageButtonClass =
-  'pagination-page-button inline-flex min-h-11 min-w-11 items-center justify-center bg-slate-900 px-3 text-base font-semibold text-white'
+  'pagination-page-button inline-flex min-h-10 min-w-10 items-center justify-center rounded-control bg-raised px-3 text-sm font-semibold text-ink tabular-nums'
 
 export function BookListFooter({
   activePageGapId,
@@ -51,17 +50,19 @@ export function BookListFooter({
   onGoToPage: (page: number) => void
 }) {
   return (
-    <div className="border-t border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+    <div className="border-t border-line px-4 py-3 text-sm text-ink-2">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <span>
-          {total ? `${skip + 1}-${Math.min(skip + pageSize, total)} of ${total}` : '0 results'}
+          {total
+            ? `Showing ${skip + 1}–${Math.min(skip + pageSize, total)} of ${total}`
+            : '0 results'}
         </span>
         <div className="flex flex-wrap items-center justify-end gap-3">
           <label className="flex items-center gap-2">
             <span>Per page</span>
             <span className="relative inline-flex">
               <select
-                className={`${inputClass} ui-control--compact-select ui-control--page-size bg-white transition hover:border-slate-400 hover:bg-white focus:bg-white`}
+                className={`${inputClass} ui-control--compact-select ui-control--page-size h-10 min-h-10 py-0`}
                 value={pageSize}
                 onChange={(event) => setPageSize(event.target.value)}
               >
@@ -71,7 +72,6 @@ export function BookListFooter({
                   </option>
                 ))}
               </select>
-              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             </span>
           </label>
           <div className="flex flex-wrap items-center gap-1.5">
@@ -173,7 +173,7 @@ export function ScrollShortcutButtons({
       {showBackToTop ? (
         <button
           aria-label="Back to top"
-          className="ui-icon-button--round inline-flex h-11 w-11 items-center justify-center border border-slate-300 bg-white text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 hover:text-slate-950"
+          className="ui-icon-button--round inline-flex h-11 w-11 items-center justify-center rounded-full border border-line-strong bg-raised text-ink shadow-popover transition hover:bg-selected"
           type="button"
           onClick={onBackToTop}
         >
@@ -183,7 +183,7 @@ export function ScrollShortcutButtons({
       {showGoDown ? (
         <button
           aria-label="Go to bottom"
-          className="ui-icon-button--round inline-flex h-11 w-11 items-center justify-center border border-slate-300 bg-white text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 hover:text-slate-950"
+          className="ui-icon-button--round inline-flex h-11 w-11 items-center justify-center rounded-full border border-line-strong bg-raised text-ink shadow-popover transition hover:bg-selected"
           type="button"
           onClick={onGoDown}
         >

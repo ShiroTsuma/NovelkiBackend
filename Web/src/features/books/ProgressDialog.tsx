@@ -16,19 +16,40 @@ const numberFormat = new Intl.NumberFormat('en-US')
 const fieldClass =
   'h-11 w-full rounded-control border border-line-strong bg-ground px-3 text-base text-ink outline-none focus:border-accent'
 
-export function ProgressDialog({ book }: { book: BookDto }) {
+/** The fields the dialog needs; both the full book and a list item provide them. */
+export type ProgressBook = Pick<
+  BookDto,
+  'id' | 'primaryTitle' | 'currentChapterNumber' | 'currentChapterLabel' | 'totalChapters'
+>
+
+export function ProgressDialog({
+  book,
+  triggerLabel = 'Log progress',
+  triggerVariant = 'primary',
+  triggerSize = 'md',
+}: {
+  book: ProgressBook
+  triggerLabel?: string
+  triggerVariant?: 'primary' | 'secondary' | 'outline'
+  triggerSize?: 'sm' | 'md'
+}) {
   const [open, setOpen] = useState(false)
   return (
     <>
-      <Button variant="primary" onClick={() => setOpen(true)}>
-        Log progress
+      <Button
+        variant={triggerVariant}
+        size={triggerSize}
+        aria-label={`Log progress for ${book.primaryTitle}`}
+        onClick={() => setOpen(true)}
+      >
+        {triggerLabel}
       </Button>
       {open ? <ProgressForm book={book} onClose={() => setOpen(false)} /> : null}
     </>
   )
 }
 
-function ProgressForm({ book, onClose }: { book: BookDto; onClose: () => void }) {
+function ProgressForm({ book, onClose }: { book: ProgressBook; onClose: () => void }) {
   const ids = { number: useId(), label: useId(), comment: useId(), error: useId() }
   const [currentChapterNumber, setCurrentChapterNumber] = useState(
     book.currentChapterNumber?.toString() ?? '',

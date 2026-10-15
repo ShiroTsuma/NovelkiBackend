@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { api } from '@/api/client'
@@ -65,8 +65,7 @@ describe('BooksPage', () => {
       'Alternative name: Cuttlefish That Loves Diving',
     )
     await user.unhover(screen.getByLabelText('1 alternative name'))
-    await user.hover(screen.getByText('favorite'))
-    expect(screen.getByRole('tooltip')).toHaveTextContent('A personal favorite.')
+    expect(screen.queryByText('favorite')).not.toBeInTheDocument()
     expect(api.getBooks).toHaveBeenCalledWith(
       expect.objectContaining({
         skip: 0,
@@ -84,8 +83,8 @@ describe('BooksPage', () => {
     const { container } = renderWithProviders(<BooksPage />, { route: '/books' })
 
     await screen.findByText('Lord of Mysteries')
-    expect(container.querySelector('table')).toHaveStyle({ minWidth: '85rem' })
-    expect(container.querySelectorAll('col')).toHaveLength(9)
+    expect(container.querySelector('table')).toHaveStyle({ minWidth: '76rem' })
+    expect(container.querySelectorAll('col')).toHaveLength(7)
     expect(screen.getByRole('columnheader', { name: /actions/i })).toHaveClass('sticky', 'right-0')
     expect(screen.queryByRole('columnheader', { name: /^id$/i })).not.toBeInTheDocument()
     expect(
@@ -126,7 +125,7 @@ describe('BooksPage', () => {
     const scroller = table?.parentElement
     const section = table?.closest('section')
 
-    expect(table).toHaveStyle({ minWidth: '149rem' })
+    expect(table).toHaveStyle({ minWidth: '152rem' })
     expect(container.querySelectorAll('col')).toHaveLength(16)
     expect(scroller).toHaveClass('max-w-full', 'overflow-x-auto')
     expect(section).toHaveClass('min-w-0', 'overflow-hidden')
@@ -300,7 +299,7 @@ describe('BooksPage', () => {
       expect(screen.getByRole('listbox')).toHaveAttribute('aria-busy', 'false')
       expect(screen.getByRole('option', { name: /^Exclude author:"Perf"/ })).toBeInTheDocument()
       expect(screen.getByRole('option', { name: /^Remove author:"Perf"/ })).toBeInTheDocument()
-      expect(screen.queryByText('Perf')).not.toBeInTheDocument()
+      expect(within(screen.getByRole('listbox')).queryByText('Perf')).not.toBeInTheDocument()
       expect(screen.queryByRole('option', { name: /^Perfect123/ })).not.toBeInTheDocument()
     })
   })
@@ -394,7 +393,7 @@ describe('BooksPage', () => {
 
     renderWithProviders(<BooksPage />, { route: '/books?take=50&query=Fantasy' })
 
-    await user.click(await screen.findByLabelText('View Lord of Mysteries'))
+    await user.click(await screen.findByRole('link', { name: 'Lord of Mysteries' }))
 
     expect(
       window.sessionStorage.getItem(
@@ -458,6 +457,10 @@ describe('BooksPage', () => {
           tagsCount: 26,
         },
       ]),
+    )
+    window.localStorage.setItem(
+      'novelki.books.columns.v1',
+      JSON.stringify([{ id: 'tags', visible: true }]),
     )
 
     renderWithProviders(<BooksPage />, { route: '/books' })
@@ -764,7 +767,7 @@ describe('BooksPage', () => {
     const ratingBadge = screen.getByLabelText('Rating 9 out of 10')
     expect(ratingBadge).toHaveClass('book-card-rating')
     expect(ratingBadge.querySelector('.book-card-rating__star')).toBeInTheDocument()
-    expect(ratingBadge).toHaveTextContent('9/10')
+    expect(ratingBadge).toHaveTextContent('9')
   })
 
   it('uses a red rating treatment for scores up to and including five', async () => {
@@ -791,8 +794,14 @@ describe('BooksPage', () => {
     await screen.findByText('Lord of Mysteries')
     await user.click(screen.getByRole('button', { name: /cards/i }))
 
-    expect(screen.getByLabelText('Book status: Reading')).toHaveClass('bg-status-reading-soft')
-    expect(screen.getByLabelText('Book status: Completed')).toHaveClass('bg-status-finished')
+    expect(screen.getByLabelText('Book status: Reading').closest('article')).toHaveAttribute(
+      'data-status-tone',
+      'reading',
+    )
+    expect(screen.getByLabelText('Book status: Completed').closest('article')).toHaveAttribute(
+      'data-status-tone',
+      'finished',
+    )
     expect(screen.getByLabelText('Book status: Reading')).toHaveTextContent('Reading')
   })
 
@@ -822,7 +831,7 @@ describe('BooksPage', () => {
 
     expect(screen.getByText('Visible card fields')).toBeInTheDocument()
     expect(screen.getByText('Alternative titles')).toBeInTheDocument()
-    expect(screen.getByText('Type')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^type$/i })).toBeInTheDocument()
     expect(screen.queryByText('Tags')).not.toBeInTheDocument()
     expect(screen.queryByText('Description')).not.toBeInTheDocument()
     expect(screen.queryByText('Chapters')).not.toBeInTheDocument()
@@ -849,7 +858,7 @@ describe('BooksPage', () => {
 
     expect(screen.queryByText('Cuttlefish')).not.toBeInTheDocument()
     expect(screen.getByText('LOTM')).toBeInTheDocument()
-    expect(screen.getAllByText('Novel')[0]).toHaveClass('truncate', 'text-ink-3')
+    expect(screen.getAllByText('Novel').at(-1)).toHaveClass('truncate', 'text-ink-3')
     expect(window.localStorage.getItem('novelki.books.card-fields.v1')).toContain(
       '"alternativeTitles"',
     )
@@ -1135,14 +1144,14 @@ describe('BooksPage', () => {
     const { container } = renderWithProviders(<BooksPage />, { route: '/books' })
 
     await screen.findByText('Lord of Mysteries')
-    let footer = container.querySelector('section > .border-t.border-slate-200.bg-white')
+    let footer = container.querySelector('section > .border-t.border-line')
     expect(footer).toHaveTextContent('Per page')
     expect(container.querySelector('.overflow-x-auto.pb-24')).toBeFalsy()
     expect(container.querySelector('section > .sticky.bottom-0')).toBeFalsy()
 
     await user.click(screen.getByRole('button', { name: /cards/i }))
 
-    footer = container.querySelector('section > .border-t.border-slate-200.bg-white')
+    footer = container.querySelector('section > .border-t.border-line')
     expect(footer).toHaveTextContent('Per page')
     expect(container.querySelector('.grid.gap-4.p-4.pb-24')).toBeFalsy()
     expect(container.querySelector('section > .sticky.bottom-0')).toBeFalsy()

@@ -1,12 +1,95 @@
+import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { sortOptions, type SortOption } from './bookListSort'
 import { getStatusTone, statusToneClasses } from './bookStatus'
 import {
+  describeToken,
   getQuickFilters,
   getStatusFilter,
   hasToken,
+  removeTokenAt,
   setStatusFilter,
+  tokenizeQuery,
   toggleToken,
 } from './queryTokens'
+
+/**
+ * The current query shown as readable pills, one per token. Removing a pill
+ * removes exactly that token from the query text.
+ */
+export function ActiveFilterPills({
+  query,
+  onQueryChange,
+}: {
+  query: string
+  onQueryChange: (query: string) => void
+}) {
+  const tokens = tokenizeQuery(query)
+  if (tokens.length === 0) return null
+  return (
+    <ul aria-label="Active filters" className="m-0 flex list-none flex-wrap gap-1.5 p-0">
+      {tokens.map((token, index) => {
+        const described = describeToken(token)
+        return (
+          <li
+            key={`${token}-${index}`}
+            className={cn(
+              'inline-flex h-[30px] items-center gap-1.5 rounded-pill border pr-1 pl-2.5 text-[13px]',
+              described.negated
+                ? 'border-danger-line bg-danger-soft text-danger-ink'
+                : 'border-line-focus bg-selected text-ink',
+            )}
+          >
+            {described.field ? (
+              <span className="font-mono text-xs opacity-85">{described.field}</span>
+            ) : null}
+            <span className="text-xs opacity-70">{described.operator}</span>
+            <span className="font-medium">{described.value}</span>
+            <button
+              type="button"
+              aria-label={`Remove filter ${token}`}
+              onClick={() => onQueryChange(removeTokenAt(query, index))}
+              className="flex size-[22px] items-center justify-center rounded border-0 bg-transparent text-current opacity-70 hover:opacity-100"
+            >
+              <X aria-hidden="true" className="size-3" strokeWidth={2.4} />
+            </button>
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
+/** Sort picker for the result toolbar; column headers still sort too. */
+export function SortMenu({
+  sortBy,
+  onSortChange,
+}: {
+  sortBy: string | null
+  onSortChange: (option: SortOption) => void
+}) {
+  const current = sortOptions.find((option) => option.sortBy === sortBy)
+  return (
+    <label className="flex items-center gap-2 text-ink-3">
+      <span className="text-[13px]">Sort</span>
+      <select
+        className="ui-control h-9 min-h-9 w-auto py-0 text-ink"
+        value={current?.sortBy ?? ''}
+        onChange={(event) => {
+          const next = sortOptions.find((option) => option.sortBy === event.target.value)
+          if (next) onSortChange(next)
+        }}
+      >
+        {current ? null : <option value="">Custom</option>}
+        {sortOptions.map((option) => (
+          <option key={option.sortBy} value={option.sortBy}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  )
+}
 
 const statusTabs: { label: string; status: string | null }[] = [
   { label: 'All', status: null },

@@ -100,3 +100,48 @@ export function getQuickFilters(today: Date = new Date()): QuickFilter[] {
     },
   ]
 }
+
+export type DescribedToken = {
+  negated: boolean
+  field: string | null
+  operator: string
+  value: string
+}
+
+const operatorWords: Record<string, string> = { '>=': '≥', '<=': '≤', '>': '>', '<': '<', '=': '=' }
+
+/** Turns one token into words for a pill: `-tag:harem` → tag · not · harem. */
+export function describeToken(token: string): DescribedToken {
+  const negated = token.startsWith('-')
+  const body = negated ? token.slice(1) : token
+  const colon = body.indexOf(':')
+  if (colon <= 0) {
+    return { negated, field: null, operator: negated ? 'without' : 'text', value: unquote(body) }
+  }
+  const field = body.slice(0, colon)
+  const raw = unquote(body.slice(colon + 1))
+  const comparison = /^(>=|<=|>|<|=)(.*)$/.exec(raw)
+  if (comparison) {
+    const [, op = '=', rest = ''] = comparison
+    return { negated, field, operator: operatorWords[op] ?? op, value: rest }
+  }
+  if (raw.toLowerCase() === 'none') {
+    return { negated, field, operator: negated ? 'is set' : 'is', value: negated ? '' : 'missing' }
+  }
+  return {
+    negated,
+    field,
+    operator: negated ? 'not' : 'is',
+    value: raw
+      .split(',')
+      .map((part) => unquote(part.trim()))
+      .join(' or '),
+  }
+}
+
+/** Removes the token at `index` (as counted by tokenizeQuery). */
+export function removeTokenAt(query: string, index: number): string {
+  return tokenizeQuery(query)
+    .filter((_, position) => position !== index)
+    .join(' ')
+}

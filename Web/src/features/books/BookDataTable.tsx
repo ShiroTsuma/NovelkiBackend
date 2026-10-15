@@ -4,10 +4,11 @@ import type { ColumnDefinition } from './columnPreferences'
 
 const minimumTableWidthRem = 76
 const fallbackColumnWidthRem = 9
-const actionsColumnWidthRem = 8
+const defaultActionsColumnWidthRem = 8
 
 export function BookDataTable<T extends { id: string }>({
   actionHeader = 'Actions',
+  actionsWidthRem = defaultActionsColumnWidthRem,
   columns,
   emptyMessage,
   isCyclicSort = () => false,
@@ -21,6 +22,8 @@ export function BookDataTable<T extends { id: string }>({
   onSort,
 }: {
   actionHeader?: string
+  /** Width of the sticky actions column, in rem. */
+  actionsWidthRem?: number
   columns: ColumnDefinition<T>[]
   emptyMessage: string
   isCyclicSort?: (sortBy: string) => boolean
@@ -33,7 +36,7 @@ export function BookDataTable<T extends { id: string }>({
   wrapperClassName?: string
   onSort: (sortBy: string) => void
 }) {
-  const tableMinWidthRem = getBookTableMinWidthRem(columns)
+  const tableMinWidthRem = getBookTableMinWidthRem(columns, actionsWidthRem)
 
   return (
     <div className={`book-table-scroll ${wrapperClassName} max-w-full overflow-x-auto`}>
@@ -45,7 +48,7 @@ export function BookDataTable<T extends { id: string }>({
           {columns.map((column) => (
             <col className={column.widthClass ?? ''} key={column.id} />
           ))}
-          <col className="w-32" />
+          <col style={{ width: `${actionsWidthRem}rem` }} />
         </colgroup>
         <thead className="bg-surface text-xs font-semibold tracking-wider text-ink-3 uppercase">
           <tr>
@@ -119,10 +122,10 @@ export function BookDataTable<T extends { id: string }>({
   )
 }
 
-function getBookTableMinWidthRem(columns: { widthClass?: string }[]) {
+function getBookTableMinWidthRem(columns: { widthClass?: string }[], actionsWidthRem: number) {
   const columnWidth = columns.reduce(
     (sum, column) => sum + getTailwindWidthRem(column.widthClass),
-    actionsColumnWidthRem,
+    actionsWidthRem,
   )
   return Math.max(minimumTableWidthRem, columnWidth)
 }

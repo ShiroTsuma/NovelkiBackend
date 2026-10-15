@@ -1,5 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ChevronDown, Download, Edit, Eye, LayoutGrid, List, Star, Upload } from 'lucide-react'
+import { ChevronDown, Download, Edit, LayoutGrid, List, Star, Upload } from 'lucide-react'
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -17,12 +17,12 @@ import { Surface } from '@/components/app/DesignSystem'
 import { buttonStyles } from '@/components/ui/buttonStyles'
 import { cn } from '@/lib/utils'
 import { BookDataTable } from './BookDataTable'
-import { BookCoverArtwork } from './BookCoverSection'
 import { isLowRating } from './bookRating'
 import { BookSearchInput } from './BookSearchInput'
-import { CoverThumb, ProgressCell, RatingCell, StatusCell } from './BookListCells'
+import { CardCover, CoverThumb, ProgressCell, RatingCell, StatusCell } from './BookListCells'
+import { ProgressDialog } from './ProgressDialog'
 import { getStatusTone, statusToneClasses } from './bookStatus'
-import { QuickFilters, StatusTabs } from './BookListControls'
+import { ActiveFilterPills, QuickFilters, SortMenu, StatusTabs } from './BookListControls'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
 import { formatProgress } from './bookProgress'
 import { saveBookListScrollPosition, takeBookListScrollPosition } from './bookListNavigation'
@@ -84,7 +84,7 @@ const bookColumns: ColumnDefinition<BookListItemDto>[] = [
   {
     id: 'author',
     label: 'Author',
-    defaultVisible: true,
+    defaultVisible: false,
     sortBy: 'author',
     widthClass: 'w-40',
     render: (book) => <AuthorCell book={book} />,
@@ -169,7 +169,7 @@ const bookColumns: ColumnDefinition<BookListItemDto>[] = [
   {
     id: 'tags',
     label: 'Tags',
-    defaultVisible: true,
+    defaultVisible: false,
     widthClass: 'w-40',
     render: (book) => (
       <DescribedMetadataPills
@@ -441,9 +441,7 @@ export function BooksPage() {
             Library
           </h1>
           <p className="m-0 mt-1.5 text-[15px] text-ink-2 tabular-nums">
-            {booksQuery.data
-              ? `${formatBookCount(total)} ${total === 1 ? 'book matches' : 'books match'}`
-              : 'List, search, and quick navigation through your library.'}
+            Search with the filter syntax, switch status with the tabs, log progress from any row.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -632,7 +630,13 @@ export function BooksPage() {
       <StatusTabs query={query} onQueryChange={updateQuery} />
 
       <div className="grid gap-2.5">
-        <BookSearchInput value={query} onChange={updateQuery} />
+        <BookSearchInput
+          appearance="compact"
+          showHelp={false}
+          value={query}
+          onChange={updateQuery}
+        />
+        <ActiveFilterPills query={query} onQueryChange={updateQuery} />
         <QuickFilters query={query} onQueryChange={updateQuery} />
       </div>
 
@@ -642,12 +646,24 @@ export function BooksPage() {
         id="book-list-results"
       >
         <div className="flex flex-wrap items-center justify-end gap-2 border-b border-line px-4 py-3">
-          {(isWaitingForSearch || booksQuery.isFetching || cycleSortMutation.isPending) &&
-          !booksQuery.isLoading ? (
-            <span className="mr-auto text-[13px] font-medium text-ink-3" role="status">
-              Searching...
-            </span>
-          ) : null}
+          <span className="mr-auto text-ink-2 tabular-nums" role="status">
+            {(isWaitingForSearch || booksQuery.isFetching || cycleSortMutation.isPending) &&
+            !booksQuery.isLoading
+              ? 'Searching...'
+              : booksQuery.data
+                ? `${formatBookCount(total)} ${total === 1 ? 'book matches' : 'books match'}`
+                : ''}
+          </span>
+          <SortMenu
+            sortBy={sortBy}
+            onSortChange={(option) => {
+              if (option.direction === null) {
+                setSort(option.sortBy)
+                return
+              }
+              setSortParams(option.sortBy, option.direction)
+            }}
+          />
           {viewMode === 'cards' ? (
             <CardsPerRowControl value={cardsPerRow} onChange={setCardsPerRow} />
           ) : null}
@@ -665,18 +681,13 @@ export function BooksPage() {
           <BookDataTable
             columns={visibleColumns}
             emptyMessage="No books match the current filters."
+            actionsWidthRem={11}
             isCyclicSort={isCyclicSort}
             isLoading={booksQuery.isLoading}
             items={booksQuery.data?.data ?? []}
             renderActions={(book) => (
               <div className="flex justify-end gap-2">
-                <BookDetailsLink
-                  ariaLabel={`View ${book.primaryTitle}`}
-                  bookId={book.id}
-                  className={buttonStyles({ variant: 'outline', size: 'iconSm' })}
-                >
-                  <Eye aria-hidden="true" className="size-4" />
-                </BookDetailsLink>
+                <ProgressDialog book={book} triggerSize="sm" triggerVariant="secondary" />
                 <BookEditLink
                   ariaLabel={`Edit ${book.primaryTitle}`}
                   bookId={book.id}
@@ -765,7 +776,6 @@ function CardsPerRowControl({
             </option>
           ))}
         </select>
-        <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
       </span>
     </label>
   )
@@ -779,25 +789,29 @@ export function ViewModeToggle({
   onChange: (value: BookViewMode) => void
 }) {
   return (
-    <div className="ui-segmented-control">
-      <button
-        aria-pressed={value === 'table'}
-        className={`ui-segmented-control__item ${value === 'table' ? 'ui-segmented-control__item--active' : ''}`}
-        type="button"
-        onClick={() => onChange('table')}
-      >
-        <List className="h-3.5 w-3.5" />
-        Table
-      </button>
-      <button
-        aria-pressed={value === 'cards'}
-        className={`ui-segmented-control__item ${value === 'cards' ? 'ui-segmented-control__item--active' : ''}`}
-        type="button"
-        onClick={() => onChange('cards')}
-      >
-        <LayoutGrid className="h-3.5 w-3.5" />
-        Cards
-      </button>
+    <div className="flex gap-0.5 rounded-field border border-line bg-surface p-[3px]">
+      {(
+        [
+          ['table', 'Table', List],
+          ['cards', 'Cards', LayoutGrid],
+        ] as const
+      ).map(([mode, label, Icon]) => (
+        <button
+          aria-pressed={value === mode}
+          className={cn(
+            'flex h-8 items-center gap-1.5 rounded-[7px] border-0 px-3 text-sm',
+            value === mode
+              ? 'bg-selected font-semibold text-ink'
+              : 'bg-transparent font-medium text-ink-2 hover:text-ink',
+          )}
+          key={mode}
+          type="button"
+          onClick={() => onChange(mode)}
+        >
+          <Icon aria-hidden="true" className="size-4" />
+          {label}
+        </button>
+      ))}
     </div>
   )
 }
@@ -1017,6 +1031,7 @@ function BookCardGrid({
   const showProgress = hasCardField(fields, 'progress')
   const showType = hasCardField(fields, 'type')
   const showStatus = hasCardField(fields, 'status')
+  const showRating = hasCardField(fields, 'rating')
   const cardDetailsClass = getCardDetailRowClass({
     cardsPerRow,
     showAlternativeTitles,
@@ -1028,147 +1043,176 @@ function BookCardGrid({
 
   return (
     <div
-      className={`book-card-grid grid min-w-0 gap-x-5 gap-y-7 p-4 grid-cols-2 ${getDesktopCardsPerRowClass(cardsPerRow)}`}
+      className={`book-card-grid grid min-w-0 grid-cols-2 gap-x-5 gap-y-7 p-4 ${getDesktopCardsPerRowClass(cardsPerRow)}`}
     >
       {books.map((book) => {
         const finished = isCompletedStatus(book.status)
         const tone = getStatusTone(book.status)
+        const rated = showRating && book.rating != null
+        const low = book.rating != null && isLowRating(book.rating)
         return (
           <article
             className={cn(
-              'book-card flex min-w-0 w-full max-w-full flex-col',
+              'book-card flex min-w-0 w-full max-w-full flex-col gap-2.5',
               finished && 'book-card--completed',
             )}
             data-status-tone={tone}
             key={book.id}
           >
             <BookDetailsLink
+              ariaLabel={book.primaryTitle}
               bookId={book.id}
-              className="group grid min-w-0 w-full max-w-full overflow-hidden text-ink hover:text-ink"
+              className="group relative block w-full max-w-full min-w-0 overflow-hidden rounded-[10px]"
             >
-              <div className="relative min-w-0 max-w-full overflow-hidden rounded-[10px] bg-raised">
-                <BookCoverArtwork
-                  className="book-card__cover min-w-0 w-full max-w-full rounded-[10px] border-0 transition-transform duration-200 group-hover:scale-[1.02]"
-                  cover={book.cover}
-                  emptyLabel="No cover"
-                  loading="lazy"
-                  preferredVariant="thumbnail"
-                  title={book.primaryTitle}
-                />
-                {finished ? (
-                  <span className="pointer-events-none absolute top-4 -right-1 rotate-[8deg] rounded border-2 border-status-finished bg-ground/85 px-2.5 py-1 text-xs font-bold tracking-[0.12em] text-status-finished-ink">
-                    FINISHED
-                  </span>
-                ) : null}
-                {hasCardField(fields, 'rating') && book.rating != null ? (
-                  <span
-                    aria-label={`Rating ${book.rating} out of 10`}
-                    className={cn(
-                      'book-card-rating absolute top-2.5 left-2.5 inline-flex items-center gap-1 rounded-full bg-ground/85 px-2 py-0.5 text-xs font-semibold tabular-nums backdrop-blur',
-                      isLowRating(book.rating)
-                        ? 'book-card-rating--low text-danger-ink'
-                        : 'text-ink',
-                    )}
-                  >
-                    <Star
-                      aria-hidden="true"
-                      className={cn(
-                        'book-card-rating__star size-3',
-                        isLowRating(book.rating)
-                          ? 'fill-danger text-danger'
-                          : 'fill-star text-star',
-                      )}
-                    />
-                    {book.rating}
-                    <span aria-hidden="true" className="font-normal text-ink-3">
-                      /10
-                    </span>
-                  </span>
-                ) : null}
-                {showStatus ? (
-                  <span className="absolute inset-x-0 bottom-0 flex items-center bg-ground/80 px-2.5 py-2 backdrop-blur">
-                    <StatusCell status={book.status} />
-                  </span>
-                ) : null}
-                <span
-                  aria-hidden="true"
-                  className="absolute inset-x-0 bottom-0 h-[3px] bg-white/10"
-                >
-                  <span
-                    className={cn('block h-full', statusToneClasses[tone].bar)}
-                    style={{ width: `${getProgressPercent(book) ?? 0}%` }}
-                  />
+              <CardCover book={book} />
+              {finished ? (
+                <span className="pointer-events-none absolute top-4 -right-1 rotate-[8deg] rounded border-2 border-status-finished bg-ground/85 px-2.5 py-1 text-xs font-bold tracking-[0.12em] text-status-finished-ink">
+                  FINISHED
                 </span>
-              </div>
-              <div
-                className={`grid min-w-0 max-w-full gap-0.5 overflow-hidden pt-2.5 ${cardDetailsClass}`}
-              >
-                {showTitle ? (
-                  <div className="min-h-10 min-w-0 max-w-full overflow-hidden">
-                    <h2
-                      className={`m-0 line-clamp-2 min-w-0 max-w-full font-sans font-semibold break-words text-ink ${cardText.title}`}
-                      title={book.primaryTitle}
+              ) : null}
+              {showStatus || rated ? (
+                <span className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-ground/80 px-2.5 py-2 text-xs backdrop-blur">
+                  {showStatus ? (
+                    <span className="flex min-w-0 items-center gap-1.5 font-semibold text-ink">
+                      <span
+                        aria-hidden="true"
+                        className={cn(
+                          'size-1.5 shrink-0 rounded-full',
+                          statusToneClasses[tone].bar,
+                        )}
+                      />
+                      <span aria-label={`Book status: ${book.status}`} className="truncate">
+                        {book.status}
+                      </span>
+                    </span>
+                  ) : (
+                    <span />
+                  )}
+                  {rated ? (
+                    <span
+                      aria-label={`Rating ${book.rating} out of 10`}
+                      className={cn(
+                        'book-card-rating inline-flex shrink-0 items-center gap-1 font-semibold tabular-nums',
+                        low ? 'book-card-rating--low text-danger-ink' : 'text-star',
+                      )}
+                    >
+                      <Star
+                        aria-hidden="true"
+                        className={cn(
+                          'book-card-rating__star size-3',
+                          low ? 'fill-danger text-danger' : 'fill-star text-star',
+                        )}
+                      />
+                      {book.rating}
+                    </span>
+                  ) : null}
+                </span>
+              ) : null}
+              <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-[3px] bg-white/10">
+                <span
+                  className={cn('block h-full', statusToneClasses[tone].bar)}
+                  style={{ width: `${getProgressPercent(book) ?? 0}%` }}
+                />
+              </span>
+            </BookDetailsLink>
+            <div className={`grid min-w-0 max-w-full gap-0.5 overflow-hidden ${cardDetailsClass}`}>
+              {showTitle ? (
+                <div className="min-h-10 min-w-0 max-w-full overflow-hidden">
+                  <h2
+                    className={`m-0 line-clamp-2 min-w-0 max-w-full font-sans leading-snug font-semibold break-words text-ink ${cardText.title}`}
+                    title={book.primaryTitle}
+                  >
+                    <BookDetailsLink
+                      bookId={book.id}
+                      className="text-ink hover:text-ink hover:underline hover:underline-offset-4"
                     >
                       {book.primaryTitle}
-                    </h2>
-                  </div>
-                ) : null}
-                {showAlternativeTitles ? (
-                  <div className="min-h-10 min-w-0 max-w-full overflow-hidden">
+                    </BookDetailsLink>
+                  </h2>
+                </div>
+              ) : null}
+              {showAlternativeTitles ? (
+                <div className="min-h-10 min-w-0 max-w-full overflow-hidden">
+                  <p
+                    className={`m-0 line-clamp-2 min-w-0 max-w-full break-words text-ink-3 ${cardText.meta}`}
+                    title={formatListTooltip(book.alternativeTitles, book.alternativeTitlesCount)}
+                  >
+                    {formatList(book.alternativeTitles)}
+                  </p>
+                </div>
+              ) : null}
+              {showAuthor || showType ? (
+                <div
+                  className={`flex min-w-0 max-w-full gap-1.5 overflow-hidden ${cardRowMinHeights.author}`}
+                >
+                  {showAuthor ? (
                     <p
-                      className={`m-0 line-clamp-2 min-w-0 max-w-full break-words text-ink-3 ${cardText.meta}`}
-                      title={formatListTooltip(book.alternativeTitles, book.alternativeTitlesCount)}
-                    >
-                      {formatList(book.alternativeTitles)}
-                    </p>
-                  </div>
-                ) : null}
-                {showAuthor ? (
-                  <div className={`min-w-0 max-w-full overflow-hidden ${cardRowMinHeights.author}`}>
-                    <p
-                      className={`m-0 min-w-0 max-w-full truncate text-ink-2 ${cardText.meta}`}
+                      className={`m-0 min-w-0 truncate text-ink-2 ${cardText.meta}`}
                       title={book.author ?? 'Unknown author'}
                     >
                       {book.author ?? 'Unknown author'}
                     </p>
-                  </div>
-                ) : null}
-                {showProgress || showType ? (
+                  ) : null}
+                  {showType ? (
+                    <p
+                      className={`m-0 shrink-0 truncate text-ink-3 ${cardText.meta}`}
+                      title={book.contentType}
+                    >
+                      {showAuthor ? '· ' : ''}
+                      {book.contentType}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+            {showProgress ? (
+              <div
+                className={`mt-auto flex min-w-0 items-center justify-between gap-2 ${cardRowMinHeights.progress}`}
+              >
+                <div className="min-w-0 tabular-nums">
                   <div
-                    className={`flex min-w-0 max-w-full items-end justify-between gap-3 overflow-hidden ${cardRowMinHeights.progress}`}
+                    className={cn(
+                      `truncate font-semibold ${cardText.meta}`,
+                      finished ? 'text-status-finished-ink' : 'text-ink',
+                    )}
+                    title={formatProgress(book)}
                   >
-                    <div className="min-w-0 flex-1">
-                      {showProgress ? (
-                        <p
-                          className={cn(
-                            `m-0 truncate font-semibold tabular-nums ${cardText.meta}`,
-                            finished ? 'text-status-finished-ink' : 'text-ink',
-                          )}
-                          title={formatProgress(book)}
-                        >
-                          {finished ? 'Finished' : formatProgress(book)}
-                        </p>
-                      ) : null}
-                    </div>
-                    <div className="min-w-0 max-w-[50%] flex-1 text-right">
-                      {showType ? (
-                        <p
-                          className={`m-0 min-w-0 max-w-full truncate text-ink-3 ${cardText.meta}`}
-                          title={book.contentType}
-                        >
-                          {book.contentType}
-                        </p>
-                      ) : null}
-                    </div>
+                    {finished ? 'Finished' : getCardProgressLabel(book)}
                   </div>
-                ) : null}
+                  <div className="truncate text-xs text-ink-3">{getCardProgressCount(book)}</div>
+                </div>
+                {finished ? null : (
+                  <ProgressDialog
+                    book={book}
+                    triggerLabel="Log"
+                    triggerSize="sm"
+                    triggerVariant="secondary"
+                  />
+                )}
               </div>
-            </BookDetailsLink>
+            ) : null}
           </article>
         )
       })}
     </div>
   )
+}
+
+function getCardProgressLabel(book: BookListItemDto) {
+  const label =
+    book.currentChapterLabel ??
+    (book.currentChapterNumber != null ? String(book.currentChapterNumber) : null)
+  return label ? `Ch. ${label}` : 'Not started'
+}
+
+function getCardProgressCount(book: BookListItemDto) {
+  const format = new Intl.NumberFormat('en-US')
+  const current = book.currentChapterNumber
+  const total = book.totalChapters
+  if (typeof current !== 'number')
+    return typeof total === 'number' ? `${format.format(total)} chapters` : ''
+  if (typeof total === 'number') return `${format.format(current)} / ${format.format(total)}`
+  return `${format.format(current)} read`
 }
 
 function getProgressPercent(book: BookListItemDto) {
@@ -1188,13 +1232,29 @@ function TitleCell({ book }: { book: BookListItemDto }) {
     <div className="flex min-w-0 items-center gap-3">
       <CoverThumb book={book} />
       <div className="min-w-0 flex-1">
-        <MetadataSummary
-          alternatives={book.alternativeTitles}
-          countNoun="alternative title"
-          primary={book.primaryTitle}
-          primaryClassName="block min-w-0 truncate text-[15px] font-semibold text-ink"
-          totalCount={book.alternativeTitlesCount}
-        />
+        <BookDetailsLink
+          bookId={book.id}
+          className="block min-w-0 truncate text-[15px] font-semibold text-ink hover:text-ink hover:underline hover:decoration-line-focus hover:underline-offset-4"
+        >
+          {book.primaryTitle}
+        </BookDetailsLink>
+        <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[13px] text-ink-2">
+          <MetadataSummary
+            alternatives={book.authorOtherNames}
+            countNoun="alternative name"
+            primary={book.author ?? 'Unknown author'}
+            primaryClassName="block min-w-0 truncate"
+          />
+          {book.alternativeTitlesCount > 0 ? (
+            <MetadataSummary
+              alternatives={book.alternativeTitles}
+              countNoun="alternative title"
+              primary=""
+              primaryClassName="hidden"
+              totalCount={book.alternativeTitlesCount}
+            />
+          ) : null}
+        </div>
       </div>
     </div>
   )

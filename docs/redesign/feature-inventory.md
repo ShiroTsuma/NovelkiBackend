@@ -64,7 +64,7 @@ Nothing may disappear without a `[~]` note.
   - created, updated (`[~]` updated is date only, which makes the column narrower)
   - genres and tags (pills with descriptions and "+N omitted")
   - links count, notes, description (truncated with a title tooltip)
-- [x] Actions column stays sticky on the right: View and Edit. Both remember the scroll position and the return URL
+- [x] Actions column stays sticky on the right. `[~]` "Log progress" + Edit; View is replaced by the title link. Links remember the scroll position and the return URL
 - [x] Loading and empty states ("No books match the current filters.")
 
 ### Cards
@@ -87,6 +87,12 @@ Nothing may disappear without a `[~]` note.
 - [x] Quick filters that toggle syntax tokens (`rating:>=8`, `rating:none`, `total:none`, `cover:none`, `updated:<…`)
 - [x] Status tabs and quick filters scroll horizontally on phones
 - [x] The page grid is width-constrained, so nothing overflows the viewport on phones
+
+- [~] Default columns follow the mock: author moves into the title cell (other names tooltip kept) and tags are hidden; both stay available in column settings
+- [~] Sort menu in the toolbar, alongside header sorting
+- [~] Active filters shown as removable pills under the search field
+- [~] Cards: type-coloured placeholder with the title in the display face; status and rating in a strip; footer with label, count and Log
+- [~] Pagination shows "Showing x–y of N"; page buttons restyled
 
 Known follow-ups: the summary panel and the export and import menus still use the old component styles, mapped to the new palette.
 

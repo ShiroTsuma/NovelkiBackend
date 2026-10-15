@@ -32,6 +32,42 @@ export function CoverThumb({ book, className }: { book: BookListItemDto; classNa
   )
 }
 
+/**
+ * Card cover: the stored thumbnail, or a type-coloured placeholder that shows
+ * the type and the title in the display face (as in the mock).
+ */
+export function CardCover({ book }: { book: BookListItemDto }) {
+  const { permitted, setTarget } = useCoverLoadPermission(true)
+  const url = useResolvedCoverImage(book.cover, 'thumbnail', permitted)
+  return (
+    <span
+      ref={setTarget}
+      className={cn(
+        'book-card__cover relative block aspect-[2/3] w-full max-w-full min-w-0 overflow-hidden rounded-[10px]',
+        url ? 'bg-raised' : typeCoverClass(book.contentType),
+      )}
+    >
+      {url ? (
+        <img
+          alt={book.primaryTitle}
+          className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.02]"
+          loading="lazy"
+          src={url}
+        />
+      ) : (
+        <>
+          <span className="absolute top-2.5 left-2.5 text-[11px] font-semibold tracking-[0.06em] uppercase opacity-85">
+            {book.contentType}
+          </span>
+          <span className="absolute right-3 bottom-12 left-3 line-clamp-4 font-display text-xl leading-tight font-bold break-words">
+            {book.primaryTitle}
+          </span>
+        </>
+      )}
+    </span>
+  )
+}
+
 export function StatusCell({ status }: { status: string }) {
   const tone = getStatusTone(status)
   return (

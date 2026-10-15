@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
+  describeToken,
   getStatusFilter,
   hasToken,
+  removeTokenAt,
   setStatusFilter,
   tokenizeQuery,
   toggleToken,
@@ -57,5 +59,38 @@ describe('toggleToken', () => {
     expect(added).toBe('genre:fantasy rating:>=8')
     expect(hasToken(added, 'RATING:>=8')).toBe(true)
     expect(toggleToken(added, 'rating:>=8')).toBe('genre:fantasy')
+  })
+})
+
+describe('describeToken', () => {
+  it('describes fields, comparisons, exclusions and missing values', () => {
+    expect(describeToken('genre:fantasy,romance')).toEqual({
+      negated: false,
+      field: 'genre',
+      operator: 'is',
+      value: 'fantasy or romance',
+    })
+    expect(describeToken('rating:>=8')).toMatchObject({
+      field: 'rating',
+      operator: '≥',
+      value: '8',
+    })
+    expect(describeToken('-tag:harem')).toMatchObject({
+      negated: true,
+      operator: 'not',
+      value: 'harem',
+    })
+    expect(describeToken('total:none')).toMatchObject({ operator: 'is', value: 'missing' })
+    expect(describeToken('dragon')).toMatchObject({
+      field: null,
+      operator: 'text',
+      value: 'dragon',
+    })
+  })
+})
+
+describe('removeTokenAt', () => {
+  it('removes only the token at the given position', () => {
+    expect(removeTokenAt('status:reading dragon dragon', 1)).toBe('status:reading dragon')
   })
 })

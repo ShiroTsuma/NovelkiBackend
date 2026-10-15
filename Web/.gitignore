@@ -24,3 +24,6 @@ playwright-report
 *.njsproj
 *.sln
 *.sw?
+
+# Local screenshot specs for design review
+tests/review-shots.spec.ts
