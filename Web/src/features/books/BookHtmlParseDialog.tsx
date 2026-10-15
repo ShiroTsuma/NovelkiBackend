@@ -308,7 +308,7 @@ function buildPreviewFields(
       key: 'alternativeTitles',
       label: 'Alternative titles',
       value: result.alternativeTitles.join(' · '),
-      conflict: Boolean(values.alternativeTitlesText.trim()),
+      conflict: values.alternativeTitles.some((title) => title.trim()),
     })
   const matchedGenres = result.genres.filter((genre) => genre.id)
   if (matchedGenres.length)
@@ -337,7 +337,7 @@ function buildPreviewFields(
       key: 'canonicalUrl',
       label: 'Source link',
       value: result.canonicalUrl,
-      conflict: Boolean(values.linksText.trim()),
+      conflict: values.links.some((link) => link.url.trim()),
     })
   if (result.coverUrl)
     fields.push({

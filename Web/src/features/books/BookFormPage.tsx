@@ -1,25 +1,30 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, FileCode2, Link2, Save, Star, Upload, X } from 'lucide-react'
-import { useEffect, useId, useRef, useState } from 'react'
+import { ArrowLeft, Link2, Upload, X } from 'lucide-react'
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { api } from '@/api/client'
 import { HttpError } from '@/api/http'
 import type { AuthorDto, BookCoverDto, BookHtmlParseResult, BookMutationRequest } from '@/api/types'
-import { buttonVariants } from '@/components/app/designTokens'
-import { DialogPanel, Surface } from '@/components/app/DesignSystem'
-import { useBodyScrollLock } from '@/components/app/useBodyScrollLock'
-import { buttonClass, inputClass, secondaryButtonClass } from '@/components/app/designTokens'
-import { FormField } from '@/components/app/FormField'
+import { Button } from '@/components/ui/Button'
+import { buttonStyles } from '@/components/ui/buttonStyles'
+import { Dialog } from '@/components/ui/Dialog'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
+import { cn } from '@/lib/utils'
+import { TypeCoverPlaceholder } from './BookListCells'
+import { getProgressHistoryWithDeltas } from './bookProgressHistory'
+import { getStatusTone, statusToneClasses } from './bookStatus'
+import { setFieldFilter } from './queryTokens'
 import { BookCoverArtwork, CoverLightbox } from './BookCoverSection'
 import { useResolvedCoverImage } from './useResolvedCoverImage'
 import {
   bookFormSchema,
   defaultBookFormValues,
+  emptyBookFormLink,
   toBookMutationRequest,
+  type BookFormLink,
   type BookFormValues,
 } from './bookFormSchema'
 import { getDisplayCoverFailure, getDisplayCoverStatus } from './coverFailure'
@@ -45,6 +50,7 @@ type SaveResult = {
   id: string
   coverError?: string | null
   coverQueued?: boolean
+  publishError?: string | null
 }
 
 type SelectedAuthorDisplay = {
@@ -75,10 +81,10 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
   const [selectedAuthorDisplay, setSelectedAuthorDisplay] = useState<SelectedAuthorDisplay | null>(
     null,
   )
-  const [coverDialogOpen, setCoverDialogOpen] = useState(false)
-  const [coverDialogView, setCoverDialogView] = useState<'choice' | 'url'>('choice')
-  const [coverUrlInput, setCoverUrlInput] = useState('')
   const [coverPreviewOpen, setCoverPreviewOpen] = useState(false)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  /** Public snapshot choice; null keeps whatever the book has now. */
+  const [publishChoice, setPublishChoice] = useState<boolean | null>(null)
   const [htmlParseDialogOpen, setHtmlParseDialogOpen] = useState(false)
   const [draftCover, setDraftCover] = useState<DraftCoverState>(null)
   const [existingCoverChange, setExistingCoverChange] = useState<ExistingCoverChange>({
@@ -116,6 +122,9 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
     : authorName
   const primaryTitle = useWatch({ control: form.control, name: 'primaryTitle' })
   const currentChapterNumber = useWatch({ control: form.control, name: 'currentChapterNumber' })
+  const currentChapterLabel = useWatch({ control: form.control, name: 'currentChapterLabel' })
+  const alternativeTitles = useWatch({ control: form.control, name: 'alternativeTitles' })
+  const links = useWatch({ control: form.control, name: 'links' })
   const totalChapters = useWatch({ control: form.control, name: 'totalChapters' })
   const priority = useWatch({ control: form.control, name: 'priority' })
   const rating = useWatch({ control: form.control, name: 'rating' })
@@ -133,6 +142,19 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
     placeholderData: keepPreviousData,
     staleTime: 30_000,
   })
+  // The book's public listing lives in Manage; look it up by title and match the id.
+  const listingQuery = useQuery({
+    queryKey: ['manage-books', 'listing', id, bookQuery.data?.primaryTitle],
+    queryFn: () =>
+      api.getManagedBooks({
+        take: 25,
+        query: setFieldFilter('', 'title', bookQuery.data?.primaryTitle ?? ''),
+      }),
+    enabled: mode === 'edit' && !admin && Boolean(bookQuery.data?.primaryTitle),
+    staleTime: 30_000,
+  })
+  const listing = listingQuery.data?.data.find((item) => item.book.id === id)?.listing ?? null
+  const isListed = listing !== null
   const authorSearchPending =
     trimmedAuthorName !== debouncedAuthorSearch || authorSuggestionsQuery.isFetching
 
@@ -141,6 +163,7 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
     setTrackedRoute({ id, mode })
     setSelectedAuthorDisplay(null)
     setExistingCoverChange({ kind: 'keep' })
+    setPublishChoice(null)
   }
 
   useEffect(() => {
@@ -282,6 +305,18 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
     window.setTimeout(() => setAuthorSuggestionsOpen(false), 120)
   }
 
+  function setAlternativeTitles(value: string[]) {
+    form.setValue('alternativeTitles', value, { shouldDirty: true })
+  }
+
+  function setLinks(value: BookFormLink[]) {
+    form.setValue('links', value, { shouldDirty: true })
+  }
+
+  function updateLink(index: number, change: Partial<BookFormLink>) {
+    setLinks(links.map((link, position) => (position === index ? { ...link, ...change } : link)))
+  }
+
   function setSelectedGenreIds(value: string[]) {
     form.setValue('genreIds', value, { shouldDirty: true, shouldValidate: true })
   }
@@ -297,23 +332,11 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
     })
   }
 
-  function setIntegerFieldValue(field: 'currentChapterNumber' | 'priority', rawValue: string) {
+  function setIntegerFieldValue(field: 'currentChapterNumber', rawValue: string) {
     form.setValue(field, sanitizeIntegerInput(rawValue), {
       shouldDirty: true,
       shouldValidate: true,
     })
-  }
-
-  function openCoverDialog() {
-    setCoverDialogView('choice')
-    setCoverUrlInput(draftCover?.kind === 'url' ? draftCover.imageUrl : '')
-    setCoverDialogOpen(true)
-  }
-
-  function closeCoverDialog() {
-    setCoverDialogOpen(false)
-    setCoverDialogView('choice')
-    setCoverUrlInput('')
   }
 
   function storeDraftFile(file: File) {
@@ -324,14 +347,12 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
 
     setExistingCoverChange({ kind: 'keep' })
     replaceDraftCover({ kind: 'file', file, previewUrl: URL.createObjectURL(file) })
-    closeCoverDialog()
     toast.success('Cover ready. It will be saved with the book.')
   }
 
   function storeDraftUrl(imageUrl: string) {
     setExistingCoverChange({ kind: 'keep' })
     replaceDraftCover({ kind: 'url', imageUrl, previewUrl: imageUrl })
-    closeCoverDialog()
     toast.success('Cover URL ready. It will be saved with the book.')
   }
 
@@ -355,8 +376,11 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
     }
     if (selected.has('alternativeTitles')) {
       form.setValue(
-        'alternativeTitlesText',
-        mergeLines(form.getValues('alternativeTitlesText'), result.alternativeTitles),
+        'alternativeTitles',
+        mergeValues(
+          form.getValues('alternativeTitles').filter((title) => title.trim()),
+          result.alternativeTitles,
+        ),
         { shouldDirty: true, shouldValidate: true },
       )
     }
@@ -381,10 +405,13 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
       form.setValue('description', result.description, { shouldDirty: true, shouldValidate: true })
     }
     if (selected.has('canonicalUrl') && result.canonicalUrl) {
-      form.setValue('linksText', mergeLines(form.getValues('linksText'), [result.canonicalUrl]), {
-        shouldDirty: true,
-        shouldValidate: true,
-      })
+      const currentLinks = form.getValues('links')
+      if (!currentLinks.some((link) => sameUrl(link.url, result.canonicalUrl ?? ''))) {
+        form.setValue('links', [...currentLinks, emptyBookFormLink(result.canonicalUrl)], {
+          shouldDirty: true,
+          shouldValidate: true,
+        })
+      }
     }
     if (selected.has('coverUrl') && result.coverUrl) {
       setExistingCoverChange({ kind: 'keep' })
@@ -392,6 +419,41 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
     }
     toast.success(`Applied metadata from ${result.source}.`)
   }
+
+  /** Lists or unlists the book in Discover; returns an error message or null. */
+  async function applyPublishChoice(bookId: string, publish: boolean) {
+    try {
+      if (publish) {
+        await api.publishBook(bookId)
+      } else if (listing) {
+        await api.unlistPublishedBook(listing.id)
+      }
+      return null
+    } catch (error) {
+      return error instanceof HttpError
+        ? error.apiError.detail
+        : error instanceof Error
+          ? error.message
+          : 'Unknown error.'
+    }
+  }
+
+  const deleteMutation = useMutation({
+    mutationFn: () => {
+      if (!id) {
+        throw new Error('The book id is missing from the route.')
+      }
+      return api.deleteBook(id)
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['books'] })
+      toast.success('Book deleted.')
+      void navigate(bookListReturnTo, { replace: true })
+    },
+    onError: (error) => {
+      toast.error(error instanceof HttpError ? error.apiError.detail : 'Failed to delete the book.')
+    },
+  })
 
   const mutation = useMutation({
     mutationFn: async (values: BookFormValues): Promise<SaveResult> => {
@@ -427,6 +489,7 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
         return {
           id: created.id,
           coverQueued: draftCover?.kind === 'url' || pendingCoverUploadToken != null,
+          publishError: publishChoice ? await applyPublishChoice(created.id, true) : null,
         }
       }
 
@@ -451,10 +514,19 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
               : 'Failed to save cover.'
       }
 
-      return { id, coverError }
+      const publishError =
+        publishChoice !== null && publishChoice !== isListed
+          ? await applyPublishChoice(id, publishChoice)
+          : null
+      return { id, coverError, publishError }
     },
     onSuccess: async (response) => {
+      if (response.publishError) {
+        toast.warning(`Book saved, but the public snapshot failed: ${response.publishError}`)
+      }
       const invalidateQueries = Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['manage-books'] }),
+        queryClient.invalidateQueries({ queryKey: ['public-books'] }),
         queryClient.invalidateQueries({ queryKey: ['books'] }),
         queryClient.invalidateQueries({ queryKey: ['adminBooks'] }),
         queryClient.invalidateQueries({ queryKey: ['book', response.id] }),
@@ -499,10 +571,19 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
   const formReady = !isLoadingDictionaries && !isLoadingBook
 
   useEffect(() => {
-    if (formReady) {
-      form.setFocus('primaryTitle')
+    if (!formReady) {
+      return
     }
-  }, [form, formReady])
+    // Links like "Rate it" or "Add one" on the details page open the form at a field.
+    const target = location.hash ? document.getElementById(location.hash.slice(1)) : null
+    if (target) {
+      target.scrollIntoView({ block: 'center' })
+      target.querySelector<HTMLElement>('button, textarea, input')?.focus()
+      if (target instanceof HTMLTextAreaElement) target.focus()
+      return
+    }
+    form.setFocus('primaryTitle')
+  }, [form, formReady, location.hash])
   const currentCover = bookQuery.data?.cover
   const visibleCoverUrl =
     mode === 'create'
@@ -543,23 +624,35 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
             ? [{ text: 'Status: Will be removed on save' }]
             : [{ text: 'Status: Missing' }]
   const backHref = admin ? '/admin' : mode === 'edit' && id ? `/books/${id}` : '/books'
-  const pageDescription =
-    mode === 'create'
-      ? 'Start with the book identity and reading state. Optional library context can be added below.'
-      : 'Update metadata, reading state, artwork, and private library context in one workspace.'
 
   if (isLoadingDictionaries || isLoadingBook) {
     return (
-      <Surface className="p-6 text-ink-3" tone="muted">
+      <div className="rounded-panel border border-line bg-surface p-6 text-ink-3">
         Loading form...
-      </Surface>
+      </div>
     )
   }
+
+  const typeName = selectedType?.name ?? typesQuery.data?.data[0]?.name ?? 'Novel'
+  const statusTone = getStatusTone(selectedStatus?.name ?? '')
+  const lastLogged = getProgressHistoryWithDeltas(bookQuery.data?.progressHistory ?? [])[0]
+    ?.changedAt
+  const isDirty =
+    form.formState.isDirty ||
+    draftCover !== null ||
+    existingCoverChange.kind === 'remove' ||
+    (publishChoice !== null && publishChoice !== isListed)
+  const dirtyText = isDirty ? 'Unsaved changes' : mode === 'create' ? 'New book' : 'No changes yet'
+  const saveText = mutation.isPending
+    ? 'Saving…'
+    : mode === 'create'
+      ? 'Add to library'
+      : 'Save changes'
 
   return (
     <>
       <form
-        className="book-form-page mx-auto grid w-full max-w-7xl gap-5"
+        className="mx-auto flex w-full max-w-[1360px] flex-col gap-6"
         data-testid="book-form"
         noValidate
         onSubmit={(event) => void form.handleSubmit((values) => mutation.mutate(values))(event)}
@@ -576,50 +669,93 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
           <h1 className="m-0 font-display text-4xl leading-tight font-bold tracking-tight">
             {admin ? 'Admin edit' : mode === 'create' ? 'Add book' : 'Edit book'}
           </h1>
-          <p className="m-0 max-w-2xl text-ink-2">{pageDescription}</p>
         </div>
 
         {mode === 'create' && !admin ? (
-          <div className="flex flex-wrap items-center gap-3 rounded-panel border border-dashed border-line-focus bg-surface px-4 py-3.5">
-            <FileCode2 aria-hidden="true" className="size-5 shrink-0 text-ink-2" />
+          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-line-focus bg-surface px-4 py-3.5">
+            <Link2 aria-hidden="true" className="size-5 shrink-0 text-ink" />
             <div className="min-w-[240px] flex-1">
               <div className="font-semibold">Fill from a page</div>
               <div className="text-[13px] text-ink-3">
-                Paste a book page's HTML and pick which title, author, genres, tags, description and
-                cover to use.
+                Paste a book page&apos;s HTML (NovelUpdates and similar), then pick which title, alt
+                titles, author, genres, tags, description and cover to use.
               </div>
             </div>
-            <button
-              className={secondaryButtonClass}
-              type="button"
-              onClick={() => setHtmlParseDialogOpen(true)}
-            >
+            <Button variant="primary" onClick={() => setHtmlParseDialogOpen(true)}>
               Parse HTML
-            </button>
+            </Button>
           </div>
         ) : null}
 
-        <div className="book-form-layout">
-          <Surface className="book-form-section book-form-identity">
-            <FormSectionHeader
-              description="The fields used to identify and classify this book across the library."
-              index="01"
-              title="Book identity"
-            />
-            <div className="grid items-start gap-4 md:grid-cols-2">
-              <FormField error={errors.primaryTitle?.message} label="Primary title *">
+        <div className="flex flex-wrap items-start gap-8">
+          <div className="min-w-0 flex-[999_1_560px] rounded-panel border border-line bg-surface">
+            <FormSection title="Identity">
+              <Field error={errors.primaryTitle?.message} label="Title" required>
                 <input
                   aria-label="Primary title"
-                  className={inputClass}
+                  aria-invalid={errors.primaryTitle ? 'true' : undefined}
+                  className={cn(fieldClass, 'font-display text-lg font-semibold')}
                   {...form.register('primaryTitle')}
                 />
-              </FormField>
-              <FormField error={errors.authorName?.message} label="Author">
+              </Field>
+
+              <Field label="Alternative titles">
+                <div className="flex flex-col gap-1.5">
+                  {alternativeTitles.map((title, index) => (
+                    <div
+                      className="flex items-center gap-2 rounded-control border border-line bg-sunk py-1 pr-1 pl-3"
+                      key={index}
+                    >
+                      <input
+                        aria-label={`Alternative title ${index + 1}`}
+                        className="h-8 min-w-0 flex-1 border-0 bg-transparent text-ink outline-none"
+                        data-alt-title-index={index}
+                        value={title}
+                        onChange={(event) =>
+                          setAlternativeTitles(
+                            alternativeTitles.map((current, position) =>
+                              position === index ? event.target.value : current,
+                            ),
+                          )
+                        }
+                      />
+                      <button
+                        aria-label={`Remove alternative title ${title || index + 1}`}
+                        className={removeButtonClass}
+                        type="button"
+                        onClick={() =>
+                          setAlternativeTitles(
+                            alternativeTitles.filter((_, position) => position !== index),
+                          )
+                        }
+                      >
+                        <X aria-hidden="true" className="size-3.5" strokeWidth={2.2} />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    className={addRowButtonClass}
+                    type="button"
+                    onClick={() => {
+                      setAlternativeTitles([...alternativeTitles, ''])
+                      focusLater(`[data-alt-title-index="${alternativeTitles.length}"]`)
+                    }}
+                  >
+                    + Add alternative title
+                  </button>
+                </div>
+              </Field>
+
+              <Field
+                error={errors.authorName?.message}
+                hint="Picks from your existing authors as you type; new names are created on save."
+                label="Author"
+              >
                 <div className="relative">
                   <input
                     aria-label="Author"
                     autoComplete="off"
-                    className={`${inputClass} w-full`}
+                    className={fieldClass}
                     name="authorName"
                     value={authorInputValue}
                     onBlur={handleAuthorBlur}
@@ -635,10 +771,7 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
                     onFocus={() => setAuthorSuggestionsOpen(true)}
                   />
                   {authorSuggestionsOpen && trimmedAuthorName.length >= 2 ? (
-                    <div
-                      aria-busy={authorSearchPending}
-                      className="ui-popover absolute z-20 mt-1 max-h-64 w-full overflow-auto"
-                    >
+                    <div aria-busy={authorSearchPending} className={popoverClass}>
                       {authorSearchPending && !authorSuggestionsQuery.data?.length ? (
                         <div className="px-3 py-2 text-sm text-ink-3">Searching authors...</div>
                       ) : null}
@@ -646,7 +779,7 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
                         const matchedAlias = findMatchingAlias(author, authorName)
                         return (
                           <button
-                            className="grid w-full gap-0.5 px-3 py-2 text-left text-sm text-ink hover:bg-hover"
+                            className="grid w-full gap-0.5 rounded-control border-0 bg-transparent px-3 py-2 text-left text-sm text-ink hover:bg-hover"
                             key={author.id}
                             type="button"
                             onMouseDown={(event) => event.preventDefault()}
@@ -654,7 +787,7 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
                           >
                             <span className="flex items-center justify-between gap-2 font-medium">
                               <span>{formatAuthorDisplay(author.primaryName, matchedAlias)}</span>
-                              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-3">
+                              <span className="text-[10px] font-semibold tracking-[0.14em] text-ink-3 uppercase">
                                 {author.isPublic ? 'Public' : 'Private'}
                               </span>
                             </span>
@@ -674,53 +807,278 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
                     </div>
                   ) : null}
                 </div>
-              </FormField>
-              <FormField error={errors.contentTypeId?.message} label="Type *">
-                <select className={inputClass} {...form.register('contentTypeId')}>
-                  {typesQuery.data?.data.map((type) => (
-                    <option key={type.id} value={type.id}>
-                      {type.name}
-                    </option>
-                  ))}
-                </select>
-                <DescriptionHelp value={selectedType?.description} />
-              </FormField>
-              <FormField error={errors.statusId?.message} label="Status *">
-                <select className={inputClass} {...form.register('statusId')}>
-                  {statusesQuery.data?.data.map((status) => (
-                    <option key={status.id} value={status.id}>
-                      {status.name}
-                    </option>
-                  ))}
-                </select>
-                <DescriptionHelp value={selectedStatus?.description} />
-              </FormField>
-            </div>
-          </Surface>
+              </Field>
 
-          <aside className="book-form-rail" data-testid="book-form-rail">
-            <Surface className="book-form-cover-panel" data-testid="book-cover-editor">
+              <div className="flex flex-wrap gap-[18px]">
+                <ChoiceGroup
+                  className="flex-[1_1_300px]"
+                  error={errors.contentTypeId?.message}
+                  hint={selectedType?.description}
+                  label="Type"
+                  options={(typesQuery.data?.data ?? []).map((type) => ({
+                    id: type.id,
+                    label: type.name,
+                  }))}
+                  value={selectedTypeId}
+                  onChange={(value) =>
+                    form.setValue('contentTypeId', value, {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    })
+                  }
+                />
+                <ChoiceGroup
+                  className="flex-[1_1_360px]"
+                  error={errors.statusId?.message}
+                  hint={selectedStatus?.description}
+                  label="Status"
+                  options={(statusesQuery.data?.data ?? []).map((status) => ({
+                    id: status.id,
+                    label: status.name,
+                    dotClass: statusToneClasses[getStatusTone(status.name)].bar,
+                  }))}
+                  value={selectedStatusId}
+                  onChange={(value) =>
+                    form.setValue('statusId', value, { shouldDirty: true, shouldValidate: true })
+                  }
+                />
+              </div>
+            </FormSection>
+
+            <FormSection
+              aside={
+                lastLogged
+                  ? `Last logged ${formatShortDate(lastLogged)} · history keeps every change`
+                  : 'History keeps every change'
+              }
+              title="Progress"
+            >
+              <div className="grid gap-3.5 md:grid-cols-3">
+                <Field
+                  error={errors.currentChapterNumber?.message}
+                  hint="Every finished chapter counts, so 32.1 and 32.2 are two."
+                  label="Chapters read"
+                  required
+                >
+                  <input
+                    aria-label="Current chapter"
+                    aria-invalid={errors.currentChapterNumber ? 'true' : undefined}
+                    className={cn(fieldClass, 'tabular-nums')}
+                    inputMode="numeric"
+                    name="currentChapterNumber"
+                    value={currentChapterNumber}
+                    onChange={(event) =>
+                      setIntegerFieldValue('currentChapterNumber', event.target.value)
+                    }
+                  />
+                </Field>
+                <Field
+                  error={errors.currentChapterLabel?.message}
+                  hint="The name of the last chapter you finished, as the source writes it."
+                  label="Label in source"
+                >
+                  <input
+                    aria-label="Label in source"
+                    className={fieldClass}
+                    placeholder="v5c34, 32.2, ex4"
+                    {...form.register('currentChapterLabel')}
+                  />
+                </Field>
+                <Field
+                  error={errors.totalChapters?.message}
+                  hint="Leave empty while the series is still ongoing."
+                  label="Total chapters"
+                >
+                  <input
+                    aria-label="Total chapters"
+                    aria-invalid={errors.totalChapters ? 'true' : undefined}
+                    className={cn(fieldClass, 'tabular-nums')}
+                    inputMode="decimal"
+                    name="totalChapters"
+                    placeholder="Unknown"
+                    value={totalChapters}
+                    onBlur={() => void form.trigger('totalChapters')}
+                    onChange={(event) => setNumericFieldValue('totalChapters', event.target.value)}
+                  />
+                </Field>
+              </div>
+              <ProgressPreview
+                chapterLabel={currentChapterLabel}
+                chaptersRead={currentChapterNumber}
+                finished={statusTone === 'finished'}
+                tone={statusTone}
+                total={totalChapters}
+              />
+            </FormSection>
+
+            <section
+              aria-label="Your take"
+              className="flex flex-wrap gap-6 border-b border-line p-6"
+            >
+              <fieldset className="m-0 min-w-0 flex-[2_1_380px] border-0 p-0" id="rating">
+                <legend className="mb-2 p-0 font-medium">Rating</legend>
+                <div className="flex flex-wrap gap-1" role="group" aria-label="Rating">
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((value) => (
+                    <ScaleButton
+                      key={value}
+                      label={`Set rating to ${value}/10`}
+                      pressed={rating === String(value)}
+                      value={value}
+                      onClick={() =>
+                        form.setValue('rating', rating === String(value) ? '' : String(value), {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        })
+                      }
+                    />
+                  ))}
+                  <button
+                    className="h-10 rounded-control border-0 bg-transparent px-2.5 text-ink-3 hover:text-ink disabled:opacity-50"
+                    disabled={!rating}
+                    type="button"
+                    onClick={() =>
+                      form.setValue('rating', '', { shouldDirty: true, shouldValidate: true })
+                    }
+                  >
+                    Clear
+                  </button>
+                </div>
+                <FieldError message={errors.rating?.message} />
+              </fieldset>
+              <fieldset className="m-0 min-w-0 flex-[1_1_240px] border-0 p-0">
+                <legend className="mb-2 p-0 font-medium">
+                  Priority{' '}
+                  <span className="text-[13px] font-normal text-ink-3">· 1 is next up</span>
+                </legend>
+                <div className="flex gap-1" role="group" aria-label="Priority">
+                  {[1, 2, 3, 4, 5].map((value) => (
+                    <ScaleButton
+                      key={value}
+                      label={`Set priority to ${value}`}
+                      pressed={priority === String(value)}
+                      value={value}
+                      onClick={() =>
+                        form.setValue('priority', priority === String(value) ? '' : String(value), {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        })
+                      }
+                    />
+                  ))}
+                </div>
+                <FieldError message={errors.priority?.message} />
+              </fieldset>
+            </section>
+
+            <FormSection title="Genres & tags">
+              <Field count={selectedGenreIds.length} label="Genres">
+                <GenreChipSelect
+                  options={genresQuery.data?.data ?? []}
+                  selectedIds={selectedGenreIds}
+                  onChange={setSelectedGenreIds}
+                />
+              </Field>
+              <Field
+                count={selectedTags.length}
+                countNote="◆ global tag managed by admin"
+                error={errors.tagsText?.message}
+                label="Tags"
+              >
+                <TagChipSelect selected={selectedTags} onChange={setSelectedTags} />
+              </Field>
+            </FormSection>
+
+            <FormSection last title="Details">
+              <Field error={errors.description?.message} label="Description">
+                <textarea
+                  aria-label="Description"
+                  className={textareaClass}
+                  rows={4}
+                  {...form.register('description')}
+                />
+              </Field>
+              <Field label="Links">
+                <div className="flex flex-col gap-2">
+                  {links.map((link, index) => (
+                    <div
+                      className="grid grid-cols-[minmax(0,1fr)_minmax(0,2.4fr)_40px] items-center gap-2"
+                      key={index}
+                    >
+                      <input
+                        aria-label={`Link ${index + 1} label`}
+                        className={fieldClass}
+                        placeholder="Label"
+                        value={link.label}
+                        onChange={(event) => updateLink(index, { label: event.target.value })}
+                      />
+                      <input
+                        aria-label={`Link ${index + 1} URL`}
+                        className={cn(fieldClass, 'font-mono text-[13px]')}
+                        data-link-index={index}
+                        inputMode="url"
+                        placeholder="https://"
+                        value={link.url}
+                        onChange={(event) => updateLink(index, { url: event.target.value })}
+                      />
+                      <button
+                        aria-label={`Remove link ${link.label || link.url || index + 1}`}
+                        className={cn(removeButtonClass, 'size-10')}
+                        type="button"
+                        onClick={() => setLinks(links.filter((_, position) => position !== index))}
+                      >
+                        <X aria-hidden="true" className="size-4" />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    className={addRowButtonClass}
+                    type="button"
+                    onClick={() => {
+                      setLinks([...links, emptyBookFormLink()])
+                      focusLater(`[data-link-index="${links.length}"]`)
+                    }}
+                  >
+                    + Add link
+                  </button>
+                </div>
+              </Field>
+              <Field error={errors.notes?.message} label="Private notes">
+                <textarea
+                  aria-label="Private notes"
+                  className={textareaClass}
+                  id="notes"
+                  placeholder="Only you see these."
+                  rows={3}
+                  {...form.register('notes')}
+                />
+              </Field>
+            </FormSection>
+          </div>
+
+          <aside
+            className="flex w-full flex-[1_1_300px] flex-col gap-4 lg:max-w-[380px]"
+            data-testid="book-form-rail"
+          >
+            <div
+              className="flex flex-col gap-3 rounded-panel border border-line bg-surface p-4"
+              data-testid="book-cover-editor"
+            >
+              <span className="font-medium">Cover</span>
               <BookCoverArtwork
-                className="book-form-cover-artwork"
+                className="w-full rounded-lg"
                 cover={mode === 'edit' ? effectiveCurrentCover : null}
-                emptyLabel="Add cover"
-                hint={
-                  mode === 'create'
-                    ? 'Upload or paste an image URL.'
-                    : 'Upload or replace from a URL.'
-                }
                 imageUrl={visibleCoverUrl}
-                interactive
+                interactive={Boolean(visibleCoverUrl)}
+                placeholder={
+                  <TypeCoverPlaceholder
+                    contentType={typeName}
+                    title={primaryTitle || 'New book'}
+                    titleClassName="bottom-4 text-[26px]"
+                  />
+                }
                 removeLabel="Remove cover"
                 title={primaryTitle || 'Book cover'}
-                onClick={() => {
-                  if (visibleCoverUrl) {
-                    setCoverPreviewOpen(true)
-                    return
-                  }
-
-                  openCoverDialog()
-                }}
+                onClick={() => setCoverPreviewOpen(true)}
                 onRemove={() => {
                   if (mode === 'create') {
                     replaceDraftCover(null)
@@ -738,196 +1096,79 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
                   toast.success('Cover will be removed after saving the book.')
                 }}
               />
-              <div className="book-form-cover-meta">
-                {coverInfo.map((item) => (
-                  <p
-                    className={`${item.text === displayCoverFailure ? 'text-[var(--qs-danger)]' : ''} ${item.truncate ? 'truncate' : ''}`}
-                    key={item.text}
-                    title={item.truncate ? item.text : undefined}
-                  >
-                    {item.text}
-                  </p>
-                ))}
-              </div>
-            </Surface>
+              <CoverDropzone
+                info={coverInfo}
+                infoErrorText={displayCoverFailure}
+                onFile={storeDraftFile}
+                onUrl={storeDraftUrl}
+              />
+            </div>
 
-            <Surface as="div" className="book-form-actions" tone="elevated">
-              <div className="book-form-actions-copy">
-                <div className="text-sm font-semibold text-[var(--qs-text)]">
-                  {mode === 'create' ? 'Save book' : 'Save changes'}
-                </div>
+            {!admin ? (
+              <div className="flex flex-col gap-2.5 rounded-panel border border-line bg-surface p-4">
+                <span className="font-medium">Public snapshot</span>
+                <label className="flex items-start gap-2.5 text-ink-2">
+                  <input
+                    checked={publishChoice ?? isListed}
+                    className="mt-0.5 size-[18px] shrink-0"
+                    disabled={mode === 'edit' && listingQuery.isPending}
+                    type="checkbox"
+                    onChange={(event) => setPublishChoice(event.target.checked)}
+                  />
+                  <span>
+                    Share a copy in Discover. Your progress, rating and notes stay private.
+                    {listing ? (
+                      <span className="mt-1 block text-xs text-ink-3">
+                        Listed since {formatShortDate(listing.snapshotAt)}. Refresh the copy in
+                        Manage after bigger edits.
+                      </span>
+                    ) : null}
+                  </span>
+                </label>
               </div>
-              <div className="book-form-action-buttons">
-                <Link
-                  className={secondaryButtonClass}
-                  state={admin ? undefined : { bookListReturnTo }}
-                  to={backHref}
+            ) : null}
+
+            {mode === 'edit' && !admin ? (
+              <div className="flex flex-col items-start gap-2.5 rounded-panel border border-danger-line p-4">
+                <span className="font-medium text-danger-ink">Delete book</span>
+                <span className="text-[13px] text-ink-3">
+                  Removes the book, its progress history, files and cover.
+                </span>
+                <Button
+                  disabled={deleteMutation.isPending}
+                  size="sm"
+                  variant="danger"
+                  onClick={() => setDeleteConfirmOpen(true)}
                 >
-                  <ArrowLeft className="h-4 w-4" />
-                  Back
-                </Link>
-                <button className={buttonClass} disabled={mutation.isPending} type="submit">
-                  <Save className="h-4 w-4" />
-                  {mutation.isPending ? 'Saving...' : 'Save'}
-                </button>
+                  Delete…
+                </Button>
               </div>
-            </Surface>
+            ) : null}
           </aside>
+        </div>
 
-          <Surface className="book-form-section book-form-reading">
-            <FormSectionHeader
-              description="Track the current position and the signals you use to plan what to read next."
-              index="02"
-              title="Reading state"
+        <div className="sticky bottom-[76px] z-20 -mx-4 flex flex-wrap items-center gap-3 border-t border-line bg-sunk/95 px-4 py-3.5 backdrop-blur-md md:bottom-0 md:-mx-8 md:px-8">
+          <span className="inline-flex items-center gap-2 text-ink-2" role="status">
+            <span
+              aria-hidden="true"
+              className={cn('size-2 rounded-full', isDirty ? 'bg-accent' : 'bg-line-strong')}
             />
-            <div className="grid gap-6">
-              <div className="book-form-field-group">
-                <div className="book-form-field-group-heading">
-                  <h3>Progress</h3>
-                </div>
-                <div className="grid gap-4 md:grid-cols-3">
-                  <FormField error={errors.currentChapterNumber?.message} label="Chapters read *">
-                    <input
-                      aria-label="Current chapter"
-                      aria-invalid={errors.currentChapterNumber ? 'true' : undefined}
-                      className={inputClass}
-                      inputMode="numeric"
-                      name="currentChapterNumber"
-                      value={currentChapterNumber}
-                      onChange={(event) =>
-                        setIntegerFieldValue('currentChapterNumber', event.target.value)
-                      }
-                    />
-                  </FormField>
-                  <FormField error={errors.currentChapterLabel?.message} label="Label in source">
-                    <input className={inputClass} {...form.register('currentChapterLabel')} />
-                  </FormField>
-                  <FormField error={errors.totalChapters?.message} label="Total chapters">
-                    <input
-                      aria-label="Total chapters"
-                      aria-invalid={errors.totalChapters ? 'true' : undefined}
-                      className={inputClass}
-                      inputMode="decimal"
-                      name="totalChapters"
-                      value={totalChapters}
-                      onBlur={() => void form.trigger('totalChapters')}
-                      onChange={(event) =>
-                        setNumericFieldValue('totalChapters', event.target.value)
-                      }
-                    />
-                  </FormField>
-                </div>
-              </div>
-
-              <div className="book-form-field-group">
-                <div className="book-form-field-group-heading">
-                  <h3>Personal signal</h3>
-                </div>
-                <div className="grid items-start gap-4 lg:grid-cols-[minmax(10rem,0.35fr)_minmax(0,1fr)]">
-                  <FormField error={errors.priority?.message} label="Priority 1-5">
-                    <input
-                      aria-label="Priority 1-5"
-                      aria-invalid={errors.priority ? 'true' : undefined}
-                      className={inputClass}
-                      inputMode="numeric"
-                      name="priority"
-                      value={priority}
-                      onBlur={() => void form.trigger('priority')}
-                      onChange={(event) => setIntegerFieldValue('priority', event.target.value)}
-                    />
-                  </FormField>
-                  <FormField error={errors.rating?.message} label="Rating">
-                    <RatingStars
-                      value={rating}
-                      onChange={(value) =>
-                        form.setValue('rating', value, { shouldDirty: true, shouldValidate: true })
-                      }
-                    />
-                  </FormField>
-                </div>
-              </div>
-
-              <div className="grid items-start gap-4 md:grid-cols-2">
-                <FormField label="Genres">
-                  <GenreChipSelect
-                    options={genresQuery.data?.data ?? []}
-                    selectedIds={selectedGenreIds}
-                    onChange={setSelectedGenreIds}
-                  />
-                </FormField>
-                <FormField error={errors.tagsText?.message} label="Tags">
-                  <TagChipSelect selected={selectedTags} onChange={setSelectedTags} />
-                </FormField>
-              </div>
-            </div>
-          </Surface>
-
-          <Surface className="book-form-section book-form-details">
-            <FormSectionHeader
-              description="Long-form context and reference data that enrich the record without blocking creation."
-              index="03"
-              title="Library details"
-            />
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="md:col-span-2">
-                <FormField error={errors.description?.message} label="Description">
-                  <textarea
-                    aria-label="Description"
-                    className={`${inputClass} book-form-textarea--description resize-y`}
-                    {...form.register('description')}
-                  />
-                </FormField>
-              </div>
-              <FormField error={errors.alternativeTitlesText?.message} label="Alternative titles">
-                <textarea
-                  aria-label="Alternative titles"
-                  className={`${inputClass} book-form-textarea--list resize-y`}
-                  placeholder="One title per line"
-                  {...form.register('alternativeTitlesText')}
-                />
-              </FormField>
-              <FormField error={errors.linksText?.message} label="Links">
-                <textarea
-                  aria-label="Links"
-                  className={`${inputClass} book-form-textarea--list resize-y`}
-                  placeholder="One URL per line"
-                  {...form.register('linksText')}
-                />
-              </FormField>
-              <div className="md:col-span-2">
-                <FormField error={errors.notes?.message} label="Private notes">
-                  <textarea
-                    className={`${inputClass} book-form-textarea--notes resize-y`}
-                    {...form.register('notes')}
-                  />
-                </FormField>
-              </div>
-            </div>
-          </Surface>
+            {dirtyText}
+          </span>
+          <span className="flex-1" />
+          <Link
+            className={buttonStyles({ variant: 'outline' })}
+            state={admin ? undefined : { bookListReturnTo }}
+            to={backHref}
+          >
+            Cancel
+          </Link>
+          <Button disabled={mutation.isPending} type="submit" variant="primary">
+            {saveText}
+          </Button>
         </div>
       </form>
 
-      <CoverSourceDialog
-        mode={mode}
-        open={coverDialogOpen}
-        setUrlPending={mutation.isPending}
-        uploadPending={mutation.isPending}
-        urlInput={coverUrlInput}
-        view={coverDialogView}
-        onBackToChoice={() => setCoverDialogView('choice')}
-        onClose={closeCoverDialog}
-        onOpenUrl={() => setCoverDialogView('url')}
-        onUpload={storeDraftFile}
-        onUrlChange={setCoverUrlInput}
-        onUrlSubmit={() => {
-          const trimmed = coverUrlInput.trim()
-          if (!trimmed) {
-            return
-          }
-
-          storeDraftUrl(trimmed)
-        }}
-      />
       {mode === 'create' && !admin ? (
         <BookHtmlParseDialog
           currentValues={form.getValues()}
@@ -944,28 +1185,386 @@ export function BookFormPage({ mode, admin = false }: BookFormPageProps) {
         title={primaryTitle || 'Book cover'}
         onClose={() => setCoverPreviewOpen(false)}
       />
+      <Dialog
+        dismissible={!deleteMutation.isPending}
+        footer={
+          <>
+            <span className="flex-1" />
+            <Button
+              disabled={deleteMutation.isPending}
+              variant="outline"
+              onClick={() => setDeleteConfirmOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              disabled={deleteMutation.isPending}
+              variant="danger"
+              onClick={() => deleteMutation.mutate()}
+            >
+              {deleteMutation.isPending ? 'Deleting…' : 'Delete'}
+            </Button>
+          </>
+        }
+        open={deleteConfirmOpen}
+        title="Delete book"
+        widthClassName="max-w-md"
+        onClose={() => setDeleteConfirmOpen(false)}
+      >
+        <p className="m-0 px-6 py-4 leading-relaxed text-ink-2">
+          Delete <strong className="font-semibold text-ink">{primaryTitle}</strong>? Its reading
+          history, EPUB files and cover go too. This cannot be undone.
+        </p>
+      </Dialog>
     </>
   )
 }
 
-function FormSectionHeader({
-  description,
-  index,
+const fieldClass =
+  'h-11 w-full rounded-control border border-line-strong bg-ground px-3 text-[15px] text-ink outline-none placeholder:text-ink-3 focus:border-ink focus:ring-[3px] focus:ring-ink/15 aria-[invalid=true]:border-danger'
+
+const textareaClass =
+  'w-full resize-y rounded-control border border-line-strong bg-ground px-3 py-2.5 text-[15px] leading-relaxed text-ink outline-none placeholder:text-ink-3 focus:border-ink focus:ring-[3px] focus:ring-ink/15'
+
+const removeButtonClass =
+  'flex size-8 shrink-0 items-center justify-center rounded-pill border-0 bg-transparent text-ink-3 hover:bg-hover hover:text-ink'
+
+const addRowButtonClass =
+  'h-9 self-start rounded-control border border-dashed border-line-strong bg-transparent px-3 text-ink-2 hover:border-line-focus hover:text-ink'
+
+const popoverClass =
+  'absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-field border border-line-strong bg-raised p-1 shadow-popover'
+
+/** Focuses an element rendered by the next state update (a newly added row). */
+function focusLater(selector: string) {
+  window.setTimeout(() => {
+    document.querySelector<HTMLElement>(selector)?.focus()
+  }, 0)
+}
+
+function FormSection({
   title,
+  aside,
+  last = false,
+  children,
 }: {
-  description: string
-  index: string
   title: string
+  aside?: string | undefined
+  last?: boolean
+  children: ReactNode
 }) {
   return (
-    <header className="book-form-section-header">
-      <div className="min-w-0">
-        <div className="book-form-section-index">{index}</div>
-        <h2 className="book-form-section-title">{title}</h2>
-        <p className="book-form-section-description">{description}</p>
+    <section className={cn('flex flex-col gap-[18px] p-6', !last && 'border-b border-line')}>
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <h2 className="m-0 text-base font-semibold">{title}</h2>
+        {aside ? <span className="text-[13px] text-ink-3">{aside}</span> : null}
       </div>
-    </header>
+      {children}
+    </section>
   )
+}
+
+function Field({
+  label,
+  required = false,
+  hint,
+  error,
+  count,
+  countNote,
+  children,
+}: {
+  label: string
+  required?: boolean
+  hint?: string | null | undefined
+  error?: string | undefined
+  count?: number | undefined
+  countNote?: string | undefined
+  children: ReactNode
+}) {
+  return (
+    <div className="flex min-w-0 flex-col gap-1.5">
+      <span className="font-medium">
+        {label}
+        {required ? (
+          <span aria-hidden="true" className="text-ink">
+            {' '}
+            *
+          </span>
+        ) : null}
+        {count !== undefined ? (
+          <span className="text-[13px] font-normal text-ink-3">
+            {' '}
+            · {count}
+            {countNote ? ` · ${countNote}` : null}
+          </span>
+        ) : null}
+      </span>
+      {children}
+      {hint ? <span className="text-xs text-ink-3">{hint}</span> : null}
+      <FieldError message={error} />
+    </div>
+  )
+}
+
+function FieldError({ message }: { message?: string | undefined }) {
+  if (!message) return null
+  return (
+    <span aria-live="polite" className="text-[13px] text-danger-ink" role="alert">
+      {message}
+    </span>
+  )
+}
+
+function ChoiceGroup({
+  label,
+  options,
+  value,
+  hint,
+  error,
+  className,
+  onChange,
+}: {
+  label: string
+  options: { id: string; label: string; dotClass?: string }[]
+  value: string
+  hint?: string | null | undefined
+  error?: string | undefined
+  className?: string
+  onChange: (value: string) => void
+}) {
+  return (
+    <fieldset className={cn('m-0 flex min-w-0 flex-col gap-1.5 border-0 p-0', className)}>
+      <legend className="mb-1.5 p-0 font-medium">{label}</legend>
+      <div className="flex flex-wrap gap-1.5">
+        {options.map((option) => {
+          const pressed = option.id === value
+          return (
+            <button
+              aria-pressed={pressed}
+              className={cn(
+                'inline-flex h-10 items-center gap-2 rounded-control border px-3.5 text-ink',
+                pressed
+                  ? 'border-line-focus bg-selected font-semibold'
+                  : 'border-line-strong bg-transparent font-medium hover:bg-hover',
+              )}
+              key={option.id}
+              type="button"
+              onClick={() => onChange(option.id)}
+            >
+              {option.dotClass ? (
+                <span aria-hidden="true" className={cn('size-2 rounded-full', option.dotClass)} />
+              ) : null}
+              {option.label}
+            </button>
+          )
+        })}
+      </div>
+      {hint ? <span className="text-xs text-ink-3">{hint}</span> : null}
+      <FieldError message={error} />
+    </fieldset>
+  )
+}
+
+function ScaleButton({
+  value,
+  label,
+  pressed,
+  onClick,
+}: {
+  value: number
+  label: string
+  pressed: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      aria-label={label}
+      aria-pressed={pressed}
+      className={cn(
+        'size-10 rounded-control border font-semibold tabular-nums',
+        pressed
+          ? 'border-accent bg-accent text-accent-ink'
+          : 'border-line-strong bg-transparent text-ink hover:bg-hover',
+      )}
+      title={label}
+      type="button"
+      onClick={onClick}
+    >
+      {value}
+    </button>
+  )
+}
+
+/** "In library" preview: how the progress will read in the list. */
+function ProgressPreview({
+  chaptersRead,
+  chapterLabel,
+  total,
+  finished,
+  tone,
+}: {
+  chaptersRead: string
+  chapterLabel: string | undefined
+  total: string
+  finished: boolean
+  tone: ReturnType<typeof getStatusTone>
+}) {
+  const read = Number(chaptersRead) || 0
+  const totalNumber = Number(total) || 0
+  const percent = finished ? 100 : totalNumber ? Math.min(100, (read / totalNumber) * 100) : null
+  const format = (value: number) => value.toLocaleString('en-US')
+  const trimmedLabel = chapterLabel?.trim() ?? ''
+  const label =
+    trimmedLabel !== '' ? trimmedLabel : chaptersRead.trim() !== '' ? chaptersRead.trim() : '—'
+  const count = finished
+    ? `${format(read)} chapters`
+    : totalNumber
+      ? `${format(read)} / ${format(totalNumber)} · ${Math.round(percent ?? 0)}%`
+      : `${format(read)} read · total unknown`
+
+  return (
+    <div className="flex items-center gap-4 rounded-field border border-line bg-sunk px-3.5 py-3">
+      <span className="shrink-0 text-xs font-semibold tracking-[0.05em] text-ink-3 uppercase">
+        In library
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline gap-2 tabular-nums">
+          <span className={cn('font-semibold', finished && 'text-status-finished-ink')}>
+            {finished ? 'Finished' : `Ch. ${label}`}
+          </span>
+          <span className="truncate text-[13px] text-ink-3">{count}</span>
+        </div>
+        <div
+          aria-hidden="true"
+          className={cn(
+            'mt-1.5 h-1 overflow-hidden rounded-full',
+            percent == null
+              ? 'bg-[repeating-linear-gradient(90deg,var(--color-line)_0_6px,transparent_6px_10px)]'
+              : 'bg-line',
+          )}
+        >
+          {percent != null ? (
+            <div
+              className={cn('h-full rounded-full', statusToneClasses[tone].bar)}
+              style={{ width: `${percent}%` }}
+            />
+          ) : null}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** Drop an image, choose a file or paste a URL; the cover is saved with the book. */
+function CoverDropzone({
+  info,
+  infoErrorText,
+  onFile,
+  onUrl,
+}: {
+  info: CoverInfoItem[]
+  infoErrorText: string | null | undefined
+  onFile: (file: File) => void
+  onUrl: (url: string) => void
+}) {
+  const [dragging, setDragging] = useState(false)
+  const [urlOpen, setUrlOpen] = useState(false)
+  const [url, setUrl] = useState('')
+
+  function submitUrl() {
+    const trimmed = url.trim()
+    if (!trimmed) return
+    onUrl(trimmed)
+    setUrl('')
+    setUrlOpen(false)
+  }
+
+  return (
+    <div
+      className={cn(
+        'flex flex-col items-center gap-1.5 rounded-lg border border-dashed p-3.5 text-center',
+        dragging ? 'border-line-focus bg-hover' : 'border-line-strong',
+      )}
+      onDragLeave={() => setDragging(false)}
+      onDragOver={(event) => {
+        event.preventDefault()
+        setDragging(true)
+      }}
+      onDrop={(event) => {
+        event.preventDefault()
+        setDragging(false)
+        const file = event.dataTransfer.files[0]
+        if (file) onFile(file)
+      }}
+    >
+      <Upload aria-hidden="true" className="size-5 text-ink-2" />
+      <span>
+        Drop an image,{' '}
+        <label className="cursor-pointer text-ink underline underline-offset-[3px]">
+          choose a file
+          <input
+            accept="image/jpeg,image/png,image/webp"
+            aria-label="Choose a cover file"
+            className="sr-only"
+            type="file"
+            onChange={(event) => {
+              const file = event.target.files?.[0]
+              if (file) {
+                onFile(file)
+                event.target.value = ''
+              }
+            }}
+          />
+        </label>{' '}
+        or{' '}
+        <button
+          className="border-0 bg-transparent p-0 text-ink underline underline-offset-[3px]"
+          type="button"
+          onClick={() => setUrlOpen(!urlOpen)}
+        >
+          paste a URL
+        </button>
+      </span>
+      {urlOpen ? (
+        <div className="mt-1 flex w-full gap-2">
+          <input
+            aria-label="Cover image URL"
+            className={cn(fieldClass, 'h-10 text-sm')}
+            placeholder="https://example.com/cover.jpg"
+            value={url}
+            onChange={(event) => setUrl(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault()
+                submitUrl()
+              }
+            }}
+          />
+          <Button disabled={!url.trim()} size="sm" variant="secondary" onClick={submitUrl}>
+            Use URL
+          </Button>
+        </div>
+      ) : null}
+      <span className="text-xs text-ink-3">JPG, PNG or WebP · the link is also added to Links</span>
+      {info.map((item) => (
+        <span
+          className={cn(
+            'max-w-full text-xs',
+            item.text === infoErrorText ? 'text-danger-ink' : 'text-ink-3',
+            item.truncate && 'truncate',
+          )}
+          key={item.text}
+          title={item.truncate ? item.text : undefined}
+        >
+          {item.text}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+function formatShortDate(value: string) {
+  return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(new Date(value))
 }
 
 function normalizeAuthorName(value: string) {
@@ -1020,7 +1619,8 @@ function GenreChipSelect({
   return (
     <ChipBox
       input={input}
-      placeholder="Start typing a genre"
+      ariaLabel="Add genre"
+      placeholder="Add genre…"
       selected={selected.map((option) => ({ key: option.id, label: option.name }))}
       suggestions={suggestions.map((option) => ({
         key: option.id,
@@ -1056,7 +1656,12 @@ function TagChipSelect({
   const normalizedSelected = selected.map((tag) => tag.toLocaleLowerCase())
   const suggestions = (tagSuggestionsQuery.data ?? [])
     .filter((tag) => !normalizedSelected.includes(tag.name.toLocaleLowerCase()))
-    .map((tag) => ({ key: tag.name, label: tag.name, description: tag.description }))
+    .map((tag) => ({
+      key: tag.name,
+      label: tag.name,
+      description: tag.description,
+      global: tag.isGlobal,
+    }))
 
   function addTag(value: string) {
     const tag = value.trim()
@@ -1072,7 +1677,10 @@ function TagChipSelect({
   return (
     <ChipBox
       input={input}
-      placeholder="Start typing a tag"
+      ariaLabel="Add tag"
+      collapseAfter={12}
+      placeholder="Add tag…"
+      variant="tag"
       selected={selected.map((tag) => ({ key: tag, label: tag }))}
       suggestions={suggestions}
       onCreate={addTag}
@@ -1085,6 +1693,7 @@ function TagChipSelect({
 }
 
 function ChipBox({
+  ariaLabel,
   input,
   placeholder,
   selected,
@@ -1094,11 +1703,23 @@ function ChipBox({
   onRemove,
   onCreate,
   suggestionsPending = false,
+  variant = 'genre',
+  collapseAfter,
 }: {
+  ariaLabel: string
   input: string
   placeholder: string
   selected: { key: string; label: string }[]
-  suggestions: { key: string; label: string; description?: string | null | undefined }[]
+  suggestions: {
+    key: string
+    label: string
+    description?: string | null | undefined
+    global?: boolean | undefined
+  }[]
+  /** Genres are solid chips, tags lighter ones (as on the details page). */
+  variant?: 'genre' | 'tag'
+  /** Shows only this many chips until "Show all N". */
+  collapseAfter?: number | undefined
   onInputChange: (value: string) => void
   onPick: (key: string) => void
   onRemove: (key: string) => void
@@ -1113,6 +1734,9 @@ function ChipBox({
     !suggestions.some((item) => item.label.toLocaleLowerCase() === trimmed.toLocaleLowerCase()),
   )
   const [activeIndex, setActiveIndex] = useState(0)
+  const [showAll, setShowAll] = useState(false)
+  const collapsed = collapseAfter !== undefined && !showAll && selected.length > collapseAfter
+  const visibleChips = collapsed ? selected.slice(0, collapseAfter) : selected
   const activeIndexResetKey = JSON.stringify([
     input,
     suggestions.map((item) => item.key),
@@ -1166,13 +1790,21 @@ function ChipBox({
 
   return (
     <div className="relative">
-      <div className="ui-control flex min-h-12 flex-wrap items-center gap-2 py-2 focus-within:border-[var(--qs-accent)]">
-        {selected.map((item) => (
-          <span className="ui-badge inline-flex items-center gap-1" key={item.key}>
+      <div className="flex min-h-11 flex-wrap items-center gap-1.5 rounded-control border border-line-strong bg-ground p-1.5 focus-within:border-ink">
+        {visibleChips.map((item) => (
+          <span
+            className={cn(
+              'inline-flex h-[30px] items-center gap-1 rounded-pill border pr-1 pl-2.5',
+              variant === 'genre'
+                ? 'border-line-strong bg-raised'
+                : 'border-line bg-surface text-[13px]',
+            )}
+            key={item.key}
+          >
             {item.label}
             <button
               aria-label={`Remove ${item.label}`}
-              className="rounded-full border border-white/20 p-0.5 hover:bg-white/15"
+              className="flex size-[22px] items-center justify-center rounded border-0 bg-transparent text-ink-3 hover:text-ink"
               type="button"
               onMouseDown={(event) => {
                 event.preventDefault()
@@ -1184,10 +1816,19 @@ function ChipBox({
                 onRemove(item.key)
               }}
             >
-              <X className="h-3 w-3" />
+              <X aria-hidden="true" className="size-3" strokeWidth={2.4} />
             </button>
           </span>
         ))}
+        {collapseAfter !== undefined && selected.length > collapseAfter ? (
+          <button
+            className="h-[30px] rounded-pill border-0 bg-transparent px-2.5 font-medium text-ink hover:underline"
+            type="button"
+            onClick={() => setShowAll(!showAll)}
+          >
+            {showAll ? 'Show fewer' : `Show all ${selected.length}`}
+          </button>
+        ) : null}
         <input
           aria-activedescendant={
             trimmed && choiceCount > 0 ? `${listboxId}-option-${activeIndex}` : undefined
@@ -1195,8 +1836,9 @@ function ChipBox({
           aria-autocomplete="list"
           aria-controls={trimmed ? listboxId : undefined}
           aria-expanded={Boolean(trimmed)}
-          className="min-w-40 flex-1 border-0 bg-transparent text-sm outline-none"
-          placeholder={selected.length ? '' : placeholder}
+          aria-label={ariaLabel}
+          className="h-[30px] min-w-[100px] flex-[1_1_120px] border-0 bg-transparent px-1 text-ink outline-none placeholder:text-ink-3"
+          placeholder={placeholder}
           role="combobox"
           value={input}
           onChange={(event) => onInputChange(event.target.value)}
@@ -1204,16 +1846,11 @@ function ChipBox({
         />
       </div>
       {trimmed ? (
-        <div
-          aria-busy={suggestionsPending}
-          className="ui-popover absolute z-20 mt-1 max-h-64 w-full overflow-auto"
-          id={listboxId}
-          role="listbox"
-        >
+        <div aria-busy={suggestionsPending} className={popoverClass} id={listboxId} role="listbox">
           {suggestions.map((item, index) => (
             <button
               aria-selected={activeIndex === index}
-              className={`w-full px-3 py-2 text-left text-sm text-ink hover:bg-hover ${activeIndex === index ? 'bg-selected' : ''}`}
+              className={`w-full rounded-control border-0 px-3 py-2 text-left text-sm text-ink hover:bg-hover ${activeIndex === index ? 'bg-selected' : 'bg-transparent'}`}
               id={`${listboxId}-option-${index}`}
               key={item.key}
               role="option"
@@ -1221,7 +1858,14 @@ function ChipBox({
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => onPick(item.key)}
             >
-              <span className="font-medium">{item.label}</span>
+              <span className="font-medium">
+                {item.global ? (
+                  <span aria-label="global" className="mr-1.5 text-[10px] text-status-reading-ink">
+                    ◆
+                  </span>
+                ) : null}
+                {item.label}
+              </span>
               {item.description ? (
                 <span className="mt-0.5 block text-xs text-ink-3">{item.description}</span>
               ) : null}
@@ -1230,7 +1874,7 @@ function ChipBox({
           {canCreate ? (
             <button
               aria-selected={activeIndex === suggestions.length}
-              className={`w-full px-3 py-2 text-left text-sm text-[var(--qs-accent-strong)] hover:bg-slate-800 ${activeIndex === suggestions.length ? 'bg-slate-800' : ''}`}
+              className={`w-full rounded-control border-0 px-3 py-2 text-left text-sm font-medium text-ink hover:bg-hover ${activeIndex === suggestions.length ? 'bg-selected' : 'bg-transparent'}`}
               id={`${listboxId}-option-${suggestions.length}`}
               role="option"
               type="button"
@@ -1252,163 +1896,6 @@ function ChipBox({
   )
 }
 
-function CoverSourceDialog({
-  mode,
-  open,
-  view,
-  urlInput,
-  uploadPending,
-  setUrlPending,
-  onClose,
-  onOpenUrl,
-  onBackToChoice,
-  onUpload,
-  onUrlChange,
-  onUrlSubmit,
-}: {
-  mode: 'create' | 'edit'
-  open: boolean
-  view: 'choice' | 'url'
-  urlInput: string
-  uploadPending: boolean
-  setUrlPending: boolean
-  onClose: () => void
-  onOpenUrl: () => void
-  onBackToChoice: () => void
-  onUpload: (file: File) => void
-  onUrlChange: (value: string) => void
-  onUrlSubmit: () => void
-}) {
-  useBodyScrollLock(open)
-
-  if (!open) {
-    return null
-  }
-
-  const urlButtonLabel = mode === 'create' ? 'Use URL' : 'Save URL'
-  const introText =
-    mode === 'create'
-      ? 'Pick the cover now. It will be uploaded automatically after the book is created.'
-      : 'Choose whether the cover comes from a local file or a direct image link.'
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4"
-      role="presentation"
-      onClick={onClose}
-    >
-      <DialogPanel
-        aria-modal="true"
-        className="grid max-w-xl gap-4 p-6"
-        role="dialog"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="flex items-start justify-between gap-4">
-          <div className="grid gap-1">
-            <h2 className="text-lg font-semibold text-white">Add cover</h2>
-            <p className="text-sm text-ink-3">{introText}</p>
-          </div>
-          <button
-            aria-label="Close cover dialog"
-            className={`${buttonVariants.ghost} ui-icon-button`}
-            type="button"
-            onClick={onClose}
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-
-        {view === 'choice' ? (
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="ui-choice-card">
-              <div className="inline-flex h-10 w-10 items-center justify-center rounded-[var(--qs-control-radius)] bg-[#262b4e] text-[var(--qs-accent-strong)]">
-                <Upload className="h-4 w-4" />
-              </div>
-              <div className="text-base font-semibold">Upload image</div>
-              <div className="text-sm text-ink-3">Use JPG, PNG, or WebP from disk.</div>
-              <input
-                accept="image/jpeg,image/png,image/webp"
-                className="sr-only"
-                disabled={mode === 'edit' && uploadPending}
-                type="file"
-                onChange={(event) => {
-                  const file = event.target.files?.[0]
-                  if (file) {
-                    onUpload(file)
-                    event.target.value = ''
-                  }
-                }}
-              />
-            </label>
-            <button className="ui-choice-card" type="button" onClick={onOpenUrl}>
-              <div className="inline-flex h-10 w-10 items-center justify-center rounded-[var(--qs-control-radius)] bg-[#262b4e] text-[var(--qs-accent-strong)]">
-                <Link2 className="h-4 w-4" />
-              </div>
-              <div className="text-base font-semibold">Paste image URL</div>
-              <div className="text-sm text-ink-3">
-                The original URL is also added to book links.
-              </div>
-            </button>
-          </div>
-        ) : (
-          <div className="grid gap-3">
-            <input
-              className={inputClass}
-              placeholder="https://example.com/cover.jpg"
-              value={urlInput}
-              onChange={(event) => onUrlChange(event.target.value)}
-            />
-            <div className="flex flex-wrap gap-2">
-              <button
-                className={buttonClass}
-                disabled={(mode === 'edit' && setUrlPending) || !urlInput.trim()}
-                type="button"
-                onClick={onUrlSubmit}
-              >
-                {urlButtonLabel}
-              </button>
-              <button className={secondaryButtonClass} type="button" onClick={onBackToChoice}>
-                Back
-              </button>
-            </div>
-          </div>
-        )}
-      </DialogPanel>
-    </div>
-  )
-}
-
-function appendUniqueLine(value: string, nextLine: string) {
-  const trimmedLine = nextLine.trim()
-  if (!trimmedLine) {
-    return value
-  }
-
-  const lines = value
-    .split('\n')
-    .map((item) => item.trim())
-    .filter(Boolean)
-  if (
-    lines.some(
-      (line) => line.localeCompare(trimmedLine, undefined, { sensitivity: 'accent' }) === 0,
-    )
-  ) {
-    return value
-  }
-
-  return lines.length ? `${lines.join('\n')}\n${trimmedLine}` : trimmedLine
-}
-
-function mergeLines(existing: string, incoming: readonly string[]) {
-  return mergeValues(
-    existing
-      .split('\n')
-      .map((item) => item.trim())
-      .filter(Boolean),
-    incoming,
-  ).join('\n')
-}
-
 function mergeValues(existing: readonly string[], incoming: readonly string[]) {
   const result = [...existing]
   const known = new Set(existing.map((value) => value.trim().toLocaleLowerCase()))
@@ -1425,29 +1912,21 @@ function mergeValues(existing: readonly string[], incoming: readonly string[]) {
 
 function appendCoverSourceLink(request: BookMutationRequest, cover?: BookCoverDto | null) {
   const sourceUrl = cover?.originalImageUrl?.trim()
-  if (!sourceUrl) {
-    return request
-  }
-
-  const nextLinks = appendUniqueLine(request.links.map((link) => link.url).join('\n'), sourceUrl)
-    .split('\n')
-    .map((url) => url.trim())
-    .filter(Boolean)
-
-  if (nextLinks.length === request.links.length) {
+  if (!sourceUrl || request.links.some((link) => sameUrl(link.url, sourceUrl))) {
     return request
   }
 
   return {
     ...request,
-    links: nextLinks.map((url) => ({
-      url,
-      label: null,
-      sourceType: 'Other',
-      isPrimary: false,
-      lastReadHere: false,
-    })),
+    links: [
+      ...request.links,
+      { url: sourceUrl, label: null, sourceType: 'Other', isPrimary: false, lastReadHere: false },
+    ],
   }
+}
+
+function sameUrl(left: string, right: string) {
+  return left.trim().localeCompare(right.trim(), undefined, { sensitivity: 'accent' }) === 0
 }
 
 function splitComma(value: string) {
@@ -1471,68 +1950,4 @@ function findMatchingAlias(author: AuthorDto, input: string) {
 
 function formatAuthorDisplay(primaryName: string, matchedAlias?: string) {
   return matchedAlias ? `${primaryName} (${matchedAlias})` : primaryName
-}
-
-function DescriptionHelp({ value }: { value?: string | null | undefined }) {
-  if (!value) {
-    return null
-  }
-
-  return <p className="text-xs font-normal text-ink-3">{value}</p>
-}
-
-function RatingStars({ value, onChange }: { value: string; onChange: (value: string) => void }) {
-  const numericValue = Number(value)
-  const normalizedValue = Number.isFinite(numericValue) && numericValue > 0 ? numericValue : 0
-  const [previewValue, setPreviewValue] = useState(0)
-  const displayedValue = previewValue || normalizedValue
-
-  return (
-    <div className="book-form-rating">
-      <div className="book-form-rating-readout">
-        {displayedValue ? `${displayedValue}/10` : '?/10'}
-      </div>
-      <div
-        aria-label="Rating"
-        className="book-form-rating-scale"
-        role="group"
-        onBlur={(event) => {
-          if (
-            !(event.relatedTarget instanceof Node) ||
-            !event.currentTarget.contains(event.relatedTarget)
-          ) {
-            setPreviewValue(0)
-          }
-        }}
-        onMouseLeave={() => setPreviewValue(0)}
-      >
-        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((star) => {
-          const active = displayedValue >= star
-          return (
-            <button
-              aria-label={`Set rating to ${star}/10`}
-              aria-pressed={normalizedValue === star}
-              className="book-form-rating-option"
-              key={star}
-              title={`${star}/10`}
-              type="button"
-              onFocus={() => setPreviewValue(star)}
-              onMouseEnter={() => setPreviewValue(star)}
-              onClick={() => {
-                const clearingSelection = normalizedValue === star
-                onChange(clearingSelection ? '' : String(star))
-                if (clearingSelection) {
-                  setPreviewValue(0)
-                }
-              }}
-            >
-              <Star
-                className={`h-5 w-5 ${active ? 'fill-star text-star' : 'text-[var(--qs-subtle)]'}`}
-              />
-            </button>
-          )
-        })}
-      </div>
-    </div>
-  )
 }

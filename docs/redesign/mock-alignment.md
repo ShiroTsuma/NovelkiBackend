@@ -17,6 +17,7 @@ If a screen differs from the mock and this file doesn't say why, that's a bug.
 | Search or jump (Ctrl K) | do: command palette with books (title search) and pages |
 | Account menu (avatar) | do: avatar initial from the access token, menu with the account name and Log out |
 | Phone bottom tab bar | do |
+| Base text 14px / 1.45 | do (was 16px) |
 
 ## Library list
 
@@ -78,7 +79,7 @@ If a screen differs from the mock and this file doesn't say why, that's a bug.
 | Title in serif, required | do |
 | Alternative titles as removable rows, "+ Add alternative title" | do. The language label: later, the book API stores no language for alternative titles |
 | Author with hint | do (search, aliases, Public / Private kept) |
-| Type and Status as buttons, status with a coloured dot | do. The type and status description lines stay (existing feature) |
+| Type and Status as buttons, status with a coloured dot | do. Statuses keep their library names ("Completed", as in the tabs) instead of the mock's "Finished"; the description lines stay (existing feature) |
 | Progress: "Last logged … · history keeps every change" | do (edit mode) |
 | Chapters read / Label in source / Total chapters, each with a hint | do |
 | "In library" preview with bar | do |

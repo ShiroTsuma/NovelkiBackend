@@ -455,6 +455,11 @@ export async function installLayoutApiMocks(page: Page) {
       return
     }
 
+    if (path === 'book/manage') {
+      await route.fulfill({ json: { skip: 0, take: 25, total: 0, data: [] } })
+      return
+    }
+
     if (path.startsWith('book/')) {
       await route.fulfill({ json: layoutBooks[0] })
       return

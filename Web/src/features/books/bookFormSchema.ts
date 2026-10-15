@@ -1,6 +1,20 @@
 import { z } from 'zod'
 import type { BookDto, BookMutationRequest } from '@/api/types'
 
+const bookFormLinkSchema = z.object({
+  label: z.string().max(200),
+  url: z.string(),
+  sourceType: z.string(),
+  isPrimary: z.boolean(),
+  lastReadHere: z.boolean(),
+})
+
+export type BookFormLink = z.infer<typeof bookFormLinkSchema>
+
+export function emptyBookFormLink(url = ''): BookFormLink {
+  return { label: '', url, sourceType: 'Other', isPrimary: false, lastReadHere: false }
+}
+
 const optionalNumberString = z
   .string()
   .refine((value) => !value.trim() || !Number.isNaN(Number(value)), 'Value must be a number.')
@@ -35,7 +49,7 @@ export const bookFormSchema = z
     contentTypeId: z.string().min(1, 'Type is required.'),
     statusId: z.string().min(1, 'Status is required.'),
     genreIds: z.array(z.string()),
-    alternativeTitlesText: z.string(),
+    alternativeTitles: z.array(z.string()),
     tagsText: z.string(),
     totalChapters: optionalPositiveNumberString,
     currentChapterNumber: requiredCurrentChapterString,
@@ -50,7 +64,7 @@ export const bookFormSchema = z
     ),
     description: z.string().max(4000).optional(),
     notes: z.string().max(4000).optional(),
-    linksText: z.string(),
+    links: z.array(bookFormLinkSchema),
   })
   .refine(
     (value) =>
@@ -72,7 +86,7 @@ export function toBookMutationRequest(values: BookFormValues): BookMutationReque
     statusId: values.statusId,
     authorName: trimToNull(values.authorName),
     authorId: emptyToNull(values.authorId),
-    alternativeTitles: splitLines(values.alternativeTitlesText).map((title) => ({
+    alternativeTitles: cleanList(values.alternativeTitles).map((title) => ({
       title,
       language: null,
       source: 'manual',
@@ -87,13 +101,15 @@ export function toBookMutationRequest(values: BookFormValues): BookMutationReque
     description: trimToNull(values.description),
     notes: trimToNull(values.notes),
     rawImportedLine: null,
-    links: splitLines(values.linksText).map((url) => ({
-      url,
-      label: null,
-      sourceType: 'Other',
-      isPrimary: false,
-      lastReadHere: false,
-    })),
+    links: values.links
+      .filter((link) => link.url.trim())
+      .map((link) => ({
+        url: link.url.trim(),
+        label: trimToNull(link.label),
+        sourceType: link.sourceType,
+        isPrimary: link.isPrimary,
+        lastReadHere: link.lastReadHere,
+      })),
   }
 }
 
@@ -105,7 +121,7 @@ export function defaultBookFormValues(book?: BookDto): BookFormValues {
     contentTypeId: '',
     statusId: '',
     genreIds: [],
-    alternativeTitlesText: book?.alternativeTitles.join('\n') ?? '',
+    alternativeTitles: book ? [...book.alternativeTitles] : [],
     tagsText: book?.tags.join(', ') ?? '',
     totalChapters:
       book?.totalChapters != null && book.totalChapters > 0 ? book.totalChapters.toString() : '',
@@ -115,15 +131,19 @@ export function defaultBookFormValues(book?: BookDto): BookFormValues {
     priority: book?.priority?.toString() ?? '',
     description: book?.description ?? '',
     notes: book?.notes ?? '',
-    linksText: book?.links.map((link) => link.url).join('\n') ?? '',
+    links:
+      book?.links.map((link) => ({
+        label: link.label ?? '',
+        url: link.url,
+        sourceType: link.sourceType,
+        isPrimary: link.isPrimary,
+        lastReadHere: link.lastReadHere,
+      })) ?? [],
   }
 }
 
-function splitLines(value: string) {
-  return value
-    .split('\n')
-    .map((item) => item.trim())
-    .filter(Boolean)
+function cleanList(values: readonly string[]) {
+  return values.map((item) => item.trim()).filter(Boolean)
 }
 
 function splitComma(value: string) {

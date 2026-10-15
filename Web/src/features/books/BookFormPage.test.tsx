@@ -58,18 +58,14 @@ describe('BookFormPage', () => {
   it('disables native browser validation for numeric fields and keeps the controlled inputs text-based', async () => {
     renderWithProviders(<BookFormPage mode="create" />, { route: '/books/new' })
 
-    const form = await screen.findByRole('button', { name: 'Save' })
+    const form = await screen.findByRole('button', { name: /^(Save changes|Add to library)$/ })
     const currentChapterInput = screen.getByLabelText<HTMLInputElement>('Current chapter')
     const totalChaptersInput = screen.getByLabelText<HTMLInputElement>('Total chapters')
-    const priorityInput = screen.getByLabelText<HTMLInputElement>('Priority 1-5')
-
     expect(form.closest('form')).toHaveAttribute('novalidate')
     expect(currentChapterInput.type).toBe('text')
     expect(currentChapterInput).toHaveAttribute('inputmode', 'numeric')
     expect(totalChaptersInput.type).toBe('text')
     expect(totalChaptersInput).toHaveAttribute('inputmode', 'decimal')
-    expect(priorityInput.type).toBe('text')
-    expect(priorityInput).toHaveAttribute('inputmode', 'numeric')
   })
 
   it('rejects total chapters equal to zero with a field error', async () => {
@@ -81,7 +77,7 @@ describe('BookFormPage', () => {
     await user.type(screen.getByLabelText('Author'), 'Guiltythree')
     await user.type(screen.getByLabelText('Current chapter'), '0')
     await user.type(screen.getByLabelText('Total chapters'), '0')
-    await user.click(screen.getByRole('button', { name: 'Save' }))
+    await user.click(screen.getByRole('button', { name: /^(Save changes|Add to library)$/ }))
 
     expect(await screen.findByText('Total chapters must be greater than 0.')).toBeInTheDocument()
     expect(api.createBook).not.toHaveBeenCalled()
@@ -95,7 +91,7 @@ describe('BookFormPage', () => {
     await user.type(screen.getByLabelText('Primary title'), 'Shadow Slave')
     await user.type(screen.getByLabelText('Author'), 'Guiltythree')
     await user.type(screen.getByLabelText('Current chapter'), '0')
-    await user.click(screen.getByRole('button', { name: 'Save' }))
+    await user.click(screen.getByRole('button', { name: /^(Save changes|Add to library)$/ }))
 
     await waitFor(() => expect(api.createBook).toHaveBeenCalled())
     expect(vi.mocked(api.createBook).mock.calls[0]![0].totalChapters).toBeNull()
@@ -140,13 +136,13 @@ describe('BookFormPage', () => {
     expect(screen.getByLabelText('Primary title')).toHaveValue('Parsed Novel')
     expect(screen.getByLabelText('Author')).toHaveValue('Primary Author')
     expect(screen.getByLabelText('Description')).toHaveValue('Parsed description.')
-    expect(screen.getByLabelText('Alternative titles')).toHaveValue('Alternate Name')
-    expect(screen.getByLabelText('Links')).toHaveValue(
+    expect(screen.getByLabelText('Alternative title 1')).toHaveValue('Alternate Name')
+    expect(screen.getByLabelText('Link 1 URL')).toHaveValue(
       'https://www.novelupdates.com/series/parsed-novel/',
     )
 
     await user.type(screen.getByLabelText('Current chapter'), '0')
-    await user.click(screen.getByRole('button', { name: 'Save' }))
+    await user.click(screen.getByRole('button', { name: /^(Save changes|Add to library)$/ }))
 
     await waitFor(() => expect(api.createBook).toHaveBeenCalled())
     const request = vi.mocked(api.createBook).mock.calls[0]![0]
@@ -173,13 +169,11 @@ describe('BookFormPage', () => {
     await screen.findByText('Add book')
     await user.type(screen.getByLabelText('Primary title'), 'Shadow Slave')
     await user.type(screen.getByLabelText('Current chapter'), '0')
-    await user.click(screen.getByText('Add cover'))
-    const dialog = screen.getByRole('dialog')
-    const input = within(dialog).getByLabelText(/upload image/i)
+    const input = screen.getByLabelText('Choose a cover file')
     const file = new File(['cover'], 'cover.jpg', { type: 'image/jpeg' })
     await user.upload(input, file)
 
-    await user.click(screen.getByRole('button', { name: 'Save' }))
+    await user.click(screen.getByRole('button', { name: /^(Save changes|Add to library)$/ }))
 
     await waitFor(() => expect(api.createBook).toHaveBeenCalled())
     expect(stagePendingCoverUpload).toHaveBeenCalledWith(file)
@@ -271,7 +265,7 @@ describe('BookFormPage', () => {
     await screen.findByText('Add book')
     await user.type(screen.getByLabelText('Primary title'), 'test')
     await user.type(screen.getByLabelText('Current chapter'), '0')
-    await user.click(screen.getByRole('button', { name: 'Save' }))
+    await user.click(screen.getByRole('button', { name: /^(Save changes|Add to library)$/ }))
 
     await waitFor(() => expect(api.createBook).toHaveBeenCalled())
     expect(api.getBooks).not.toHaveBeenCalled()
@@ -288,7 +282,7 @@ describe('BookFormPage', () => {
 
     expect(screen.queryByText('Current chapter is required.')).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Save' }))
+    await user.click(screen.getByRole('button', { name: /^(Save changes|Add to library)$/ }))
 
     expect(await screen.findByText('Current chapter is required.')).toBeInTheDocument()
     expect(api.createBook).not.toHaveBeenCalled()
@@ -298,72 +292,109 @@ describe('BookFormPage', () => {
     expect(currentChapterInput).toHaveValue('1234')
   })
 
-  it('normalizes optional decimal and integer fields while typing', async () => {
+  it('normalizes the total chapters field while typing', async () => {
     const user = userEvent.setup()
     renderWithProviders(<BookFormPage mode="create" />, { route: '/books/new' })
 
     await screen.findByText('Add book')
 
     const totalChaptersInput = screen.getByLabelText('Total chapters')
-    const priorityInput = screen.getByLabelText('Priority 1-5')
-
     await user.type(totalChaptersInput, '4..5x')
-    await user.type(priorityInput, '2-4a')
-
     expect(totalChaptersInput).toHaveValue('4.5')
-    expect(priorityInput).toHaveValue('24')
   })
 
-  it('previews and selects a rating through the compact star scale', async () => {
+  it('picks priority from 1 to 5 and clears it on a second click', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<BookFormPage mode="create" />, { route: '/books/new' })
+
+    await screen.findByText('Add book')
+    const priorityTwo = screen.getByRole('button', { name: 'Set priority to 2' })
+    await user.click(priorityTwo)
+    expect(priorityTwo).toHaveAttribute('aria-pressed', 'true')
+    await user.click(priorityTwo)
+    expect(priorityTwo).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('selects a rating from 1 to 10 and clears it', async () => {
     const user = userEvent.setup()
     renderWithProviders(<BookFormPage mode="create" />, { route: '/books/new' })
 
     await screen.findByText('Add book')
     const ratingSeven = screen.getByRole('button', { name: 'Set rating to 7/10' })
-
-    expect(screen.getByText('?/10')).toBeInTheDocument()
-    await user.hover(ratingSeven)
-    expect(screen.getByText('7/10')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Clear' })).toBeDisabled()
 
     await user.click(ratingSeven)
-    await user.unhover(ratingSeven)
-    expect(screen.getByText('7/10')).toBeInTheDocument()
     expect(ratingSeven).toHaveAttribute('aria-pressed', 'true')
 
-    await user.click(ratingSeven)
-    expect(screen.getByText('?/10')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Clear' }))
+    expect(ratingSeven).toHaveAttribute('aria-pressed', 'false')
   })
 
-  it('renders type and status options in domain order', async () => {
+  it('renders type and status choices in domain order', async () => {
     renderWithProviders(<BookFormPage mode="create" />, { route: '/books/new' })
 
     await screen.findByText('Add book')
 
-    const [typeSelect, statusSelect] = screen.getAllByRole('combobox')
-    const typeOptions = typeSelect!.querySelectorAll('option')
-    const statusOptions = statusSelect!.querySelectorAll('option')
-
-    expect(Array.from(typeOptions).map((option) => option.textContent)).toEqual(['Novel', 'Manga'])
-    expect(Array.from(statusOptions).map((option) => option.textContent)).toEqual([
-      'Reading',
-      'Completed',
-    ])
+    const type = screen.getByRole('group', { name: 'Type' })
+    const status = screen.getByRole('group', { name: 'Status' })
+    expect(
+      within(type)
+        .getAllByRole('button')
+        .map((button) => button.textContent),
+    ).toEqual(['Novel', 'Manga'])
+    expect(
+      within(status)
+        .getAllByRole('button')
+        .map((button) => button.textContent),
+    ).toEqual(['Reading', 'Completed'])
+    expect(within(type).getByRole('button', { name: 'Novel' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
   })
 
-  it('orders the editor around identity, cover, reading state, and optional details', async () => {
+  it('lays the form out as in the mock: sections, side panel and a sticky save bar', async () => {
     renderWithProviders(<BookFormPage mode="create" />, { route: '/books/new' })
 
-    const identity = await screen.findByRole('heading', { name: 'Book identity' })
+    const identity = await screen.findByRole('heading', { name: 'Identity' })
+    const progress = screen.getByRole('heading', { name: 'Progress' })
+    const genres = screen.getByRole('heading', { name: 'Genres & tags' })
+    const details = screen.getByRole('heading', { name: 'Details' })
     const cover = screen.getByTestId('book-cover-editor')
-    const reading = screen.getByRole('heading', { name: 'Reading state' })
-    const details = screen.getByRole('heading', { name: 'Library details' })
 
-    expect(identity.compareDocumentPosition(cover) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(cover.compareDocumentPosition(reading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(reading.compareDocumentPosition(details) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(screen.getByTestId('book-form-rail')).toContainElement(
-      screen.getByRole('button', { name: 'Save' }),
-    )
+    expect(
+      identity.compareDocumentPosition(progress) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    expect(progress.compareDocumentPosition(genres) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(genres.compareDocumentPosition(details) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.getByTestId('book-form-rail')).toContainElement(cover)
+    expect(screen.getByRole('status')).toHaveTextContent('New book')
+    expect(screen.getByRole('button', { name: 'Add to library' })).toHaveAttribute('type', 'submit')
+  })
+
+  it('keeps link labels and drops empty rows when saving', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<BookFormPage mode="create" />, { route: '/books/new' })
+
+    await screen.findByText('Add book')
+    await user.type(screen.getByLabelText('Primary title'), 'Shadow Slave')
+    await user.type(screen.getByLabelText('Current chapter'), '3')
+    await user.click(screen.getByRole('button', { name: '+ Add alternative title' }))
+    await user.type(screen.getByLabelText('Alternative title 1'), 'SS')
+    await user.click(screen.getByRole('button', { name: '+ Add alternative title' }))
+    await user.click(screen.getByRole('button', { name: '+ Add link' }))
+    await user.type(screen.getByLabelText('Link 1 label'), 'NovelUpdates')
+    await user.type(screen.getByLabelText('Link 1 URL'), 'https://example.com/ss')
+    await user.click(screen.getByRole('button', { name: '+ Add link' }))
+    expect(screen.getByRole('status')).toHaveTextContent('Unsaved changes')
+    await user.click(screen.getByRole('button', { name: 'Add to library' }))
+
+    await waitFor(() => expect(api.createBook).toHaveBeenCalled())
+    const request = vi.mocked(api.createBook).mock.calls[0]![0]
+    expect(request.alternativeTitles.map((title) => title.title)).toEqual(['SS'])
+    expect(request.links).toEqual([
+      expect.objectContaining({ label: 'NovelUpdates', url: 'https://example.com/ss' }),
+    ])
   })
 
   it('shows the matched alias but submits the primary author identity', async () => {
@@ -389,7 +420,7 @@ describe('BookFormPage', () => {
 
     expect(screen.getByLabelText('Author')).toHaveValue('Er Gen (Ergen)')
     await user.type(screen.getByLabelText('Current chapter'), '1')
-    await user.click(screen.getByRole('button', { name: 'Save' }))
+    await user.click(screen.getByRole('button', { name: /^(Save changes|Add to library)$/ }))
 
     await waitFor(() => expect(api.createBook).toHaveBeenCalled())
     expect(vi.mocked(api.createBook).mock.calls[0]![0]).toMatchObject({
@@ -437,7 +468,7 @@ describe('BookFormPage', () => {
     renderWithProviders(<BookFormPage mode="create" />, { route: '/books/new' })
 
     await screen.findByText('Add book')
-    await user.type(screen.getByPlaceholderText('Start typing a tag'), 'cult')
+    await user.type(screen.getByRole('combobox', { name: 'Add tag' }), 'cult')
 
     expect(
       await screen.findByText('Progression through spiritual realms and techniques.'),
@@ -455,7 +486,7 @@ describe('BookFormPage', () => {
     await waitFor(() => expect(api.searchAuthors).toHaveBeenCalledTimes(1))
     expect(api.searchAuthors).toHaveBeenLastCalledWith('Ergen', 8)
 
-    await user.type(screen.getByPlaceholderText('Start typing a tag'), 'cult')
+    await user.type(screen.getByRole('combobox', { name: 'Add tag' }), 'cult')
 
     expect(api.searchTags).not.toHaveBeenCalled()
     await waitFor(() => expect(api.searchTags).toHaveBeenCalledTimes(1))
@@ -475,13 +506,13 @@ describe('BookFormPage', () => {
     renderWithProviders(<BookFormPage mode="create" />, { route: '/books/new' })
 
     await screen.findByText('Add book')
-    const genreInput = screen.getByPlaceholderText('Start typing a genre')
+    const genreInput = screen.getByRole('combobox', { name: 'Add genre' })
     await user.type(genreInput, 'Fan')
     await user.keyboard('{Tab}')
     expect(screen.getByText('Fantasy')).toBeInTheDocument()
     expect(genreInput).toHaveFocus()
 
-    const tagInput = screen.getByPlaceholderText('Start typing a tag')
+    const tagInput = screen.getByRole('combobox', { name: 'Add tag' })
     await user.type(tagInput, 'cult')
     expect(await screen.findByRole('option', { name: /cultivation/i })).toBeInTheDocument()
     await user.keyboard('{Tab}')
