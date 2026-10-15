@@ -42,34 +42,42 @@ function unquote(value: string): string {
   return value
 }
 
-function isStatusToken(token: string): boolean {
-  return token.toLowerCase().startsWith('status:')
+function isFieldToken(token: string, field: string): boolean {
+  return token.toLowerCase().startsWith(`${field}:`)
 }
 
 /**
- * Returns the status the query filters on when it holds exactly one plain
- * `status:` token with one value, or null when there is none.
- * Returns 'custom' for anything the tabs cannot represent (several values,
- * several tokens).
+ * Returns the value the query filters `field` on when it holds exactly one plain
+ * `field:` token with one value, or null when there is none.
+ * Returns 'custom' for anything a single choice cannot represent (several
+ * values, several tokens).
  */
-export function getStatusFilter(query: string): string | null {
-  const statusTokens = tokenizeQuery(query).filter(isStatusToken)
-  if (statusTokens.length === 0) return null
-  const [only] = statusTokens
-  if (statusTokens.length > 1 || only === undefined) return 'custom'
-  const value = unquote(only.slice('status:'.length)).trim()
+export function getFieldFilter(query: string, field: string): string | null {
+  const fieldTokens = tokenizeQuery(query).filter((token) => isFieldToken(token, field))
+  if (fieldTokens.length === 0) return null
+  const [only] = fieldTokens
+  if (fieldTokens.length > 1 || only === undefined) return 'custom'
+  const value = unquote(only.slice(field.length + 1)).trim()
   if (value === '' || value.includes(',')) return 'custom'
   return value.toLowerCase()
 }
 
-/** Replaces every plain `status:` token with one for `status` (or removes them). */
-export function setStatusFilter(query: string, status: string | null): string {
-  const rest = tokenizeQuery(query).filter((token) => !isStatusToken(token))
-  if (status) {
-    const value = /\s/.test(status) ? `"${status.toLowerCase()}"` : status.toLowerCase()
-    rest.unshift(`status:${value}`)
+/** Replaces every plain `field:` token with one for `value` (or removes them). */
+export function setFieldFilter(query: string, field: string, value: string | null): string {
+  const rest = tokenizeQuery(query).filter((token) => !isFieldToken(token, field))
+  if (value) {
+    const lower = value.toLowerCase()
+    rest.unshift(`${field}:${/\s/.test(lower) ? `"${lower}"` : lower}`)
   }
   return rest.join(' ')
+}
+
+export function getStatusFilter(query: string): string | null {
+  return getFieldFilter(query, 'status')
+}
+
+export function setStatusFilter(query: string, status: string | null): string {
+  return setFieldFilter(query, 'status', status)
 }
 
 export function hasToken(query: string, token: string): boolean {
@@ -143,5 +151,15 @@ export function describeToken(token: string): DescribedToken {
 export function removeTokenAt(query: string, index: number): string {
   return tokenizeQuery(query)
     .filter((_, position) => position !== index)
+    .join(' ')
+}
+
+/** Flips the token at `index` between include and exclude (`-` prefix). */
+export function toggleTokenNegationAt(query: string, index: number): string {
+  return tokenizeQuery(query)
+    .map((token, position) => {
+      if (position !== index) return token
+      return token.startsWith('-') ? token.slice(1) : `-${token}`
+    })
     .join(' ')
 }

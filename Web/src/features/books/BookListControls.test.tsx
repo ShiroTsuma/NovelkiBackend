@@ -1,8 +1,9 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { renderWithProviders } from '@/test/render'
-import { QueryBar, QuickFilters, StatusTabs } from './BookListControls'
+import { QueryBar, QuickFilters, StatusTabs, TypeChips } from './BookListControls'
 
 describe('StatusTabs', () => {
   it('marks the tab that matches the status token', () => {
@@ -62,6 +63,39 @@ describe('QueryBar', () => {
     expect(screen.getByRole('combobox', { name: /search books/i })).toHaveFocus()
   })
 
+  it('negates a token when its pill is clicked', async () => {
+    const onQueryChange = vi.fn()
+    renderWithProviders(<QueryBar query="genre:fantasy -tag:harem" onQueryChange={onQueryChange} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Exclude genre:fantasy' }))
+    expect(onQueryChange).toHaveBeenLastCalledWith('-genre:fantasy -tag:harem')
+    await userEvent.click(screen.getByRole('button', { name: 'Include -tag:harem' }))
+    expect(onQueryChange).toHaveBeenLastCalledWith('genre:fantasy tag:harem')
+  })
+
+  it('goes back to pills when focus leaves the editor', async () => {
+    renderWithProviders(
+      <>
+        <QueryBar query="genre:fantasy" onQueryChange={vi.fn()} />
+        <button type="button">Elsewhere</button>
+      </>,
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Query' }))
+    expect(screen.getByRole('combobox', { name: /search books/i })).toHaveFocus()
+    await userEvent.click(screen.getByRole('button', { name: 'Elsewhere' }))
+    expect(screen.getByRole('list', { name: 'Active filters' })).toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: /search books/i })).not.toBeInTheDocument()
+  })
+
+  it('keeps the editor while typing into an empty query', async () => {
+    function Harness() {
+      const [query, setQuery] = useState('')
+      return <QueryBar query={query} onQueryChange={setQuery} />
+    }
+    renderWithProviders(<Harness />)
+    await userEvent.type(screen.getByRole('combobox', { name: /search books/i }), 'dragon')
+    expect(screen.getByRole('combobox', { name: /search books/i })).toHaveValue('dragon')
+  })
+
   it('starts in the editor when the query is empty', () => {
     renderWithProviders(<QueryBar query="" onQueryChange={vi.fn()} />)
     expect(screen.getByRole('combobox', { name: /search books/i })).toBeInTheDocument()
@@ -87,5 +121,26 @@ describe('saved views', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Delete saved view Good fantasy' }))
     expect(screen.queryByRole('button', { name: 'Good fantasy' })).not.toBeInTheDocument()
+  })
+})
+
+describe('TypeChips', () => {
+  it('writes the type token and shows counts from the rest of the query', async () => {
+    const onQueryChange = vi.fn()
+    render(
+      <TypeChips
+        counts={{ all: 12, novel: 9, manga: 3 }}
+        query="status:reading"
+        types={['Novel', 'Manga', 'Manhwa']}
+        onQueryChange={onQueryChange}
+      />,
+    )
+    expect(screen.getByRole('button', { name: /All typess*12/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(screen.getByRole('button', { name: /Manhwas*0/ })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /Novels*9/ }))
+    expect(onQueryChange).toHaveBeenLastCalledWith('type:novel status:reading')
   })
 })

@@ -164,7 +164,10 @@ export function AppShell() {
         </div>
       </header>
 
-      <main id="main-content" className="app-main">
+      <main
+        id="main-content"
+        className="mx-auto w-full max-w-[1360px] px-4 pt-6 pb-[calc(76px+2rem)] md:px-8 md:pb-14"
+      >
         <Outlet />
       </main>
 

@@ -10,7 +10,8 @@ export function StatusBadge({ status, className }: { status: string; className?:
       aria-label={`Book status: ${status}`}
       data-tone={tone}
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[13px] font-medium',
+        'inline-flex max-w-full items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[13px]',
+        tone === 'finished' ? 'font-bold' : 'font-medium',
         classes.badge,
         className,
       )}

@@ -1,5 +1,6 @@
 import { ChevronDown, Search, X } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { Menu } from '@/components/ui/Menu'
 import { cn } from '@/lib/utils'
 import { BookSearchInput } from './BookSearchInput'
 import { sortOptions, type SortOption } from './bookListSort'
@@ -7,9 +8,12 @@ import { getStatusTone, statusToneClasses } from './bookStatus'
 import {
   describeToken,
   getQuickFilters,
+  getFieldFilter,
   getStatusFilter,
   hasToken,
   removeTokenAt,
+  setFieldFilter,
+  toggleTokenNegationAt,
   setStatusFilter,
   tokenizeQuery,
   toggleToken,
@@ -27,9 +31,17 @@ type QueryProps = {
  * - Query: the raw text in the existing search input with its suggestion engine
  * The text is the only state, so the pill view can never break searching.
  */
+/**
+ * Search bar with two views of the same query text:
+ * - Filters: one pill per token. Clicking a pill excludes it (`-`) or includes
+ *   it again; × removes it. Clicking the free space edits the text.
+ * - Query: the raw text with syntax suggestions.
+ * Leaving the text input goes back to the pills, so a finished query always
+ * reads as filters. The query text is the only state; pills are derived.
+ */
 export function QueryBar({ query, onQueryChange }: QueryProps) {
   const tokens = tokenizeQuery(query)
-  const [mode, setMode] = useState<'filters' | 'query'>(tokens.length ? 'filters' : 'query')
+  const [mode, setMode] = useState<'filters' | 'query'>('filters')
   const focusQueryInput = useRef(false)
   const effectiveMode = tokens.length === 0 ? 'query' : mode
 
@@ -47,7 +59,22 @@ export function QueryBar({ query, onQueryChange }: QueryProps) {
 
   return (
     <div className="flex flex-wrap items-stretch gap-2">
-      <div className="min-w-0 flex-[1_1_520px]">
+      <div
+        className="min-w-0 flex-[1_1_520px]"
+        onFocus={() => {
+          // Typing into an empty bar must stay in the text view once tokens appear.
+          if (effectiveMode === 'query') setMode('query')
+        }}
+        onBlur={(event) => {
+          const next = event.relatedTarget
+          if (
+            effectiveMode === 'query' &&
+            !(next instanceof Node && event.currentTarget.contains(next))
+          ) {
+            setMode('filters')
+          }
+        }}
+      >
         {effectiveMode === 'filters' ? (
           <div className="flex min-h-11 flex-wrap items-center gap-1.5 rounded-field border border-line-strong bg-surface py-[5px] pr-2 pl-3">
             <Search aria-hidden="true" className="size-4 shrink-0 text-ink-3" />
@@ -56,6 +83,7 @@ export function QueryBar({ query, onQueryChange }: QueryProps) {
                 <TokenPill
                   key={`${token}-${index}`}
                   token={token}
+                  onToggleNegation={() => onQueryChange(toggleTokenNegationAt(query, index))}
                   onRemove={() => onQueryChange(removeTokenAt(query, index))}
                 />
               ))}
@@ -98,27 +126,43 @@ export function QueryBar({ query, onQueryChange }: QueryProps) {
   )
 }
 
-function TokenPill({ token, onRemove }: { token: string; onRemove: () => void }) {
+function TokenPill({
+  token,
+  onToggleNegation,
+  onRemove,
+}: {
+  token: string
+  onToggleNegation: () => void
+  onRemove: () => void
+}) {
   const described = describeToken(token)
   return (
     <li
       className={cn(
-        'inline-flex h-[30px] items-center gap-1.5 rounded-pill border pr-1 pl-2.5 text-[13px]',
+        'inline-flex h-[30px] items-center rounded-pill border text-[13px]',
         described.negated
           ? 'border-danger-line bg-danger-soft text-danger-ink'
           : 'border-line-focus bg-selected text-ink',
       )}
     >
-      {described.field ? (
-        <span className="font-mono text-xs opacity-85">{described.field}</span>
-      ) : null}
-      <span className="text-xs opacity-70">{described.operator}</span>
-      {described.value ? <span className="font-medium">{described.value}</span> : null}
+      <button
+        type="button"
+        aria-label={`${described.negated ? 'Include' : 'Exclude'} ${token}`}
+        title={described.negated ? 'Click to include again' : 'Click to exclude'}
+        onClick={onToggleNegation}
+        className="flex h-full items-center gap-1.5 rounded-l-pill border-0 bg-transparent pr-1 pl-2.5 text-current hover:bg-white/5"
+      >
+        {described.field ? (
+          <span className="font-mono text-xs opacity-85">{described.field}</span>
+        ) : null}
+        <span className="text-xs opacity-70">{described.operator}</span>
+        {described.value ? <span className="font-medium">{described.value}</span> : null}
+      </button>
       <button
         type="button"
         aria-label={`Remove filter ${token}`}
         onClick={onRemove}
-        className="flex size-[22px] items-center justify-center rounded border-0 bg-transparent text-current opacity-70 hover:opacity-100"
+        className="mr-1 flex size-[22px] items-center justify-center rounded border-0 bg-transparent text-current opacity-70 hover:opacity-100"
       >
         <X aria-hidden="true" className="size-3" strokeWidth={2.4} />
       </button>
@@ -146,7 +190,7 @@ export function SegmentButton({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        'flex h-8 items-center gap-1.5 rounded-[7px] border-0 px-3 text-sm disabled:opacity-40',
+        'flex h-[30px] items-center gap-1.5 rounded-[7px] border-0 px-3 text-sm disabled:opacity-40',
         mono && 'font-mono text-[13px]',
         pressed
           ? 'bg-selected font-semibold text-ink'
@@ -168,28 +212,27 @@ export function SortMenu({
 }) {
   const current = sortOptions.find((option) => option.sortBy === sortBy)
   return (
-    <label className="relative flex h-9 items-center gap-1.5 rounded-control border border-line px-3 hover:border-line-strong">
-      <span className="text-ink-3">Sort</span>
-      <select
-        className="h-full cursor-pointer appearance-none border-0 bg-transparent pr-5 text-ink outline-none"
-        value={current?.sortBy ?? ''}
-        onChange={(event) => {
-          const next = sortOptions.find((option) => option.sortBy === event.target.value)
-          if (next) onSortChange(next)
-        }}
-      >
-        {current ? null : <option value="">Custom</option>}
-        {sortOptions.map((option) => (
-          <option key={option.sortBy} value={option.sortBy}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-      <ChevronDown
-        aria-hidden="true"
-        className="pointer-events-none absolute right-2.5 size-3.5 text-ink-2"
-      />
-    </label>
+    <Menu
+      label="Sort"
+      triggerClassName="flex h-9 items-center gap-1.5 rounded-control border border-line bg-transparent px-3 text-ink hover:border-line-strong"
+      triggerContent={
+        <>
+          <span className="text-ink-3">Sort</span>
+          {current?.label ?? 'Custom'}
+          <ChevronDown aria-hidden="true" className="size-3.5 text-ink-2" />
+        </>
+      }
+      widthClassName="w-56"
+      sections={[
+        {
+          items: sortOptions.map((option) => ({
+            label: option.label,
+            checked: option.sortBy === current?.sortBy,
+            onSelect: () => onSortChange(option),
+          })),
+        },
+      ]}
+    />
   )
 }
 
@@ -379,6 +422,70 @@ export function QuickFilters({ query, onQueryChange }: QueryProps) {
           + Save current as view
         </button>
       )}
+    </div>
+  )
+}
+
+/**
+ * Second facet row under the status tabs: one chip per content type. Picking a
+ * chip writes `type:<name>` into the query; counts come from the query without
+ * its own `type:` token, so status and type counts stay in step.
+ */
+export function TypeChips({
+  query,
+  onQueryChange,
+  types,
+  counts,
+}: QueryProps & { types: string[]; counts?: Record<string, number> | undefined }) {
+  const active = getFieldFilter(query, 'type')
+  if (types.length === 0) return null
+  const chips: { label: string; value: string | null }[] = [
+    { label: 'All types', value: null },
+    ...types.map((type) => ({ label: type, value: type })),
+  ]
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <div
+        role="group"
+        aria-label="Filter by type"
+        className="-mx-4 flex flex-1 items-center gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0"
+      >
+        {chips.map((chip) => {
+          const key = chip.value?.toLowerCase() ?? null
+          const selected = key === null ? active === null : active === key
+          const count = counts ? (key === null ? counts.all : (counts[key] ?? 0)) : undefined
+          return (
+            <button
+              key={chip.label}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => onQueryChange(setFieldFilter(query, 'type', chip.value))}
+              className={cn(
+                'flex h-8 shrink-0 items-center gap-2 rounded-full border px-3 text-[13px] whitespace-nowrap transition-colors',
+                selected
+                  ? 'border-line-focus bg-selected font-semibold text-ink'
+                  : count === 0
+                    ? 'border-line bg-transparent text-ink-disabled'
+                    : 'border-line bg-transparent text-ink-2 hover:border-line-strong hover:text-ink',
+              )}
+            >
+              {chip.label}
+              {count !== undefined ? (
+                <span className="text-xs text-ink-3 tabular-nums">
+                  {count.toLocaleString('en-US')}
+                </span>
+              ) : null}
+            </button>
+          )
+        })}
+      </div>
+      <span className="hidden px-1 font-mono text-xs text-ink-3 sm:inline">
+        {active === null
+          ? 'no type: filter'
+          : active === 'custom'
+            ? 'custom type: filter'
+            : `type:${active}`}
+      </span>
     </div>
   )
 }

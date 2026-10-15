@@ -7,6 +7,10 @@ type MetadataSummaryProps = {
   totalCount?: number
   countNoun: string
   primaryClassName?: string
+  /** `pill`: "+N" badge; `text`: "· N alt titles" in muted text. */
+  countStyle?: 'pill' | 'text'
+  /** Short noun for the text style, e.g. "alt title". */
+  shortNoun?: string
 }
 
 export function MetadataSummary({
@@ -15,6 +19,8 @@ export function MetadataSummary({
   totalCount = alternatives.length,
   countNoun,
   primaryClassName = 'block min-w-0 truncate',
+  countStyle = 'pill',
+  shortNoun = countNoun,
 }: MetadataSummaryProps) {
   const tooltip = buildAlternativeTooltip(alternatives, totalCount, countNoun)
 
@@ -27,9 +33,15 @@ export function MetadataSummary({
         <MetadataTooltip
           ariaLabel={`${totalCount} ${pluralize(countNoun, totalCount)}`}
           content={tooltip}
-          triggerClassName="book-table-badge shrink-0 rounded px-2 py-1 text-xs font-medium"
+          triggerClassName={
+            countStyle === 'text'
+              ? 'shrink-0 cursor-help border-0 bg-transparent p-0 text-ink-3 underline decoration-line-strong decoration-dotted underline-offset-[3px] hover:text-ink-2'
+              : 'book-table-badge shrink-0 rounded px-2 py-1 text-xs font-medium'
+          }
         >
-          +{totalCount}
+          {countStyle === 'text'
+            ? `· ${totalCount} ${pluralize(shortNoun, totalCount)}`
+            : `+${totalCount}`}
         </MetadataTooltip>
       ) : null}
     </div>

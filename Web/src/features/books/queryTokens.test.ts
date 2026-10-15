@@ -4,6 +4,7 @@ import {
   getStatusFilter,
   hasToken,
   removeTokenAt,
+  toggleTokenNegationAt,
   setStatusFilter,
   tokenizeQuery,
   toggleToken,
@@ -92,5 +93,13 @@ describe('describeToken', () => {
 describe('removeTokenAt', () => {
   it('removes only the token at the given position', () => {
     expect(removeTokenAt('status:reading dragon dragon', 1)).toBe('status:reading dragon')
+  })
+})
+
+describe('toggleTokenNegationAt', () => {
+  it('excludes and re-includes only the token at the given position', () => {
+    const excluded = toggleTokenNegationAt('genre:fantasy tag:"slow burn"', 1)
+    expect(excluded).toBe('genre:fantasy -tag:"slow burn"')
+    expect(toggleTokenNegationAt(excluded, 1)).toBe('genre:fantasy tag:"slow burn"')
   })
 })

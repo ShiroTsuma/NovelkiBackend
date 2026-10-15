@@ -13,7 +13,6 @@ import {
 } from 'lucide-react'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { api } from '@/api/client'
-import { inputClass } from '@/components/app/designTokens'
 import { Surface } from '@/components/app/DesignSystem'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
 import {
@@ -186,7 +185,7 @@ export function BookSearchInput({
         <label className="sr-only" htmlFor="book-search-input">
           {ariaLabel}
         </label>
-        <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <Search className="pointer-events-none absolute top-1/2 left-3 z-10 size-4 -translate-y-1/2 text-ink-3" />
         <input
           aria-activedescendant={
             open && suggestions[activeIndex] ? `${suggestionListId}-${activeIndex}` : undefined
@@ -197,7 +196,7 @@ export function BookSearchInput({
           autoComplete="off"
           autoCapitalize="none"
           autoCorrect="off"
-          className={`${inputClass} ui-control--search ${draftValue ? 'pr-12' : ''}`}
+          className={`h-11 w-full rounded-field border border-line-strong bg-surface pl-9 font-mono text-[13px] text-ink outline-none placeholder:font-sans placeholder:text-sm placeholder:text-ink-3 focus:border-line-focus ${draftValue ? 'pr-11' : 'pr-3'}`}
           id="book-search-input"
           placeholder={placeholder}
           ref={inputRef}
@@ -248,7 +247,7 @@ export function BookSearchInput({
         {draftValue ? (
           <button
             aria-label="Clear search and filters"
-            className="absolute right-1.5 top-1/2 z-10 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-[var(--qs-control-radius)] text-slate-500 transition hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950"
+            className="absolute top-1/2 right-1.5 z-10 grid size-8 -translate-y-1/2 place-items-center rounded-control border-0 bg-transparent text-ink-3 transition hover:bg-hover hover:text-ink"
             type="button"
             onClick={() => {
               updateDraft('', 0)
@@ -260,10 +259,10 @@ export function BookSearchInput({
           </button>
         ) : null}
 
-        {open ? (
+        {open && (suggestions.length > 0 || loadingRemote || remoteSuggestions.isError) ? (
           <div
             aria-busy={loadingRemote}
-            className="ui-popover absolute left-0 right-0 z-40 mt-2 max-h-[26rem] overflow-y-auto p-1.5 shadow-xl ring-1 ring-slate-950/5"
+            className="absolute inset-x-0 z-40 mt-1.5 max-h-[26rem] overflow-y-auto rounded-field border border-line-strong bg-raised p-1 shadow-popover"
             id={suggestionListId}
             role="listbox"
           >
@@ -272,14 +271,16 @@ export function BookSearchInput({
                 aria-disabled={suggestion.disabled ? true : undefined}
                 aria-selected={activeIndex === index}
                 disabled={suggestion.disabled}
-                className={`group flex min-h-11 w-full items-center gap-3 rounded-[var(--qs-control-radius)] px-3 py-2 text-left transition ${
+                className={`group flex min-h-11 w-full items-center gap-3 rounded-control border-0 px-3 py-2 text-left transition ${
                   suggestion.disabled
-                    ? 'cursor-not-allowed text-slate-400 opacity-60'
+                    ? 'cursor-not-allowed bg-transparent text-ink-disabled'
                     : activeIndex === index
-                      ? 'bg-slate-900 text-white'
+                      ? suggestion.kind === 'remove'
+                        ? 'bg-danger-soft text-danger-ink'
+                        : 'bg-selected text-ink'
                       : suggestion.kind === 'remove'
-                        ? 'text-rose-700 hover:bg-rose-50'
-                        : 'text-[var(--qs-text)] hover:bg-[var(--qs-surface-muted)]'
+                        ? 'bg-transparent text-danger-ink hover:bg-danger-soft'
+                        : 'bg-transparent text-ink hover:bg-hover'
                 }`}
                 id={`${suggestionListId}-${index}`}
                 key={suggestion.id}
@@ -298,42 +299,30 @@ export function BookSearchInput({
                   <span className="block truncate font-mono text-sm font-semibold">
                     {suggestion.label}
                   </span>
-                  <span
-                    className={`block truncate text-xs ${
-                      activeIndex === index ? 'text-slate-300' : 'text-[var(--qs-muted)]'
-                    }`}
-                  >
+                  <span className="block truncate text-xs text-ink-3">
                     {suggestion.description}
                   </span>
                 </span>
                 {suggestion.kind === 'filter' ||
                 suggestion.kind === 'value' ||
                 suggestion.kind === 'wildcard' ? (
-                  <ArrowRight
-                    className={`h-4 w-4 shrink-0 ${
-                      suggestion.disabled
-                        ? 'text-slate-300'
-                        : activeIndex === index
-                          ? 'text-slate-300'
-                          : 'text-slate-400 group-hover:text-slate-600'
-                    }`}
-                  />
+                  <ArrowRight className="size-4 shrink-0 text-ink-3 group-hover:text-ink-2" />
                 ) : null}
               </button>
             ))}
 
             {loadingRemote ? (
-              <div className="px-3 py-2 text-xs font-medium text-[var(--qs-muted)]" role="status">
+              <div className="px-3 py-2 text-xs font-medium text-ink-3" role="status">
                 Loading matching values…
               </div>
             ) : null}
             {remoteSuggestions.isError ? (
-              <div className="px-3 py-2 text-xs font-medium text-rose-700" role="status">
+              <div className="px-3 py-2 text-xs font-medium text-danger-ink" role="status">
                 Value suggestions are unavailable. Manual search still works.
               </div>
             ) : null}
             {!loadingRemote && suggestions.length === 0 ? (
-              <div className="px-3 py-3 text-sm text-[var(--qs-muted)]" role="status">
+              <div className="px-3 py-3 text-sm text-ink-3" role="status">
                 No suggestions. Keep typing to search the raw query.
               </div>
             ) : null}
@@ -342,7 +331,7 @@ export function BookSearchInput({
       </div>
 
       {showHelp ? (
-        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-3">
           <span>Choose a suggestion or type</span>
           <code>:</code>
           <span>to build a filter.</span>

@@ -5,6 +5,10 @@
  */
 
 @layer base {
+  :root {
+    color-scheme: dark;
+  }
+
   *::-webkit-scrollbar-thumb {
     border-radius: 999px;
   }

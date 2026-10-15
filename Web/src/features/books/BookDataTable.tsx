@@ -41,16 +41,16 @@ export function BookDataTable<T extends { id: string }>({
   return (
     <div className={`book-table-scroll ${wrapperClassName} max-w-full overflow-x-auto`}>
       <table
-        className="w-full table-fixed border-collapse text-left text-sm"
+        className="w-full table-fixed border-collapse text-left text-sm [&_td:first-child]:pl-4 [&_td:last-child]:pr-4 [&_th:first-child]:pl-4 [&_th:last-child]:pr-4"
         style={{ minWidth: `${tableMinWidthRem}rem` }}
       >
         <colgroup>
           {columns.map((column) => (
-            <col className={column.widthClass ?? ''} key={column.id} />
+            <col className={column.grow ? '' : (column.widthClass ?? '')} key={column.id} />
           ))}
           <col style={{ width: `${actionsWidthRem}rem` }} />
         </colgroup>
-        <thead className="bg-surface text-xs font-semibold tracking-wider text-ink-3 uppercase">
+        <thead className="text-xs font-semibold tracking-[0.04em] text-ink-3 uppercase">
           <tr>
             {columns.map((column) => (
               <ColumnHeader
@@ -61,8 +61,8 @@ export function BookDataTable<T extends { id: string }>({
                 onSort={onSort}
               />
             ))}
-            <th className="sticky right-0 z-10 border-b border-line bg-surface px-3 py-3 text-right">
-              {actionHeader}
+            <th className="sticky right-0 z-10 border-b border-line bg-sunk px-3 py-3 text-right">
+              <span className="sr-only">{actionHeader}</span>
             </th>
           </tr>
         </thead>
@@ -76,7 +76,7 @@ export function BookDataTable<T extends { id: string }>({
           ) : null}
           {items.map((item) => (
             <tr
-              className="book-table-row group border-t border-line-soft hover:bg-hover"
+              className="book-table-row group border-b border-line-soft last:border-b-0 hover:bg-hover"
               data-testid={`book-table-row-${item.id}`}
               key={item.id}
             >
@@ -103,13 +103,13 @@ export function BookDataTable<T extends { id: string }>({
                 className="book-table-actions-cell sticky right-0 z-10 bg-sunk px-3 py-2.5 group-hover:bg-hover"
                 data-testid={`book-table-actions-cell-${item.id}`}
               >
-                <div className="flex justify-end gap-2 whitespace-nowrap">
+                <div className="flex justify-end gap-1.5 whitespace-nowrap">
                   {renderActions(item)}
                 </div>
               </td>
             </tr>
           ))}
-          {items.length === 0 ? (
+          {!isLoading && items.length === 0 ? (
             <tr>
               <td className="px-4 py-8 text-center text-ink-3" colSpan={columns.length + 1}>
                 {emptyMessage}

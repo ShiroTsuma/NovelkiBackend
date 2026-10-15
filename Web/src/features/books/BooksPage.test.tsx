@@ -98,7 +98,7 @@ describe('BooksPage', () => {
     expect(
       screen.queryByRole('columnheader', { name: /alternative titles/i }),
     ).not.toBeInTheDocument()
-    expect(screen.getByLabelText('1 alternative title')).toHaveTextContent('+1')
+    expect(screen.getByLabelText('1 alternative title')).toHaveTextContent('· 1 alt title')
   })
 
   it('keeps all enabled table columns inside a symmetric scroll container', async () => {
@@ -131,12 +131,12 @@ describe('BooksPage', () => {
 
     const table = container.querySelector('table')
     const scroller = table?.parentElement
-    const section = table?.closest('section')
+    const box = table?.closest('.rounded-xl')
 
-    expect(table).toHaveStyle({ minWidth: '150.5rem' })
+    expect(table).toHaveStyle({ minWidth: '154.25rem' })
     expect(container.querySelectorAll('col')).toHaveLength(16)
     expect(scroller).toHaveClass('max-w-full', 'overflow-x-auto')
-    expect(section).toHaveClass('min-w-0', 'overflow-hidden')
+    expect(box).toHaveClass('min-w-0', 'overflow-hidden')
     expect(screen.queryByRole('columnheader', { name: /^id$/i })).not.toBeInTheDocument()
     expect(
       screen.queryByRole('columnheader', { name: /alternative titles/i }),
@@ -1077,14 +1077,14 @@ describe('BooksPage', () => {
     const { container } = renderWithProviders(<BooksPage />, { route: '/books' })
 
     await screen.findByText('Lord of Mysteries')
-    let footer = container.querySelector('section > .border-t.border-line')
+    let footer = container.querySelector('#book-list-results > :last-child')
     expect(footer).toHaveTextContent('Per page')
     expect(container.querySelector('.overflow-x-auto.pb-24')).toBeFalsy()
     expect(container.querySelector('section > .sticky.bottom-0')).toBeFalsy()
 
     await user.click(screen.getByRole('button', { name: /cards/i }))
 
-    footer = container.querySelector('section > .border-t.border-line')
+    footer = container.querySelector('#book-list-results > :last-child')
     expect(footer).toHaveTextContent('Per page')
     expect(container.querySelector('.grid.gap-4.p-4.pb-24')).toBeFalsy()
     expect(container.querySelector('section > .sticky.bottom-0')).toBeFalsy()

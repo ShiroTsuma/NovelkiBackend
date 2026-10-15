@@ -17,8 +17,8 @@ import { BookSearchInput } from './BookSearchInput'
 import { CardCover, CoverThumb, ProgressCell, RatingCell, StatusCell } from './BookListCells'
 import { ProgressDialog } from './ProgressDialog'
 import { getStatusTone, statusToneClasses } from './bookStatus'
-import { QueryBar, QuickFilters, SortMenu, StatusTabs } from './BookListControls'
-import { setStatusFilter } from './queryTokens'
+import { QueryBar, QuickFilters, SortMenu, StatusTabs, TypeChips } from './BookListControls'
+import { setFieldFilter, setStatusFilter } from './queryTokens'
 import { useDebouncedValue } from '@/lib/useDebouncedValue'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { formatProgress } from './bookProgress'
@@ -75,6 +75,7 @@ const bookColumns: ColumnDefinition<BookListItemDto>[] = [
     defaultVisible: true,
     sortBy: 'title',
     widthClass: 'w-80',
+    grow: true,
     render: (book) => <TitleCell book={book} />,
   },
   {
@@ -90,7 +91,7 @@ const bookColumns: ColumnDefinition<BookListItemDto>[] = [
     label: 'Status',
     defaultVisible: true,
     sortBy: 'status',
-    widthClass: 'w-36',
+    widthClass: 'w-[8.5rem]',
     render: (book) => <StatusCell status={book.status} />,
   },
   {
@@ -98,7 +99,7 @@ const bookColumns: ColumnDefinition<BookListItemDto>[] = [
     label: 'Type',
     defaultVisible: true,
     sortBy: 'type',
-    widthClass: 'w-20',
+    widthClass: 'w-[5.25rem]',
     render: (book) => book.contentType,
   },
   {
@@ -106,7 +107,7 @@ const bookColumns: ColumnDefinition<BookListItemDto>[] = [
     label: 'Progress',
     defaultVisible: true,
     sortBy: 'progress',
-    widthClass: 'w-48',
+    widthClass: 'w-[15.5rem]',
     render: (book) => <ProgressCell book={book} />,
   },
   {
@@ -122,7 +123,7 @@ const bookColumns: ColumnDefinition<BookListItemDto>[] = [
     label: 'Rating',
     defaultVisible: true,
     sortBy: 'rating',
-    widthClass: 'w-16',
+    widthClass: 'w-[4.5rem]',
     render: (book) => <RatingCell rating={book.rating} />,
   },
   {
@@ -146,7 +147,7 @@ const bookColumns: ColumnDefinition<BookListItemDto>[] = [
     label: 'Updated',
     defaultVisible: true,
     sortBy: 'lastModified',
-    widthClass: 'w-28',
+    widthClass: 'w-[7.75rem]',
     render: (book) => formatShortDate(book.lastModified || book.created),
   },
   {
@@ -317,6 +318,14 @@ export function BooksPage() {
     placeholderData: keepPreviousData,
     staleTime: 30_000,
   })
+  const typeScopeQuery = setFieldFilter(debouncedRequestQuery, 'type', null)
+  const typeSummaryQuery = useQuery({
+    queryKey: ['books-summary', typeScopeQuery],
+    queryFn: () => api.getBooksSummary({ query: typeScopeQuery }),
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
+  })
+  const typesQuery = useQuery({ queryKey: ['types'], queryFn: api.getTypes, staleTime: 300_000 })
   const cycleSortMutation = useMutation({
     mutationFn: ({
       nextSortBy,
@@ -434,6 +443,8 @@ export function BooksPage() {
   }
 
   const statusCounts = getStatusCounts(statusSummaryQuery.data)
+  const typeCounts = getTypeCounts(typeSummaryQuery.data)
+  const typeNames = typesQuery.data?.data.map((type) => type.name) ?? []
   const libraryStats = libraryStatsQuery.data
   const analyticsHref = buildAnalyticsHref(requestQuery)
   const books = booksQuery.data?.data ?? []
@@ -539,19 +550,23 @@ export function BooksPage() {
         </section>
       ) : null}
 
-      <StatusTabs counts={statusCounts} query={query} onQueryChange={updateQuery} />
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3">
+        <StatusTabs counts={statusCounts} query={query} onQueryChange={updateQuery} />
+        <TypeChips
+          counts={typeCounts}
+          query={query}
+          types={typeNames}
+          onQueryChange={updateQuery}
+        />
+      </div>
 
       <div className="grid gap-2.5">
         <QueryBar query={query} onQueryChange={updateQuery} />
         <QuickFilters query={query} onQueryChange={updateQuery} />
       </div>
 
-      <section
-        aria-label="Books"
-        className="min-w-0 overflow-hidden rounded-panel border border-line bg-sunk"
-        id="book-list-results"
-      >
-        <div className="flex flex-wrap items-center justify-end gap-2 border-b border-line px-4 py-3">
+      <section aria-label="Books" className="flex min-w-0 flex-col gap-4" id="book-list-results">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <div className="mr-auto flex items-baseline gap-3">
             <span className="text-ink-2 tabular-nums" role="status">
               {searching
@@ -592,27 +607,31 @@ export function BooksPage() {
             />
           </div>
         </div>
-        {viewMode === 'table' && isPhone ? (
-          <BookCompactList books={books} isLoading={booksQuery.isLoading} />
-        ) : viewMode === 'table' ? (
-          <BookDataTable
-            actionsWidthRem={9.5}
-            columns={visibleColumns}
-            emptyMessage="No books match the current filters."
-            isCyclicSort={isCyclicSort}
-            isLoading={booksQuery.isLoading}
-            items={books}
-            renderActions={(book) => (
-              <div className="flex justify-end gap-1.5">
-                <ProgressDialog book={book} triggerSize="sm" triggerVariant="secondary" />
-                <BookRowMenu book={book} />
-              </div>
+        {viewMode === 'table' ? (
+          <div className="min-w-0 overflow-hidden rounded-xl border border-line bg-sunk">
+            {isPhone ? (
+              <BookCompactList books={books} isLoading={booksQuery.isLoading} />
+            ) : (
+              <BookDataTable
+                actionsWidthRem={8.75}
+                columns={visibleColumns}
+                emptyMessage="No books match the current filters."
+                isCyclicSort={isCyclicSort}
+                isLoading={booksQuery.isLoading}
+                items={books}
+                renderActions={(book) => (
+                  <>
+                    <ProgressDialog book={book} triggerSize="row" triggerVariant="secondary" />
+                    <BookRowMenu book={book} />
+                  </>
+                )}
+                sortBy={sortBy}
+                sortDirection={sortDirection}
+                wrapperClassName="w-full overflow-x-auto"
+                onSort={setSort}
+              />
             )}
-            sortBy={sortBy}
-            sortDirection={sortDirection}
-            wrapperClassName="w-full overflow-x-auto"
-            onSort={setSort}
-          />
+          </div>
         ) : (
           <BookCardGrid
             books={books}
@@ -622,6 +641,7 @@ export function BooksPage() {
           />
         )}
         <BookListFooter
+          bare
           activePageGapId={pagination.activePageGapId}
           canGoBack={pagination.canGoBack}
           canGoForward={pagination.canGoForward}
@@ -676,6 +696,15 @@ function getStatusCounts(summary: BookSummaryDto | undefined) {
   return counts
 }
 
+function getTypeCounts(summary: BookSummaryDto | undefined) {
+  if (!summary) return undefined
+  const counts: Record<string, number> = { all: summary.totalBooks }
+  for (const item of summary.typeCounts) {
+    counts[item.type.trim().toLowerCase()] = item.bookCount
+  }
+  return counts
+}
+
 function formatLibraryStats(stats: BookSummaryDto) {
   const finished =
     stats.statusCounts.find((item) => item.status.trim().toLowerCase() === 'completed')?.count ?? 0
@@ -703,7 +732,7 @@ function BookRowMenu({ book }: { book: BookListItemDto }) {
   return (
     <Menu
       label={`More actions for ${book.primaryTitle}`}
-      triggerClassName={buttonStyles({ variant: 'ghost', size: 'iconSm' })}
+      triggerClassName={buttonStyles({ variant: 'ghost', size: 'iconRow' })}
       triggerContent={<MoreHorizontal aria-hidden="true" className="size-4" />}
       widthClassName="w-48"
       sections={[
@@ -835,7 +864,7 @@ export function ViewModeToggle({
         <button
           aria-pressed={value === mode}
           className={cn(
-            'flex h-8 items-center gap-1.5 rounded-[7px] border-0 px-3 text-sm',
+            'flex h-[30px] items-center gap-1.5 rounded-[7px] border-0 px-3 text-sm',
             value === mode
               ? 'bg-selected font-semibold text-ink'
               : 'bg-transparent font-medium text-ink-2 hover:text-ink',
@@ -881,12 +910,18 @@ function BookCardGrid({
   isLoading: boolean
 }) {
   if (isLoading) {
-    return <div className="px-4 py-8 text-center text-ink-3">Loading...</div>
+    return (
+      <div className="rounded-xl border border-line bg-sunk px-4 py-8 text-center text-ink-3">
+        Loading...
+      </div>
+    )
   }
 
   if (!books.length) {
     return (
-      <div className="px-4 py-8 text-center text-ink-3">No books match the current filters.</div>
+      <div className="rounded-xl border border-line bg-sunk px-4 py-8 text-center text-ink-3">
+        No books match the current filters.
+      </div>
     )
   }
 
@@ -911,7 +946,7 @@ function BookCardGrid({
 
   return (
     <div
-      className={`book-card-grid grid min-w-0 grid-cols-2 gap-x-5 gap-y-7 p-4 md:grid-cols-3 ${getDesktopCardsPerRowClass(cardsPerRow)}`}
+      className={`book-card-grid grid min-w-0 grid-cols-2 gap-x-5 gap-y-7 md:grid-cols-3 ${getDesktopCardsPerRowClass(cardsPerRow)}`}
     >
       {books.map((book) => {
         const finished = isCompletedStatus(book.status)
@@ -1117,8 +1152,10 @@ function TitleCell({ book }: { book: BookListItemDto }) {
             <MetadataSummary
               alternatives={book.alternativeTitles}
               countNoun="alternative title"
+              countStyle="text"
               primary=""
               primaryClassName="hidden"
+              shortNoun="alt title"
               totalCount={book.alternativeTitlesCount}
             />
           ) : null}

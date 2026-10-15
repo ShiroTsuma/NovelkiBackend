@@ -228,22 +228,30 @@ export function ColumnHeader<T>({
 
   const sortBy = column.sortBy
   if (!sortBy) {
-    return (
-      <th className={`${column.widthClass ?? ''} border-b border-line px-3 py-3`}>
-        {column.label}
-      </th>
-    )
+    return <th className="border-b border-line px-3 py-3">{column.label}</th>
   }
 
   return (
-    <th className={`${column.widthClass ?? ''} border-b border-line px-3 py-2`}>
+    <th
+      aria-sort={
+        activeDirection === 'asc'
+          ? 'ascending'
+          : activeDirection === 'desc'
+            ? 'descending'
+            : undefined
+      }
+      className="border-b border-line px-3 py-3"
+    >
       <button
-        className="-ml-2 inline-flex h-8 items-center gap-1 rounded-control px-2 text-xs font-semibold tracking-wider text-ink-3 uppercase hover:bg-raised hover:text-ink"
+        className={`group/sort inline-flex items-center gap-1 border-0 bg-transparent p-0 text-xs font-semibold tracking-[0.04em] uppercase hover:text-ink ${activeDirection ? 'text-ink-2' : 'text-ink-3'}`}
         type="button"
         onClick={() => onSort(sortBy)}
       >
         {column.label}
-        <Icon className="h-3.5 w-3.5" />
+        <Icon
+          aria-hidden="true"
+          className={`size-3.5 ${activeDirection ? '' : 'opacity-0 group-hover/sort:opacity-100 group-focus-visible/sort:opacity-100'}`}
+        />
       </button>
     </th>
   )

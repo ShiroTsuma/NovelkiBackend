@@ -346,7 +346,10 @@ export async function installLayoutApiMocks(page: Page) {
             { status: 'On Hold', count: 1 },
             { status: 'Unknown', count: 2 },
           ],
-          typeCounts: [],
+          typeCounts: [
+            { type: 'Novel', bookCount: 131, currentChapters: 34000 },
+            { type: 'Manga', bookCount: 11, currentChapters: 2388 },
+          ],
           genreCounts: [],
           ratingCounts: [],
         },

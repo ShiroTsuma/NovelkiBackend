@@ -1,4 +1,6 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useEffectEvent, useId, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
+import { Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export type MenuItem = {
@@ -7,6 +9,8 @@ export type MenuItem = {
   onSelect: () => void
   disabled?: boolean | undefined
   danger?: boolean | undefined
+  /** Set for single-choice menus: the item renders as a radio with a check mark. */
+  checked?: boolean | undefined
 }
 
 export type MenuSection = { title?: string | undefined; items: MenuItem[] }
@@ -14,6 +18,9 @@ export type MenuSection = { title?: string | undefined; items: MenuItem[] }
 /**
  * Small dropdown menu: a trigger button and a list of actions.
  * Closes on Escape, on outside click and after choosing an item.
+ * The list renders in a portal with fixed positioning, so scroll containers
+ * (tables, panels with overflow) never clip it. It opens upwards when there is
+ * more room above the trigger.
  */
 export function Menu({
   label,
@@ -32,16 +39,41 @@ export function Menu({
   widthClassName?: string
 }) {
   const [open, setOpen] = useState(false)
+  const [position, setPosition] = useState<MenuPosition | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
   const menuId = useId()
+
+  function measure() {
+    const trigger = triggerRef.current
+    if (!trigger) return
+    const bounds = trigger.getBoundingClientRect()
+    const gap = 8
+    const spaceBelow = window.innerHeight - bounds.bottom - gap
+    const spaceAbove = bounds.top - gap
+    const menuHeight = menuRef.current?.offsetHeight ?? 0
+    const below = spaceBelow >= menuHeight || spaceBelow >= spaceAbove
+    setPosition({
+      top: below ? bounds.bottom + gap : undefined,
+      bottom: below ? undefined : window.innerHeight - bounds.top + gap,
+      left: align === 'start' ? bounds.left : undefined,
+      right: align === 'end' ? window.innerWidth - bounds.right : undefined,
+      maxHeight: Math.max(120, (below ? spaceBelow : spaceAbove) - 12),
+    })
+  }
+
+  const onViewportChange = useEffectEvent(measure)
 
   useEffect(() => {
     if (!open) return undefined
+    onViewportChange()
     function onPointerDown(event: PointerEvent) {
+      const target = event.target
       if (
-        rootRef.current &&
-        event.target instanceof Node &&
-        !rootRef.current.contains(event.target)
+        target instanceof Node &&
+        !rootRef.current?.contains(target) &&
+        !menuRef.current?.contains(target)
       ) {
         setOpen(false)
       }
@@ -49,11 +81,16 @@ export function Menu({
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') setOpen(false)
     }
+    const reposition = () => onViewportChange()
     document.addEventListener('pointerdown', onPointerDown)
     document.addEventListener('keydown', onKeyDown)
+    window.addEventListener('resize', reposition)
+    window.addEventListener('scroll', reposition, true)
     return () => {
       document.removeEventListener('pointerdown', onPointerDown)
       document.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('resize', reposition)
+      window.removeEventListener('scroll', reposition, true)
     }
   }, [open])
 
@@ -66,58 +103,84 @@ export function Menu({
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
         className={triggerClassName}
+        ref={triggerRef}
         onClick={() => setOpen((current) => !current)}
       >
         {triggerContent}
       </button>
-      {open ? (
-        <div
-          id={menuId}
-          role="menu"
-          aria-label={label}
-          className={cn(
-            'absolute top-full z-50 mt-2 flex flex-col overflow-hidden rounded-field border border-line-strong bg-raised p-1 shadow-popover',
-            align === 'end' ? 'right-0' : 'left-0',
-            widthClassName,
-          )}
-        >
-          {sections.map((section, sectionIndex) => (
+      {open && typeof document !== 'undefined'
+        ? createPortal(
             <div
-              key={section.title ?? sectionIndex}
-              className={cn(sectionIndex > 0 && 'mt-1 border-t border-line pt-1')}
+              id={menuId}
+              role="menu"
+              aria-label={label}
+              ref={menuRef}
+              className={cn(
+                'fixed z-[90] flex flex-col overflow-y-auto rounded-field border border-line-strong bg-raised p-1 shadow-popover',
+                widthClassName,
+              )}
+              style={{
+                top: position?.top,
+                bottom: position?.bottom,
+                left: position?.left,
+                right: position?.right,
+                maxHeight: position?.maxHeight,
+                visibility: position ? 'visible' : 'hidden',
+              }}
             >
-              {section.title ? (
-                <div className="px-3 pt-2 pb-1 text-xs font-semibold tracking-wider text-ink-3 uppercase">
-                  {section.title}
-                </div>
-              ) : null}
-              {section.items.map((item) => (
-                <button
-                  key={item.label}
-                  type="button"
-                  role="menuitem"
-                  disabled={item.disabled}
-                  onClick={() => {
-                    setOpen(false)
-                    item.onSelect()
-                  }}
-                  className={cn(
-                    'flex w-full flex-col items-start rounded-control border-0 bg-transparent px-3 py-2 text-left text-sm disabled:opacity-50',
-                    item.danger
-                      ? 'text-danger-ink hover:bg-danger-soft'
-                      : 'text-ink hover:bg-selected',
-                  )}
+              {sections.map((section, sectionIndex) => (
+                <div
+                  key={section.title ?? sectionIndex}
+                  className={cn(sectionIndex > 0 && 'mt-1 border-t border-line pt-1')}
                 >
-                  <span className="font-medium">{item.label}</span>
-                  {item.description ? (
-                    <span className="mt-0.5 text-xs text-ink-3">{item.description}</span>
+                  {section.title ? (
+                    <div className="px-3 pt-2 pb-1 text-xs font-semibold tracking-wider text-ink-3 uppercase">
+                      {section.title}
+                    </div>
                   ) : null}
-                </button>
+                  {section.items.map((item) => (
+                    <button
+                      key={item.label}
+                      type="button"
+                      role={item.checked === undefined ? 'menuitem' : 'menuitemradio'}
+                      aria-checked={item.checked}
+                      disabled={item.disabled}
+                      onClick={() => {
+                        setOpen(false)
+                        item.onSelect()
+                      }}
+                      className={cn(
+                        'flex w-full flex-col items-start rounded-control border-0 bg-transparent px-3 py-2 text-left text-sm disabled:opacity-50',
+                        item.danger
+                          ? 'text-danger-ink hover:bg-danger-soft'
+                          : 'text-ink hover:bg-selected',
+                      )}
+                    >
+                      <span className="flex w-full items-center justify-between gap-3 font-medium">
+                        {item.label}
+                        {item.checked ? (
+                          <Check aria-hidden="true" className="size-4 shrink-0 text-ink-2" />
+                        ) : null}
+                      </span>
+                      {item.description ? (
+                        <span className="mt-0.5 text-xs text-ink-3">{item.description}</span>
+                      ) : null}
+                    </button>
+                  ))}
+                </div>
               ))}
-            </div>
-          ))}
-        </div>
-      ) : null}
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   )
+}
+
+type MenuPosition = {
+  top: number | undefined
+  bottom: number | undefined
+  left: number | undefined
+  right: number | undefined
+  maxHeight: number
 }

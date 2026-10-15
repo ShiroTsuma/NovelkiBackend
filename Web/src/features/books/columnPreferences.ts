@@ -12,6 +12,8 @@ export type ColumnDefinition<T> = {
   defaultVisible: boolean
   sortBy?: string
   widthClass?: string
+  /** Takes the width left over by the fixed columns (the title). */
+  grow?: boolean
   render: (item: T) => ReactNode
 }
 

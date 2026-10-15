@@ -27,7 +27,10 @@ export function BookListFooter({
   totalPages,
   visiblePages,
   onGoToPage,
+  bare = false,
 }: {
+  /** No top border or padding: the footer sits on the page, below a boxed list. */
+  bare?: boolean
   activePageGapId: string | null
   canGoBack: boolean
   canGoForward: boolean
@@ -43,9 +46,11 @@ export function BookListFooter({
   onGoToPage: (page: number) => void
 }) {
   return (
-    <div className="border-t border-line px-4 py-3 text-sm text-ink-2">
+    <div
+      className={bare ? 'text-sm text-ink-2' : 'border-t border-line px-4 py-3 text-sm text-ink-2'}
+    >
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <span>
+        <span className="tabular-nums">
           {total
             ? `Showing ${skip + 1}–${Math.min(skip + pageSize, total)} of ${total}`
             : '0 results'}
@@ -55,7 +60,7 @@ export function BookListFooter({
             <span>Per page</span>
             <span className="relative inline-flex">
               <select
-                className={`${inputClass} ui-control--compact-select ui-control--page-size h-10 min-h-10 py-0`}
+                className={`${inputClass} ui-control--compact-select ui-control--page-size h-9 min-h-9 py-0`}
                 value={pageSize}
                 onChange={(event) => setPageSize(event.target.value)}
               >

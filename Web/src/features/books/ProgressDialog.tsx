@@ -31,7 +31,7 @@ export function ProgressDialog({
   book: ProgressBook
   triggerLabel?: string
   triggerVariant?: 'primary' | 'secondary' | 'outline'
-  triggerSize?: 'sm' | 'md'
+  triggerSize?: 'row' | 'sm' | 'md'
 }) {
   const [open, setOpen] = useState(false)
   return (

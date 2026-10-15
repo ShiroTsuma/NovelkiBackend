@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { titleInitials, typeCoverClass } from './bookCovers'
 import { isLowRating } from './bookRating'
 import { getStatusTone, statusToneClasses } from './bookStatus'
+import { StatusBadge } from './StatusBadge'
 import { useCoverLoadPermission } from './useCoverLoadPermission'
 import { useResolvedCoverImage } from './useResolvedCoverImage'
 
@@ -69,22 +70,7 @@ export function CardCover({ book }: { book: BookListItemDto }) {
 }
 
 export function StatusCell({ status }: { status: string }) {
-  const tone = getStatusTone(status)
-  return (
-    <span
-      aria-label={`Book status: ${status}`}
-      className={cn(
-        'inline-flex max-w-full items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[13px] font-medium',
-        statusToneClasses[tone].badge,
-      )}
-    >
-      <span
-        aria-hidden="true"
-        className={cn('size-1.5 shrink-0 rounded-full', statusToneClasses[tone].dot)}
-      />
-      <span className="truncate">{status}</span>
-    </span>
-  )
+  return <StatusBadge status={status} />
 }
 
 export function ProgressCell({ book }: { book: BookListItemDto }) {
@@ -100,17 +86,23 @@ export function ProgressCell({ book }: { book: BookListItemDto }) {
       : null
 
   let detail = ''
-  if (finished) detail = current != null ? `${numberFormat.format(current)} chapters` : ''
+  if (finished)
+    detail = [
+      current != null ? `${numberFormat.format(current)} chapters` : null,
+      label ? `last ${label}` : null,
+    ]
+      .filter(Boolean)
+      .join(' · ')
   else if (current != null && total != null)
-    detail = `${numberFormat.format(current)} / ${numberFormat.format(total)}`
-  else if (current != null) detail = `${numberFormat.format(current)} read`
+    detail = `${numberFormat.format(current)} / ${numberFormat.format(total)} · ${Math.round(percent ?? 0)}%`
+  else if (current != null) detail = `${numberFormat.format(current)} read · total unknown`
 
   return (
     <div className="min-w-0">
       <div className="flex min-w-0 items-baseline gap-2 tabular-nums">
         <span
           className={cn(
-            'truncate font-semibold',
+            'shrink-0 text-[15px] font-semibold',
             finished ? 'text-status-finished-ink' : 'text-ink',
           )}
         >
@@ -140,7 +132,11 @@ export function ProgressCell({ book }: { book: BookListItemDto }) {
 
 export function RatingCell({ rating }: { rating?: number | null | undefined }) {
   if (typeof rating !== 'number') {
-    return <span className="text-ink-disabled">—</span>
+    return (
+      <span className="font-semibold text-ink-disabled" aria-label="Not rated">
+        —
+      </span>
+    )
   }
   const low = isLowRating(rating)
   return (
